@@ -869,11 +869,7 @@ async function gerar() {
   resultado.innerHTML = '<p class="msg"><span class="spinner"></span>Gerando... leva alguns segundos.</p>';
 
   try {
-    const resposta = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(dados)
-    });
+    const resposta = await enviarComRetentativa(url, JSON.stringify(dados));
 
     /* Lemos como texto e convertemos na mão: o Safari dá uma mensagem
        indecifrável quando o corpo não é o JSON esperado. Assim dá para
@@ -965,6 +961,46 @@ function mostrarErro(texto) {
   p.className = 'msg erro';
   p.textContent = texto;
   resultado.appendChild(p);
+}
+
+/**
+ * Envia o pedido com retentativa.
+ * Falha de rede aqui quase sempre é o Google limitando requisições
+ * seguidas — some sozinho depois de alguns segundos de espera.
+ */
+async function enviarComRetentativa(url, corpo) {
+  const esperas = [0, 4000, 10000];
+  let ultimoErro;
+
+  for (let tentativa = 0; tentativa < esperas.length; tentativa++) {
+
+    if (esperas[tentativa]) {
+      resultado.innerHTML =
+        '<p class="msg"><span class="spinner"></span>O Google pediu uma pausa. ' +
+        'Tentando de novo em ' + (esperas[tentativa] / 1000) + ' segundos...</p>';
+      await new Promise((r) => setTimeout(r, esperas[tentativa]));
+      resultado.innerHTML =
+        '<p class="msg"><span class="spinner"></span>Gerando... leva alguns segundos.</p>';
+    }
+
+    try {
+      return await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: corpo
+      });
+    } catch (erro) {
+      /* TypeError aqui é falha de rede (Failed to fetch / Load failed).
+         Qualquer outra coisa não adianta repetir. */
+      if (!(erro instanceof TypeError)) throw erro;
+      ultimoErro = erro;
+    }
+  }
+
+  throw new Error(
+    'O Google está limitando as gerações no momento. ' +
+    'Espere um minuto e tente de novo.'
+  );
 }
 
 /**
