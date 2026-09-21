@@ -487,6 +487,10 @@ const btnGerar  = el('g-gerar');
 let materialAtual = null;
 let ultimo = null;
 
+/* iPhone e iPad não fazem download forçado — abrem o arquivo */
+const EH_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 /* Imagens já cortadas: { chave: { b64, mime } } */
 const imagens = {};
 
@@ -871,8 +875,24 @@ async function gerar() {
       body: JSON.stringify(dados)
     });
 
-    const json = await resposta.json();
-    if (!json.ok) throw new Error(json.erro || 'Não foi possível gerar a peça.');
+    /* Lemos como texto e convertemos na mão: o Safari dá uma mensagem
+       indecifrável quando o corpo não é o JSON esperado. Assim dá para
+       dizer o que realmente veio. */
+    const bruto = (await resposta.text()).trim().replace(/^﻿/, '');
+
+    let json;
+    try {
+      json = JSON.parse(bruto);
+    } catch (e) {
+      throw new Error(
+        bruto.startsWith('<')
+          ? 'O script respondeu com uma página de erro em vez do arquivo. Verifique as permissões e republique a implantação.'
+          : 'Resposta inesperada do script. Tente de novo em alguns segundos.'
+      );
+    }
+
+    if (!json || !json.ok) throw new Error(json && json.erro || 'Não foi possível gerar a peça.');
+    if (!json.b64) throw new Error('O script respondeu sem o arquivo.');
 
     ultimo = json;
     mostrarResultado(json);
@@ -947,17 +967,49 @@ function mostrarErro(texto) {
   resultado.appendChild(p);
 }
 
+/**
+ * Converte a resposta em bytes.
+ * O Safari é mais rígido que o Chrome: recusa a string se houver
+ * espaço, quebra de linha ou padding faltando. Por isso a limpeza.
+ */
+function base64ParaBytes(b64) {
+  const limpo = String(b64 || '')
+    .replace(/\s+/g, '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  if (!limpo) throw new Error('Resposta vazia.');
+
+  const falta = (4 - (limpo.length % 4)) % 4;
+  const binario = atob(limpo + '='.repeat(falta));
+
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) {
+    bytes[i] = binario.charCodeAt(i);
+  }
+  return bytes;
+}
+
 /** salvar(true) abre em nova aba; salvar(false) baixa o arquivo */
 function salvar(abrir) {
-  const binario = atob(ultimo.b64);
-  const bytes = new Uint8Array(binario.length);
-  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  let url;
 
-  const url = URL.createObjectURL(
-    new Blob([bytes], { type: ultimo.tipo || 'image/png' })
-  );
+  try {
+    url = URL.createObjectURL(
+      new Blob([base64ParaBytes(ultimo.b64)], { type: ultimo.tipo || 'image/png' })
+    );
+  } catch (erro) {
+    avisar(
+      (ultimo.tipo === 'application/pdf')
+        ? 'Este navegador não conseguiu montar o PDF. Abra a página no Chrome e gere de novo.'
+        : 'Este navegador não conseguiu montar o arquivo. Clique com o botão direito na imagem acima e escolha "Salvar imagem como".'
+    );
+    return;
+  }
 
-  if (abrir) {
+  /* No iPhone e no iPad o download forçado não funciona: o sistema
+     abre o arquivo e o usuário salva pelo botão de compartilhar. */
+  if (abrir || EH_IOS) {
     window.open(url, '_blank');
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     return;
@@ -970,6 +1022,18 @@ function salvar(abrir) {
   link.click();
 
   setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 1000);
+}
+
+function avisar(texto) {
+  let aviso = document.getElementById('aviso');
+  if (!aviso) {
+    aviso = document.createElement('p');
+    aviso.id = 'aviso';
+    aviso.className = 'msg erro';
+    aviso.style.marginTop = '12px';
+    resultado.appendChild(aviso);
+  }
+  aviso.textContent = texto;
 }
 
 /* ============================================================
