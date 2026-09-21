@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Central de Peças · Dalmóbile</title>
+<style>
+  :root {
+    --bg:      #f2f2f0;
+    --card:    #ffffff;
+    --ink:     #141618;
+    --ink-2:   #4a5054;
+    --muted:   #8a9094;
+    --line:    #e0e1df;
+    --line-2:  #c9cbc8;
+    --accent:  #141618;
+    --ok:      #1c6b3f;
+    --erro:    #b3261e;
+    --radius:  14px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px 56px; }
+
+  /* ---------- Cabeçalho ---------- */
+
+  .topo {
+    position: relative;
+    padding: 28px 0 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+
+  .tracos {
+    position: absolute; top: 26px; right: 0;
+    display: flex; gap: 5px; align-items: flex-start;
+    opacity: .5; pointer-events: none;
+  }
+  .tracos i { display: block; width: 1px; background: var(--line-2); }
+  .tracos i:nth-child(1) { height: 22px; }
+  .tracos i:nth-child(2) { height: 38px; }
+  .tracos i:nth-child(3) { height: 14px; }
+
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+
+  .assinatura {
+    margin: 3px 0 0; font-size: 10px; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------- Seletor de loja ---------- */
+
+  .loja-barra { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+
+  .loja-barra label {
+    font-size: 12px; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--muted); white-space: nowrap;
+  }
+
+  select, input[type="text"], input[type="date"], input[type="time"] {
+    width: 100%; padding: 12px 13px;
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 16px; font-family: inherit; color: var(--ink);
+    background: var(--card); appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath fill='none' stroke='%238a9094' stroke-width='1.6' d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center;
+    padding-right: 36px; cursor: pointer;
+  }
+
+  select:focus, input:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(20,22,24,.07);
+  }
+
+  /* ---------- Catálogo ---------- */
+
+  .seccao-titulo {
+    font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 12px;
+  }
+
+  .grade { display: grid; gap: 10px; }
+
+  .item {
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; text-align: left; padding: 16px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); cursor: pointer;
+    font-family: inherit; color: inherit;
+    transition: border-color .15s, transform .15s;
+  }
+
+  .item:hover { border-color: var(--line-2); }
+  .item:active { transform: scale(.994); }
+  .item[disabled] { cursor: default; opacity: .55; }
+  .item[disabled]:hover { border-color: var(--line); }
+
+  .item .icone {
+    flex: 0 0 40px; height: 40px;
+    display: grid; place-items: center;
+    background: var(--bg); border-radius: 10px;
+  }
+
+  .item .icone svg { display: block; }
+  .item .texto { flex: 1; min-width: 0; }
+  .item h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .item p { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); line-height: 1.35; }
+
+  .tag {
+    flex: 0 0 auto; font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px;
+  }
+
+  .tag.impresso { color: var(--ink-2); border-color: var(--line-2); }
+
+  .seta { flex: 0 0 auto; color: var(--line-2); }
+
+  /* ---------- Formulário ---------- */
+
+  .voltar {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: none; border: 0; padding: 0; margin-bottom: 16px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--ink-2); cursor: pointer;
+  }
+
+  .painel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px;
+  }
+
+  .painel > h2 { margin: 0 0 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+  .painel > p.desc { margin: 0 0 20px; font-size: 13px; color: var(--ink-2); }
+
+  .campo { margin-bottom: 15px; }
+  .campo > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .campo .nota { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: -2px; margin-bottom: 6px; }
+
+  .toggle {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+    padding: 13px 14px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-weight: 600; cursor: pointer; user-select: none;
+  }
+
+  .toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+  /* ---------- Campo de imagem ---------- */
+
+  .foto-area {
+    position: relative; border: 1px dashed var(--line-2);
+    border-radius: 9px; background: var(--bg);
+    overflow: hidden; cursor: pointer; transition: border-color .15s;
+  }
+
+  .foto-area:hover { border-color: var(--muted); }
+  .foto-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .foto-vazio {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 28px 16px; text-align: center;
+    color: var(--muted); font-size: 13px; pointer-events: none;
+  }
+
+  .foto-vazio strong { color: var(--ink); font-size: 14px; font-weight: 600; }
+
+  .foto-previa { display: block; width: 100%; }
+
+  .foto-trocar {
+    position: absolute; right: 8px; bottom: 8px;
+    background: rgba(20,22,24,.82); color: #fff;
+    font-size: 11px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; padding: 5px 10px;
+    border-radius: 6px; pointer-events: none;
+  }
+
+  .foto-carregando { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; pointer-events: none; }
+
+  /* ---------- Botões e resultado ---------- */
+
+  .botao {
+    width: 100%; padding: 15px; border: 0; border-radius: 9px;
+    background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    cursor: pointer; margin-top: 6px;
+  }
+
+  .botao:disabled { opacity: .45; cursor: default; }
+  .botao.verde { background: var(--ok); margin-top: 12px; }
+  .botao.vazado {
+    background: none; color: var(--ink-2);
+    border: 1px solid var(--line-2); margin-top: 8px;
+  }
+
+  #resultado { margin-top: 18px; }
+
+  .msg { font-size: 14px; text-align: center; color: var(--ink-2); margin: 0; }
+  .msg.erro { color: var(--erro); font-weight: 500; }
+
+  .preview { width: 100%; display: block; border: 1px solid var(--line); border-radius: 9px; }
+
+  .arquivo-pronto {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+  }
+
+  .arquivo-pronto .selo {
+    flex: 0 0 auto; font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; color: #fff; background: var(--erro);
+    padding: 5px 7px; border-radius: 5px;
+  }
+
+  .arquivo-pronto .nome { font-size: 13px; font-weight: 600; word-break: break-word; }
+  .arquivo-pronto .sub { font-size: 12px; color: var(--muted); }
+
+  .dica { margin: 10px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(20,22,24,.15); border-top-color: var(--accent);
+    border-radius: 50%; animation: gira .7s linear infinite;
+    display: inline-block; vertical-align: -3px; margin-right: 8px;
+  }
+
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  .oculto { display: none !important; }
+
+  .rodape {
+    margin-top: 32px; text-align: center; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topo">
+    <div class="tracos"><i></i><i></i><i></i></div>
+    <!-- Para usar o logo real: troque o <h1> abaixo por
+         <img src="logo-dalmobile.svg" alt="Dalmóbile" style="height:26px"> -->
+    <h1 class="marca">Dalmóbile <span>· Central de Peças</span></h1>
+    <p class="assinatura">Crie seu mundo</p>
+  </header>
+
+  <div class="loja-barra">
+    <label for="loja">Loja</label>
+    <select id="loja"></select>
+  </div>
+
+  <section id="hub">
+    <h2 class="seccao-titulo">O que você precisa gerar?</h2>
+    <div class="grade" id="grade"></div>
+  </section>
+
+  <section id="gerador" class="oculto">
+    <button class="voltar" id="voltar">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Todos os materiais
+    </button>
+
+    <div class="painel">
+      <h2 id="g-titulo"></h2>
+      <p class="desc" id="g-desc"></p>
+      <div id="g-campos"></div>
+      <button class="botao" id="g-gerar">Gerar</button>
+      <div id="resultado"></div>
+    </div>
+  </section>
+
+  <p class="rodape">Lumina · Uso interno</p>
+
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURAÇÃO
+   ------------------------------------------------------------
+   Para colocar um material novo no ar:
+     1. Monte a apresentação e o script dele (Codigo.gs padrão,
+        mudando só o bloco CONFIG)
+     2. Publique como app da web e copie a URL /exec
+     3. Acrescente um bloco aqui, com disponivel: true
+
+   Tipos de campo:
+     texto | lista | data | hora | checkbox | genero | imagem
+   ============================================================ */
+
+const LOJAS = [
+  { id: 'sjc', nome: 'São José dos Campos' },
+  { id: 'cgt', nome: 'Caraguatatuba' }
+];
+
+/* --- Campos reaproveitados entre materiais --- */
+
+const CLIENTE = {
+  chave: 'cliente', rotulo: 'Nome do Cliente', tipo: 'texto',
+  exemplo: 'Ex.: Marina e Rafael Toledo', obrigatorio: true
+};
+
+const CONSULTOR = {
+  chave: 'consultor', rotulo: 'Consultor de Vendas', tipo: 'texto',
+  exemplo: 'Ex.: Juliana Mendes', obrigatorio: true
+};
+
+/* Uma escolha só resolve todas as palavras que variam:
+   você/vocês, Seja/Sejam, bem-vindo/bem-vinda/bem-vindos/bem-vindas */
+const GENERO = {
+  chave: 'genero', rotulo: 'Como falar com o cliente', tipo: 'genero',
+  nota: 'Define as palavras que mudam no texto da peça.',
+  obrigatorio: true
+};
+
+const OPCOES_GENERO = [
+  { valor: 'ele',  rotulo: 'Ele — um cliente' },
+  { valor: 'ela',  rotulo: 'Ela — uma cliente' },
+  { valor: 'eles', rotulo: 'Eles — casal ou grupo' },
+  { valor: 'elas', rotulo: 'Elas — duas ou mais mulheres' }
+];
+
+const CATALOGO = [
+
+  {
+    id: 'boas-vindas',
+    nome: 'Boas-vindas (carta)',
+    descricao: 'Abertura do projeto, com a equipe responsável.',
+    icone: 'carta',
+    formato: 'png',
+    disponivel: true,
+    endpoints: {
+      sjc: 'https://script.google.com/macros/s/AKfycbwxQcXBO9b_75gwXHVsP4i5L6zucxPFGAQNpvaPNZiqITvmwz9x_GDNeOnfJxcQe57U/exec',
+      cgt: 'https://script.google.com/macros/s/AKfycby33G9QNUNl9r9G1yTopKx2BoFp8ftpe6hwgrXX2DZ5_N18EUBcHUaojzX7_1-JomQi/exec'
+    },
+    campos: [
+      CLIENTE,
+      CONSULTOR,
+      { chave: 'temArquiteto', rotulo: 'Este projeto tem arquiteto', tipo: 'checkbox', padrao: true },
+      { chave: 'arquiteto', rotulo: 'Arquiteto', tipo: 'texto',
+        exemplo: 'Ex.: Camila Prado', obrigatorio: true, dependeDe: 'temArquiteto' },
+      { chave: 'executivo', rotulo: 'Executivo', tipo: 'texto',
+        exemplo: 'Ex.: Marcos Rocha', obrigatorio: true }
+    ]
+  },
+
+  {
+    id: 'boas-vindas-impresso',
+    nome: 'Boas-vindas para imprimir',
+    descricao: 'Cartão A6 numa folha A4, para o atendimento na loja.',
+    icone: 'impressora',
+    formato: 'pdf',
+    disponivel: true,
+    endpoints: {
+      sjc: 'https://script.google.com/macros/s/AKfycbz9tYY2TmUVm_E_aZMPW_A4LqV1GuiYG93sEMdUmrTE_gXD6XifU6vhEsGehl44ofDt/exec',
+      cgt: 'https://script.google.com/macros/s/AKfycbz9tYY2TmUVm_E_aZMPW_A4LqV1GuiYG93sEMdUmrTE_gXD6XifU6vhEsGehl44ofDt/exec'
+    },
+    campos: [ CLIENTE, GENERO ]
+  },
+
+  {
+    id: 'pos-visita',
+    nome: 'Pós-visita',
+    descricao: 'Agradecimento depois da visita à loja.',
+    icone: 'estrela',
+    formato: 'png',
+    disponivel: true,
+    endpoints: {
+      sjc: 'https://script.google.com/macros/s/AKfycbxCm51_yxfyQAdk8mrWTDDlWPj2FNjSPYLemLu4uDdPploJ3ChNtaUObOSLmhxV3aUQ/exec',
+      cgt: 'https://script.google.com/macros/s/AKfycbxCm51_yxfyQAdk8mrWTDDlWPj2FNjSPYLemLu4uDdPploJ3ChNtaUObOSLmhxV3aUQ/exec'
+    },
+    campos: [ CLIENTE, GENERO ]
+  },
+
+  {
+    id: 'aniversario',
+    nome: 'Aniversário do cliente',
+    descricao: 'Felicitação com foto, para enviar no dia.',
+    icone: 'presente',
+    formato: 'png',
+    disponivel: true,
+    endpoints: {
+      sjc: 'https://script.google.com/macros/s/AKfycbxlw4Mr7qphJzcR26rMlOTaTrlRCZ-Vwp1RTMZ1pgemt1AVfAzkjOQ4UdRKlH-arAU4/exec',
+      cgt: 'https://script.google.com/macros/s/AKfycbxlw4Mr7qphJzcR26rMlOTaTrlRCZ-Vwp1RTMZ1pgemt1AVfAzkjOQ4UdRKlH-arAU4/exec'
+    },
+    campos: [
+      { chave: 'cliente', rotulo: 'Nome do aniversariante', tipo: 'texto',
+        exemplo: 'Ex.: Camila Prado', obrigatorio: true },
+      /* proporcao = largura ÷ altura da elipse no slide.
+         A borda é desenhada junto com a foto, então ela entra no
+         slide já pronta e não depende de ordem de camada. */
+      { chave: 'foto', rotulo: 'Foto do aniversariante', tipo: 'imagem',
+        formato: 'elipse', proporcao: 0.75, largura: 1200,
+        borda: { cor: '#9a9a9a', espessura: 3 },
+        obrigatorio: true,
+        nota: 'A foto é cortada em oval, pelo centro, com o contorno da arte.' }
+    ]
+  },
+
+  {
+    id: 'entrega',
+    nome: 'Entrega concluída',
+    descricao: 'Encerramento do projeto, após a montagem.',
+    icone: 'caixa',
+    formato: 'png',
+    disponivel: false,
+    endpoints: { sjc: '', cgt: '' },
+    campos: [
+      CLIENTE, GENERO, CONSULTOR,
+      { chave: 'montador', rotulo: 'Supervisor de Montagem', tipo: 'texto',
+        exemplo: 'Ex.: Rômullo Goulart', obrigatorio: true }
+    ]
+  },
+
+  {
+    id: 'agendamento',
+    nome: 'Agendamento',
+    descricao: 'Confirmação de medição, apresentação ou montagem.',
+    icone: 'calendario',
+    formato: 'png',
+    disponivel: false,
+    endpoints: { sjc: '', cgt: '' },
+    campos: [
+      CLIENTE,
+      { chave: 'etapa', rotulo: 'Etapa', tipo: 'lista', obrigatorio: true,
+        opcoes: ['Medição', 'Apresentação do projeto', 'Montagem', 'Entrega'] },
+      { chave: 'data', rotulo: 'Data', tipo: 'data', obrigatorio: true },
+      { chave: 'hora', rotulo: 'Horário', tipo: 'hora', obrigatorio: true },
+      CONSULTOR
+    ]
+  }
+
+];
+
+/* ============================================================
+   ÍCONES
+   ============================================================ */
+
+const ICONES = {
+  carta:      '<path d="M3 6h14v12H3z"/><path d="M3 7l7 5 7-5"/>',
+  presente:   '<path d="M3 9h14v9H3z"/><path d="M3 9V7h14v2M10 7v11"/><path d="M10 7c-1.5-3-5-2-4 0 .6 1.2 2.4 1 4 0zM10 7c1.5-3 5-2 4 0-.6 1.2-2.4 1-4 0z"/>',
+  caixa:      '<path d="M3 7l7-3 7 3v9l-7 3-7-3z"/><path d="M3 7l7 3 7-3M10 10v9"/>',
+  calendario: '<path d="M3 5h14v13H3z"/><path d="M3 9h14M7 3v3M13 3v3"/>',
+  estrela:    '<path d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4L5.5 17l.9-5L2.8 8.3l5-.7z"/>',
+  impressora: '<path d="M6 8V3h8v5"/><path d="M4 8h12v6H4z"/><path d="M6 12h8v5H6z"/>'
+};
+
+function svg(nome) {
+  return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#141618" ' +
+         'stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+         (ICONES[nome] || ICONES.carta) + '</svg>';
+}
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+
+const el = (id) => document.getElementById(id);
+const selLoja   = el('loja');
+const hub       = el('hub');
+const gerador   = el('gerador');
+const grade     = el('grade');
+const resultado = el('resultado');
+const btnGerar  = el('g-gerar');
+
+let materialAtual = null;
+let ultimo = null;
+
+/* Imagens já cortadas: { chave: { b64, mime } } */
+const imagens = {};
+
+/* ============================================================
+   LOJA
+   ============================================================ */
+
+LOJAS.forEach((loja) => {
+  const opt = document.createElement('option');
+  opt.value = loja.id;
+  opt.textContent = loja.nome;
+  selLoja.appendChild(opt);
+});
+
+try {
+  const salva = localStorage.getItem('dalmobile:loja');
+  if (salva && LOJAS.some((l) => l.id === salva)) selLoja.value = salva;
+} catch (e) {}
+
+selLoja.addEventListener('change', () => {
+  try { localStorage.setItem('dalmobile:loja', selLoja.value); } catch (e) {}
+  resultado.innerHTML = '';
+});
+
+/* ============================================================
+   MENU
+   ============================================================ */
+
+function montarHub() {
+  grade.innerHTML = '';
+
+  CATALOGO.forEach((material) => {
+    const botao = document.createElement('button');
+    botao.className = 'item';
+    botao.type = 'button';
+    if (!material.disponivel) botao.disabled = true;
+
+    let direita;
+    if (!material.disponivel) {
+      direita = '<span class="tag">Em breve</span>';
+    } else if (material.formato === 'pdf') {
+      direita = '<span class="tag impresso">PDF</span>';
+    } else {
+      direita = '<svg class="seta" width="14" height="14" viewBox="0 0 14 14" fill="none">' +
+                '<path d="M5.5 2.5L10 7l-4.5 4.5" stroke="currentColor" stroke-width="1.7" ' +
+                'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+
+    botao.innerHTML =
+      '<span class="icone">' + svg(material.icone) + '</span>' +
+      '<span class="texto"><h3></h3><p></p></span>' + direita;
+
+    botao.querySelector('h3').textContent = material.nome;
+    botao.querySelector('p').textContent  = material.descricao;
+
+    if (material.disponivel) {
+      botao.addEventListener('click', () => { location.hash = '#/' + material.id; });
+    }
+
+    grade.appendChild(botao);
+  });
+}
+
+/* ============================================================
+   FORMULÁRIO
+   ============================================================ */
+
+function abrirMaterial(material) {
+  materialAtual = material;
+
+  el('g-titulo').textContent = material.nome;
+  el('g-desc').textContent   = material.descricao;
+  btnGerar.textContent = material.formato === 'pdf' ? 'Gerar PDF' : 'Gerar imagem';
+  resultado.innerHTML = '';
+
+  Object.keys(imagens).forEach((k) => delete imagens[k]);
+
+  const area = el('g-campos');
+  area.innerHTML = '';
+
+  material.campos.forEach((campo) => area.appendChild(montarCampo(campo)));
+
+  material.campos
+    .filter((c) => c.tipo === 'checkbox')
+    .forEach((c) => {
+      el('campo-' + c.chave).addEventListener('change', () => atualizarDependentes(material));
+    });
+
+  atualizarDependentes(material);
+
+  hub.classList.add('oculto');
+  gerador.classList.remove('oculto');
+  window.scrollTo(0, 0);
+}
+
+function montarCampo(campo) {
+
+  if (campo.tipo === 'checkbox') {
+    const label = document.createElement('label');
+    label.className = 'toggle';
+    label.setAttribute('for', 'campo-' + campo.chave);
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = 'campo-' + campo.chave;
+    input.checked = campo.padrao !== false;
+
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(campo.rotulo));
+    return label;
+  }
+
+  const bloco = document.createElement('div');
+  bloco.className = 'campo';
+  bloco.id = 'bloco-' + campo.chave;
+
+  const label = document.createElement('label');
+  label.setAttribute('for', 'campo-' + campo.chave);
+  label.textContent = campo.rotulo;
+  bloco.appendChild(label);
+
+  if (campo.nota) {
+    const nota = document.createElement('span');
+    nota.className = 'nota';
+    nota.textContent = campo.nota;
+    bloco.appendChild(nota);
+  }
+
+  if (campo.tipo === 'imagem') {
+    bloco.appendChild(montarCampoImagem(campo));
+    return bloco;
+  }
+
+  let input;
+
+  if (campo.tipo === 'genero') {
+    input = document.createElement('select');
+    OPCOES_GENERO.forEach((o) => {
+      const opt = document.createElement('option');
+      opt.value = o.valor;
+      opt.textContent = o.rotulo;
+      input.appendChild(opt);
+    });
+
+  } else if (campo.tipo === 'lista') {
+    input = document.createElement('select');
+    (campo.opcoes || []).forEach((opcao) => {
+      const o = document.createElement('option');
+      o.value = opcao;
+      o.textContent = opcao;
+      input.appendChild(o);
+    });
+
+  } else {
+    input = document.createElement('input');
+    input.type = campo.tipo === 'data' ? 'date'
+               : campo.tipo === 'hora' ? 'time'
+               : 'text';
+    if (campo.exemplo) input.placeholder = campo.exemplo;
+    input.autocomplete = 'off';
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') gerar(); });
+  }
+
+  input.id = 'campo-' + campo.chave;
+  bloco.appendChild(input);
+  return bloco;
+}
+
+function montarCampoImagem(campo) {
+  const area = document.createElement('div');
+  area.className = 'foto-area';
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.id = 'campo-' + campo.chave;
+  input.accept = 'image/*';
+
+  const vazio = document.createElement('div');
+  vazio.className = 'foto-vazio';
+  vazio.innerHTML = '<strong>Escolher foto</strong>';
+  const ajuda = document.createElement('span');
+  ajuda.textContent = 'JPG ou PNG, do celular ou do computador.';
+  vazio.appendChild(ajuda);
+
+  area.append(input, vazio);
+
+  input.addEventListener('change', async () => {
+    const arquivo = input.files && input.files[0];
+    if (!arquivo) return;
+
+    limparArea(area);
+
+    const carregando = document.createElement('div');
+    carregando.className = 'foto-carregando';
+    carregando.innerHTML = '<span class="spinner"></span>Preparando a imagem...';
+    area.appendChild(carregando);
+
+    try {
+      const pronta = await prepararImagem(arquivo, campo);
+      imagens[campo.chave] = pronta;
+
+      limparArea(area);
+
+      const previa = document.createElement('img');
+      previa.className = 'foto-previa';
+      previa.alt = '';
+      previa.src = 'data:' + pronta.mime + ';base64,' + pronta.b64;
+
+      const trocar = document.createElement('span');
+      trocar.className = 'foto-trocar';
+      trocar.textContent = 'Trocar';
+
+      area.append(previa, trocar);
+
+    } catch (erro) {
+      limparArea(area);
+      delete imagens[campo.chave];
+
+      const falha = document.createElement('div');
+      falha.className = 'foto-vazio';
+      falha.innerHTML = '<strong>Não consegui ler essa imagem</strong>';
+      const dica = document.createElement('span');
+      dica.textContent = 'Tente outra foto, em JPG ou PNG.';
+      falha.appendChild(dica);
+      area.appendChild(falha);
+    }
+  });
+
+  return area;
+}
+
+function limparArea(area) {
+  area.querySelectorAll('.foto-vazio, .foto-previa, .foto-trocar, .foto-carregando')
+      .forEach((n) => n.remove());
+}
+
+/**
+ * Redimensiona e corta a foto no formato exato que ela ocupa no slide.
+ * Elipse sai em PNG com fundo transparente e o contorno já desenhado;
+ * retângulo sai em JPEG, que é mais leve.
+ */
+async function prepararImagem(arquivo, campo) {
+  const proporcao = campo.proporcao || 1;
+  const largura = campo.largura || 1200;
+  const altura = Math.round(largura / proporcao);
+  const elipse = campo.formato === 'elipse';
+
+  const bitmap = await carregarBitmap(arquivo);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = largura;
+  canvas.height = altura;
+  const ctx = canvas.getContext('2d');
+
+  ctx.save();
+
+  if (elipse) {
+    ctx.beginPath();
+    ctx.ellipse(largura / 2, altura / 2, largura / 2, altura / 2, 0, 0, Math.PI * 2);
+    ctx.clip();
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, largura, altura);
+  }
+
+  /* "cover": preenche a área toda e descarta o excedente, sem distorcer */
+  const escala = Math.max(largura / bitmap.width, altura / bitmap.height);
+  const l = bitmap.width * escala;
+  const a = bitmap.height * escala;
+  ctx.drawImage(bitmap, (largura - l) / 2, (altura - a) / 2, l, a);
+
+  ctx.restore();
+
+  if (elipse && campo.borda) {
+    const esp = campo.borda.espessura || 3;
+    ctx.strokeStyle = campo.borda.cor || '#9a9a9a';
+    ctx.lineWidth = esp;
+    ctx.beginPath();
+    ctx.ellipse(largura / 2, altura / 2,
+                largura / 2 - esp / 2, altura / 2 - esp / 2,
+                0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (bitmap.close) bitmap.close();
+
+  const mime = elipse ? 'image/png' : 'image/jpeg';
+  const dataUrl = elipse ? canvas.toDataURL('image/png')
+                         : canvas.toDataURL('image/jpeg', 0.9);
+
+  return { b64: dataUrl.split(',')[1], mime };
+}
+
+/* createImageBitmap respeita a orientação EXIF (foto de celular deitada) */
+function carregarBitmap(arquivo) {
+  if (window.createImageBitmap) {
+    return createImageBitmap(arquivo, { imageOrientation: 'from-image' })
+      .catch(() => carregarImg(arquivo));
+  }
+  return carregarImg(arquivo);
+}
+
+function carregarImg(arquivo) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem inválida')); };
+    img.src = url;
+  });
+}
+
+function atualizarDependentes(material) {
+  material.campos.forEach((campo) => {
+    if (!campo.dependeDe) return;
+    const pai = el('campo-' + campo.dependeDe);
+    const bloco = el('bloco-' + campo.chave);
+    if (pai && bloco) bloco.classList.toggle('oculto', !pai.checked);
+  });
+}
+
+function ativo(campo) {
+  if (!campo.dependeDe) return true;
+  const pai = el('campo-' + campo.dependeDe);
+  return pai ? pai.checked : true;
+}
+
+/* ============================================================
+   GERAÇÃO
+   ============================================================ */
+
+btnGerar.addEventListener('click', gerar);
+
+async function gerar() {
+  if (!materialAtual) return;
+
+  const dados = { loja: selLoja.value };
+  const faltando = [];
+
+  materialAtual.campos.forEach((campo) => {
+
+    if (campo.tipo === 'checkbox') {
+      dados[campo.chave] = el('campo-' + campo.chave).checked;
+      return;
+    }
+
+    if (campo.tipo === 'imagem') {
+      const pronta = imagens[campo.chave];
+      dados[campo.chave] = (ativo(campo) && pronta) ? pronta.b64 : '';
+      if (campo.obrigatorio && ativo(campo) && !pronta) faltando.push(campo.rotulo);
+      return;
+    }
+
+    const input = el('campo-' + campo.chave);
+    if (!input) return;
+
+    if (!ativo(campo)) { dados[campo.chave] = ''; return; }
+
+    const valor = String(input.value || '').trim();
+    dados[campo.chave] = valor;
+    if (campo.obrigatorio && !valor) faltando.push(campo.rotulo);
+  });
+
+  if (faltando.length) {
+    mostrarErro('Preencha: ' + faltando.join(', ') + '.');
+    return;
+  }
+
+  const url = materialAtual.endpoints[selLoja.value];
+  if (!url) {
+    mostrarErro('Este material ainda não está configurado para esta loja.');
+    return;
+  }
+
+  btnGerar.disabled = true;
+  resultado.innerHTML = '<p class="msg"><span class="spinner"></span>Gerando... leva alguns segundos.</p>';
+
+  try {
+    const resposta = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(dados)
+    });
+
+    const json = await resposta.json();
+    if (!json.ok) throw new Error(json.erro || 'Não foi possível gerar a peça.');
+
+    ultimo = json;
+    mostrarResultado(json);
+
+  } catch (erro) {
+    mostrarErro(erro.message || 'Falha de conexão. Tente de novo.');
+  } finally {
+    btnGerar.disabled = false;
+  }
+}
+
+function mostrarResultado(json) {
+  resultado.innerHTML = '';
+
+  const ehPdf = (json.tipo || 'image/png') === 'application/pdf';
+
+  if (ehPdf) {
+    const cartao = document.createElement('div');
+    cartao.className = 'arquivo-pronto';
+
+    const selo = document.createElement('span');
+    selo.className = 'selo';
+    selo.textContent = 'PDF';
+
+    const texto = document.createElement('div');
+    const nome = document.createElement('div');
+    nome.className = 'nome';
+    nome.textContent = json.nome;
+    const sub = document.createElement('div');
+    sub.className = 'sub';
+    sub.textContent = 'Pronto para imprimir em A4.';
+    texto.append(nome, sub);
+
+    cartao.append(selo, texto);
+
+    const baixar = document.createElement('button');
+    baixar.className = 'botao verde';
+    baixar.textContent = 'Baixar PDF';
+    baixar.addEventListener('click', () => salvar(false));
+
+    const abrir = document.createElement('button');
+    abrir.className = 'botao vazado';
+    abrir.textContent = 'Abrir para conferir';
+    abrir.addEventListener('click', () => salvar(true));
+
+    resultado.append(cartao, baixar, abrir);
+    return;
+  }
+
+  const img = document.createElement('img');
+  img.className = 'preview';
+  img.alt = 'Prévia da peça';
+  img.src = 'data:image/png;base64,' + json.b64;
+
+  const baixar = document.createElement('button');
+  baixar.className = 'botao verde';
+  baixar.textContent = 'Baixar PNG';
+  baixar.addEventListener('click', () => salvar(false));
+
+  const dica = document.createElement('p');
+  dica.className = 'dica';
+  dica.textContent = 'ou toque e segure na imagem para salvar';
+
+  resultado.append(img, baixar, dica);
+}
+
+function mostrarErro(texto) {
+  resultado.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'msg erro';
+  p.textContent = texto;
+  resultado.appendChild(p);
+}
+
+/** salvar(true) abre em nova aba; salvar(false) baixa o arquivo */
+function salvar(abrir) {
+  const binario = atob(ultimo.b64);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+
+  const url = URL.createObjectURL(
+    new Blob([bytes], { type: ultimo.tipo || 'image/png' })
+  );
+
+  if (abrir) {
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return;
+  }
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = ultimo.nome;
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 1000);
+}
+
+/* ============================================================
+   NAVEGAÇÃO
+   ============================================================ */
+
+el('voltar').addEventListener('click', () => { location.hash = ''; });
+
+function rotear() {
+  const id = location.hash.replace('#/', '');
+  const material = CATALOGO.find((m) => m.id === id && m.disponivel);
+
+  if (material) {
+    abrirMaterial(material);
+  } else {
+    materialAtual = null;
+    gerador.classList.add('oculto');
+    hub.classList.remove('oculto');
+  }
+}
+
+window.addEventListener('hashchange', rotear);
+
+montarHub();
+rotear();
+</script>
+
+</body>
+</html>
