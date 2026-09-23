@@ -249,81 +249,6 @@
     margin-top: 32px; text-align: center; font-size: 10px;
     letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
   }
-
-  /* ---------- Biblioteca ---------- */
-
-  .biblioteca { margin-top: 38px; }
-
-  .busca-envolve { position: relative; margin-bottom: 18px; }
-
-  .busca-envolve svg {
-    position: absolute; left: 13px; top: 50%;
-    transform: translateY(-50%); pointer-events: none;
-  }
-
-  #busca {
-    width: 100%; padding: 11px 13px 11px 38px;
-    border: 1px solid var(--line); border-radius: 9px;
-    font-size: 15px; font-family: inherit;
-    color: var(--ink); background: var(--card);
-  }
-
-  #busca:focus {
-    outline: none; border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(20,22,24,.07);
-  }
-
-  .grupo { margin-bottom: 22px; }
-
-  .grupo > h3 {
-    margin: 0 0 8px;
-    font-size: 11px; font-weight: 700; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--muted);
-  }
-
-  .lista {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-
-  .link-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 13px 16px;
-    text-decoration: none; color: inherit;
-    border-top: 1px solid var(--line);
-    transition: background .12s;
-  }
-
-  .link-item:first-child { border-top: 0; }
-  .link-item:hover { background: var(--bg); }
-
-  .link-item .marcador {
-    flex: 0 0 auto;
-    font-size: 9px; font-weight: 700; letter-spacing: .08em;
-    text-transform: uppercase; color: var(--muted);
-    border: 1px solid var(--line-2); border-radius: 5px;
-    padding: 3px 6px; min-width: 44px; text-align: center;
-  }
-
-  .link-item .conteudo { flex: 1; min-width: 0; }
-
-  .link-item .titulo { font-size: 14px; font-weight: 600; }
-
-  .link-item .sub {
-    font-size: 12px; color: var(--ink-2);
-    line-height: 1.3; margin-top: 1px;
-  }
-
-  .link-item .externo { flex: 0 0 auto; color: var(--line-2); }
-
-  .link-item.indisponivel { opacity: .5; pointer-events: none; }
-
-  .vazio-busca {
-    padding: 22px 16px; text-align: center;
-    font-size: 13px; color: var(--muted);
-  }
 </style>
 </head>
 <body>
@@ -346,20 +271,6 @@
   <section id="hub">
     <h2 class="seccao-titulo">O que você precisa gerar?</h2>
     <div class="grade" id="grade"></div>
-
-    <div class="biblioteca">
-      <h2 class="seccao-titulo">Biblioteca de materiais</h2>
-
-      <div class="busca-envolve">
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-          <circle cx="6.5" cy="6.5" r="4.5" stroke="#8a9094" stroke-width="1.5"/>
-          <path d="M10 10l3 3" stroke="#8a9094" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <input id="busca" type="search" placeholder="Buscar material..." autocomplete="off">
-      </div>
-
-      <div id="acervo"></div>
-    </div>
   </section>
 
   <section id="gerador" class="oculto">
@@ -434,7 +345,7 @@ const CATALOGO = [
 
   {
     id: 'boas-vindas',
-    nome: 'Card de apresentação no WhatsApp',
+    nome: 'Boas-vindas (carta)',
     descricao: 'Abertura do projeto, com a equipe responsável.',
     icone: 'carta',
     formato: 'png',
@@ -456,7 +367,7 @@ const CATALOGO = [
 
   {
     id: 'boas-vindas-impresso',
-    nome: 'Boas-vindas - Atendimento na loja',
+    nome: 'Boas-vindas para imprimir',
     descricao: 'Cartão A6 numa folha A4, para o atendimento na loja.',
     icone: 'impressora',
     formato: 'pdf',
@@ -471,7 +382,7 @@ const CATALOGO = [
   {
     id: 'pos-visita',
     nome: 'Pós-visita',
-    descricao: 'Card de agradecimento, para envio pelo WhatsApp após a visita do cliente.',
+    descricao: 'Agradecimento depois da visita à loja.',
     icone: 'estrela',
     formato: 'png',
     disponivel: true,
@@ -484,8 +395,8 @@ const CATALOGO = [
 
   {
     id: 'aniversario',
-    nome: 'Aniversáriantes',
-    descricao: 'Felicitação com foto, para enviar no dia. (Interno)',
+    nome: 'Aniversário do cliente',
+    descricao: 'Felicitação com foto, para enviar no dia.',
     icone: 'presente',
     formato: 'png',
     disponivel: true,
@@ -504,35 +415,6 @@ const CATALOGO = [
         borda: { cor: '#9a9a9a', espessura: 3 },
         obrigatorio: true,
         nota: 'A foto é cortada em oval, pelo centro, com o contorno da arte.' }
-    ]
-  },
-
-  {
-    id: 'lembrete',
-    nome: 'Lembrete de agendamento',
-    descricao: 'Card para envio ao cliente ou arquiteto, para lembrete do agendamento realizado!',
-    icone: 'estrela',
-    formato: 'png',
-    disponivel: true,
-    endpoints: {
-      sjc: '',
-      cgt: ''
-    },
-    campos: [ CLIENTE, GENERO ]
-  },
-
-  {
-    id: 'confirmacao',
-    nome: 'Confirmação de agendamento',
-    descricao: 'Ao confirmar a medição, apresentação ou montagem, envie este card para o cliente.',
-    icone: 'caixa',
-    formato: 'png',
-    disponivel: false,
-    endpoints: { sjc: '', cgt: '' },
-    campos: [
-      CLIENTE, GENERO, CONSULTOR,
-      { chave: 'montador', rotulo: 'Supervisor de Montagem', tipo: 'texto',
-        exemplo: 'Ex.: Rômullo Goulart', obrigatorio: true }
     ]
   },
 
@@ -570,61 +452,6 @@ const CATALOGO = [
   }
 
 ];
-
-/* ============================================================
-   BIBLIOTECA DE MATERIAIS
-   ------------------------------------------------------------
-   Links do Drive, agrupados. Para acrescentar um item, copie uma
-   linha e preencha:
-
-     nome      → como aparece na lista
-     descricao → uma linha curta (opcional)
-     url       → link do Drive. Deixe '' para marcar "em breve"
-     tipo      → o selo da esquerda: PASTA, PDF, PNG, DOC, LINK...
-     lojas     → ['sjc'], ['cgt'] ou ['sjc','cgt'] para as duas
-
-   IMPORTANTE: no Drive, cada arquivo ou pasta precisa estar
-   compartilhado como "Qualquer pessoa com o link". Senão o
-   vendedor abre e vê "pedir acesso".
-   ============================================================ */
-
-const BIBLIOTECA = [
-
-  {
-    grupo: 'Catálogos',
-    itens: [
-      { nome: 'Catálogos digitais', descricao: 'Catálogos para follow up, conversas e retargeting de clientes e arquitetos!',
-        url: 'https://drive.google.com/open?id=1DpfL3YHfD6J_kaLfUaUydZYLjZodMzjs&usp=drive_fs', tipo: 'PASTA', lojas: ['sjc'] },
-      { nome: 'Catálogos digitais', descricao: '',
-        url: 'https://drive.google.com/open?id=17M8sNhcZ1B9dU68VBV6jBoG4eC91Hru4&usp=drive_fs', tipo: 'PASTA', lojas: ['cgt'] }
-    ]
-  },
-
-  {
-    grupo: 'Documentos',
-    itens: [
-      { nome: 'Apresentação Clientes', descricao: 'Apresentação para clientes finais.',
-        url: 'https://docs.google.com/presentation/d/1PuTSYx9Cppav-oxWyV0ZeeKR7cD9EUty/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
-      { nome: 'Apresentação Arquitetos', descricao: 'Apresentação para arquitetos e designers.',
-        url: 'https://docs.google.com/presentation/d/1bUeeFLVEqcS9M0vDMLy2HqsxBbSUBLOQ/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
-    ]
-  },
-
-  {
-    grupo: 'Marca',
-    itens: [
-      { nome: 'Logos Dalmóbile SJC', descricao: 'PNG, SVG e versões monocromáticas',
-        url: '', tipo: 'PASTA', lojas: ['sjc'] },
-      { nome: 'Logos Dalmóbile Caraguá', descricao: 'PNG, SVG e versões monocromáticas',
-        url: '', tipo: 'PASTA', lojas: ['cgt'] },
-      { nome: 'Logo para grupos WhatsApp', descricao: 'Imagem a ser usada para criação de grupos do WhatsApp',
-        url: '', tipo: 'PDF', lojas: ['sjc', 'cgt'] }
-    ]
-  },
-  
-
-];
-
 
 /* ============================================================
    ÍCONES
@@ -686,7 +513,6 @@ try {
 selLoja.addEventListener('change', () => {
   try { localStorage.setItem('dalmobile:loja', selLoja.value); } catch (e) {}
   resultado.innerHTML = '';
-  montarBiblioteca();
 });
 
 /* ============================================================
@@ -727,108 +553,6 @@ function montarHub() {
     grade.appendChild(botao);
   });
 }
-
-/* ============================================================
-   BIBLIOTECA
-   ============================================================ */
-
-const acervo = el('acervo');
-const busca  = el('busca');
-
-busca.addEventListener('input', montarBiblioteca);
-
-function montarBiblioteca() {
-  const loja = selLoja.value;
-  const termo = busca.value.trim().toLowerCase();
-
-  acervo.innerHTML = '';
-  let encontrou = false;
-
-  BIBLIOTECA.forEach((grupo) => {
-
-    const itens = grupo.itens.filter((item) => {
-      if (!item.lojas.includes(loja)) return false;
-      if (!termo) return true;
-      return (item.nome + ' ' + (item.descricao || '') + ' ' + grupo.grupo)
-        .toLowerCase().includes(termo);
-    });
-
-    if (!itens.length) return;
-    encontrou = true;
-
-    const bloco = document.createElement('div');
-    bloco.className = 'grupo';
-
-    const titulo = document.createElement('h3');
-    titulo.textContent = grupo.grupo;
-    bloco.appendChild(titulo);
-
-    const lista = document.createElement('div');
-    lista.className = 'lista';
-
-    itens.forEach((item) => lista.appendChild(montarLink(item)));
-
-    bloco.appendChild(lista);
-    acervo.appendChild(bloco);
-  });
-
-  if (!encontrou) {
-    const vazio = document.createElement('p');
-    vazio.className = 'vazio-busca';
-    vazio.textContent = termo
-      ? 'Nenhum material encontrado para "' + busca.value.trim() + '".'
-      : 'Nenhum material cadastrado para esta loja ainda.';
-    acervo.appendChild(vazio);
-  }
-}
-
-function montarLink(item) {
-  const disponivel = Boolean(item.url);
-
-  const link = document.createElement(disponivel ? 'a' : 'div');
-  link.className = 'link-item' + (disponivel ? '' : ' indisponivel');
-
-  if (disponivel) {
-    link.href = item.url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-  }
-
-  const marcador = document.createElement('span');
-  marcador.className = 'marcador';
-  marcador.textContent = disponivel ? (item.tipo || 'LINK') : 'Em breve';
-
-  const conteudo = document.createElement('span');
-  conteudo.className = 'conteudo';
-
-  const titulo = document.createElement('span');
-  titulo.className = 'titulo';
-  titulo.textContent = item.nome;
-  conteudo.appendChild(titulo);
-
-  if (item.descricao) {
-    const sub = document.createElement('span');
-    sub.className = 'sub';
-    sub.textContent = item.descricao;
-    conteudo.appendChild(document.createElement('br'));
-    conteudo.appendChild(sub);
-  }
-
-  link.append(marcador, conteudo);
-
-  if (disponivel) {
-    const seta = document.createElement('span');
-    seta.className = 'externo';
-    seta.innerHTML =
-      '<svg width="13" height="13" viewBox="0 0 13 13" fill="none">' +
-      '<path d="M4 2h7v7M11 2L2.5 10.5" stroke="currentColor" stroke-width="1.5" ' +
-      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    link.appendChild(seta);
-  }
-
-  return link;
-}
-
 
 /* ============================================================
    FORMULÁRIO
@@ -1370,7 +1094,6 @@ function rotear() {
 window.addEventListener('hashchange', rotear);
 
 montarHub();
-montarBiblioteca();
 rotear();
 </script>
 
