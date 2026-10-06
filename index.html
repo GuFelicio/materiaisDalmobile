@@ -507,6 +507,18 @@ const CATALOGO = [
     ]
   },
 
+   {
+    id: 'projeto',
+    nome: 'Apresentação de projeto',
+    descricao: 'Criação da apresentação de projeto para o cliente, com fotos, plantas e detalhes do projeto.',
+    icone: 'deck',
+    formato: 'pdf',
+    pagina: 'projeto.html',
+    disponivel: true,
+    endpoints: {},
+    campos: []
+  },
+
   {
     id: 'confirmacao',
     nome: 'Confirmação de agendamento',
@@ -707,7 +719,13 @@ function montarHub() {
     botao.querySelector('p').textContent  = material.descricao;
 
     if (material.disponivel) {
-      botao.addEventListener('click', () => { location.hash = '#/' + material.id; });
+      botao.addEventListener('click', () => {
+        if (material.pagina) {
+          location.href = material.pagina;
+        } else {
+          location.hash = '#/' + material.id;
+        }
+      });
     }
 
     grade.appendChild(botao);

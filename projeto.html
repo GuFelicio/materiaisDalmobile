@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Apresentação de Projeto · Dalmóbile</title>
+<style>
+  :root {
+    --bg:      #f2f2f0;
+    --card:    #ffffff;
+    --ink:     #141618;
+    --ink-2:   #4a5054;
+    --muted:   #8a9094;
+    --line:    #e0e1df;
+    --line-2:  #c9cbc8;
+    --accent:  #141618;
+    --ok:      #1c6b3f;
+    --erro:    #b3261e;
+    --radius:  14px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 16px 64px; }
+
+  /* ---------- Cabeçalho ---------- */
+
+  .topo {
+    position: relative;
+    padding: 28px 0 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+
+  .tracos {
+    position: absolute; top: 26px; right: 0;
+    display: flex; gap: 5px; align-items: flex-start;
+    opacity: .5; pointer-events: none;
+  }
+  .tracos i { display: block; width: 1px; background: var(--line-2); }
+  .tracos i:nth-child(1) { height: 22px; }
+  .tracos i:nth-child(2) { height: 38px; }
+  .tracos i:nth-child(3) { height: 14px; }
+
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+
+  .assinatura {
+    margin: 3px 0 0; font-size: 10px; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+
+  .voltar {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: none; border: 0; padding: 0; margin-bottom: 18px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--ink-2); cursor: pointer; text-decoration: none;
+  }
+
+  /* ---------- Blocos ---------- */
+
+  .painel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .painel > h2 {
+    margin: 0 0 16px;
+    font-size: 11px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  .campo { margin-bottom: 15px; }
+  .campo:last-child { margin-bottom: 0; }
+
+  .campo > label {
+    display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;
+  }
+
+  .campo .nota {
+    display: block; font-size: 12px; font-weight: 400;
+    color: var(--muted); margin: -2px 0 6px;
+  }
+
+  input[type="text"], select {
+    width: 100%; padding: 12px 13px;
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 16px; font-family: inherit; color: var(--ink);
+    background: var(--card); appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath fill='none' stroke='%238a9094' stroke-width='1.6' d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center;
+    padding-right: 36px; cursor: pointer;
+  }
+
+  input:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(20,22,24,.07);
+  }
+
+  /* ---------- Ambientes ---------- */
+
+  .ambiente {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: var(--bg);
+  }
+
+  .ambiente-topo {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+
+  .ambiente-num {
+    flex: 0 0 auto; width: 26px; height: 26px;
+    display: grid; place-items: center;
+    background: var(--accent); color: #fff;
+    border-radius: 7px; font-size: 12px; font-weight: 700;
+  }
+
+  .ambiente-topo input { flex: 1; }
+
+  .remover {
+    flex: 0 0 auto; background: none; border: 0; padding: 6px;
+    color: var(--muted); cursor: pointer; line-height: 0;
+    border-radius: 6px;
+  }
+  .remover:hover { color: var(--erro); background: #fff; }
+
+  .linha-valor {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .linha-valor .rotulo {
+    flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--ink-2);
+    padding-left: 36px;
+  }
+  .linha-valor input { flex: 1; }
+
+  .solta {
+    position: relative;
+    border: 1px dashed var(--line-2);
+    border-radius: 9px; background: var(--card);
+    padding: 18px 14px; text-align: center;
+    font-size: 13px; color: var(--muted); cursor: pointer;
+    transition: border-color .12s, background .12s;
+  }
+  .solta:hover, .solta.ativa { border-color: var(--accent); background: #fff; }
+  .solta input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .solta strong { display: block; color: var(--ink); font-size: 14px; margin-bottom: 2px; }
+
+  .miniaturas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px; margin-top: 12px;
+  }
+
+  .mini {
+    position: relative; aspect-ratio: 16/9;
+    border-radius: 6px; overflow: hidden;
+    border: 1px solid var(--line-2); background: #fff;
+  }
+
+  .mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .mini .ordem {
+    position: absolute; left: 4px; top: 4px;
+    background: rgba(20,22,24,.78); color: #fff;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 5px; border-radius: 4px;
+  }
+
+  .mini-acoes {
+    position: absolute; right: 3px; bottom: 3px;
+    display: flex; gap: 2px;
+  }
+
+  .mini-acoes button {
+    width: 20px; height: 20px; padding: 0;
+    border: 0; border-radius: 4px;
+    background: rgba(20,22,24,.78); color: #fff;
+    font-size: 11px; line-height: 1; cursor: pointer;
+  }
+  .mini-acoes button:hover { background: #141618; }
+
+  .botao {
+    width: 100%; padding: 15px; border: 0; border-radius: 9px;
+    background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    cursor: pointer;
+  }
+  .botao:disabled { opacity: .45; cursor: default; }
+  .botao.verde { background: var(--ok); margin-top: 12px; }
+  .botao.vazado {
+    background: none; color: var(--ink-2);
+    border: 1px solid var(--line-2);
+  }
+
+  .add-ambiente { margin-top: 4px; }
+
+  .toggle {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 14px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-weight: 600; cursor: pointer; user-select: none;
+    margin-bottom: 12px;
+  }
+  .toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+  /* ---------- Resultado ---------- */
+
+  #saida { margin-top: 18px; }
+
+  .msg { font-size: 14px; text-align: center; color: var(--ink-2); margin: 0; }
+  .msg.erro { color: var(--erro); font-weight: 500; text-align: left; }
+
+  .barra {
+    height: 6px; background: var(--line); border-radius: 99px;
+    overflow: hidden; margin-top: 10px;
+  }
+  .barra i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+  .arquivo-pronto {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+  }
+  .arquivo-pronto .selo {
+    flex: 0 0 auto; font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    color: #fff; background: var(--erro); padding: 5px 7px; border-radius: 5px;
+  }
+  .arquivo-pronto .nome { font-size: 13px; font-weight: 600; word-break: break-word; }
+  .arquivo-pronto .sub { font-size: 12px; color: var(--muted); }
+
+  .aviso-config {
+    border: 1px solid #e8d7a8; background: #fdf8ea;
+    border-radius: 9px; padding: 14px 16px;
+    font-size: 13px; color: #6b5a24; margin-bottom: 16px;
+  }
+  .aviso-config code { background: #fff; padding: 1px 4px; border-radius: 4px; }
+
+  .rodape {
+    margin-top: 32px; text-align: center; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topo">
+    <div class="tracos"><i></i><i></i><i></i></div>
+    <h1 class="marca">Dalmóbile <span>· Apresentação de Projeto</span></h1>
+    <p class="assinatura">Crie seu mundo</p>
+  </header>
+
+  <a class="voltar" href="./">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Central de Peças
+  </a>
+
+  <div id="aviso-arquivos" class="aviso-config oculto"></div>
+
+  <div class="painel">
+    <h2>Dados do projeto</h2>
+
+    <div class="campo">
+      <label for="loja">Loja</label>
+      <select id="loja"></select>
+    </div>
+
+    <div class="campo">
+      <label for="cliente">Nome do cliente</label>
+      <input id="cliente" type="text" placeholder="Ex.: Gustavo Felício e Gleiza Dias" autocomplete="off">
+    </div>
+
+    <div class="campo">
+      <label for="arquiteto">Projeto por</label>
+      <input id="arquiteto" type="text" placeholder="Ex.: Camila Prado" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="painel">
+    <h2>Ambientes</h2>
+    <div id="ambientes"></div>
+    <button class="botao vazado add-ambiente" id="add">+ Adicionar ambiente</button>
+  </div>
+
+  <div class="painel">
+    <h2>Proposta</h2>
+
+    <label class="toggle" for="temPv">
+      <input type="checkbox" id="temPv">
+      Anexar o PV no fim da apresentação
+    </label>
+
+    <div class="solta oculto" id="area-pv">
+      <input type="file" id="pv" accept="application/pdf">
+      <strong>Escolher o PDF do PV</strong>
+      <span id="pv-nome">Exportado do sistema, com valores e forma de pagamento.</span>
+    </div>
+  </div>
+
+  <button class="botao" id="gerar">Gerar apresentação</button>
+  <div id="saida"></div>
+
+  <p class="rodape">Lumina · Uso interno</p>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script>
+/* ============================================================
+   CONFIGURAÇÃO
+   ------------------------------------------------------------
+   ARQUIVOS QUE PRECISAM ESTAR AO LADO DESTA PÁGINA:
+
+   bases-sjc.pdf e bases-cgt.pdf
+        → as páginas fixas de cada loja, exportadas do Slides,
+          SEM nenhum texto variável, nesta ordem:
+            1. capa (sem o nome do cliente e sem o "Projeto por")
+            2. móveis personalizados
+            3. da marcenaria à personalização
+            4. o que pode ser construído sob medida
+            5. capa de ambiente (só o fundo, sem título, sem régua,
+               sem investimento)
+            6. contracapa
+
+   Krub-Medium.ttf e Krub-Bold.ttf
+        → a fonte da apresentação, nos dois pesos usados na arte.
+          Pode subir a família inteira; o código só carrega esses
+          dois, então os outros pesos ficam de reserva sem pesar
+          nada no carregamento.
+
+   marca.png (opcional)
+        → logo para aparecer sobre as fotos dos ambientes.
+          Só entra se MARCA.usar = true.
+
+   POSIÇÕES: tudo em fração da página (0 a 1), medido direto no
+   PDF que você enviou. x cresce para a direita, y cresce PARA
+   CIMA a partir da base. Os textos são alinhados À DIREITA, então
+   o que se informa é a borda direita (xDireita).
+   ============================================================ */
+
+const CONFIG = {
+
+  arquivos: {
+    bases: {
+      sjc: 'bases-sjc.pdf',
+      cgt: 'bases-cgt.pdf'
+    },
+    /* Nomes como vêm do Google Fonts. Maiúsculas e minúsculas
+       importam no servidor — se renomear os arquivos, ajuste aqui. */
+    fonteMedia:   'Krub-Medium.ttf',
+    fonteNegrito: 'Krub-Bold.ttf',
+    marca:        'marca.png'
+  },
+
+  /* Índice de cada página dentro do bases da loja (começa em 0) */
+  PAGINAS: {
+    capa:           0,
+    institucionais: [1, 2, 3],
+    ambiente:       4,
+    contracapa:     5
+  },
+
+  LOJAS: [
+    { id: 'sjc', nome: 'São José dos Campos' },
+    { id: 'cgt', nome: 'Caraguatatuba' }
+  ],
+
+  COR_TEXTO: '#595959',
+
+  /* Textos variáveis da capa */
+  CAPA: {
+    cliente: {
+      xDireita: 0.9563, y: 0.3612, tamanho: 0.04444, negrito: false
+    },
+    arquiteto: {
+      xDireita: 0.9563, y: 0.2985, tamanho: 0.02963, negrito: false,
+      prefixo: 'Projeto por: '
+    }
+  },
+
+  /* Capa de cada ambiente */
+  AMBIENTE: {
+    titulo: {
+      xDireita: 0.9451,
+      y: 0.5583,          // linha de base da ÚLTIMA linha do título
+      tamanho: 0.09630,
+      larguraMax: 0.60,   // antes de quebrar a linha
+      entrelinha: 1.14    // títulos longos crescem para cima
+    },
+    regua: {
+      x0: 0.6308, x1: 0.9386,
+      abaixoDoTitulo: 0.01012,
+      espessura: 0.00284,
+      cor: '#000000'
+    },
+    investimento: {
+      xDireita: 0.9379,
+      abaixoDoTitulo: 0.07753,
+      tamanho: 0.02963,
+      prefixo: 'Investimento: R$'
+    }
+  },
+
+  /* Logo sobre as fotos dos ambientes. Suba marca.png e troque
+     para true se quiser essa marcação nas páginas de imagem. */
+  MARCA: {
+    usar: false,
+    largura: 0.085,
+    direita: 0.030,
+    base: 0.045
+  },
+
+  /* Qualidade das imagens dentro do PDF.
+     1920 é mais que suficiente para apresentação em tela e
+     mantém o arquivo leve. Suba para 2560 se for imprimir. */
+  IMAGEM: {
+    larguraMax: 1920,
+    qualidade: 0.86
+  }
+};
+
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+
+const el = (id) => document.getElementById(id);
+
+const selLoja   = el('loja');
+const listaAmb  = el('ambientes');
+const saida     = el('saida');
+const btnGerar  = el('gerar');
+const chkPv     = el('temPv');
+const areaPv    = el('area-pv');
+const inputPv   = el('pv');
+
+let ambientes = [];   // [{ id, nome, valor, imagens: [File] }]
+let proximoId = 1;
+let arquivoPv = null;
+let ultimo = null;    // { nome, bytes }
+
+/* ============================================================
+   LOJA
+   ============================================================ */
+
+CONFIG.LOJAS.forEach((loja) => {
+  const opt = document.createElement('option');
+  opt.value = loja.id;
+  opt.textContent = loja.nome;
+  selLoja.appendChild(opt);
+});
+
+try {
+  const salva = localStorage.getItem('dalmobile:loja');
+  if (salva && CONFIG.LOJAS.some((l) => l.id === salva)) selLoja.value = salva;
+} catch (e) {}
+
+selLoja.addEventListener('change', () => {
+  try { localStorage.setItem('dalmobile:loja', selLoja.value); } catch (e) {}
+});
+
+/* ============================================================
+   AMBIENTES
+   ============================================================ */
+
+el('add').addEventListener('click', () => {
+  ambientes.push({ id: proximoId++, nome: '', valor: '', imagens: [] });
+  desenharAmbientes();
+});
+
+function desenharAmbientes() {
+  listaAmb.innerHTML = '';
+
+  if (!ambientes.length) {
+    const vazio = document.createElement('p');
+    vazio.className = 'msg';
+    vazio.style.padding = '12px 0';
+    vazio.textContent = 'Nenhum ambiente ainda. Comece adicionando o primeiro.';
+    listaAmb.appendChild(vazio);
+    return;
+  }
+
+  ambientes.forEach((amb, i) => listaAmb.appendChild(cartaoAmbiente(amb, i)));
+}
+
+function cartaoAmbiente(amb, indice) {
+  const cartao = document.createElement('div');
+  cartao.className = 'ambiente';
+
+  /* Cabeçalho: número, nome e remover */
+  const topo = document.createElement('div');
+  topo.className = 'ambiente-topo';
+
+  const num = document.createElement('span');
+  num.className = 'ambiente-num';
+  num.textContent = indice + 1;
+
+  const nome = document.createElement('input');
+  nome.type = 'text';
+  nome.placeholder = 'Ex.: Cozinha e Sala de Estar';
+  nome.value = amb.nome;
+  nome.addEventListener('input', () => { amb.nome = nome.value; });
+
+  const remover = document.createElement('button');
+  remover.className = 'remover';
+  remover.title = 'Remover ambiente';
+  remover.innerHTML =
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none">' +
+    '<path d="M3 4h10M6.5 4V2.5h3V4M5 4l.6 9h4.8L11 4" stroke="currentColor" ' +
+    'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  remover.addEventListener('click', () => {
+    ambientes = ambientes.filter((a) => a.id !== amb.id);
+    desenharAmbientes();
+  });
+
+  topo.append(num, nome, remover);
+
+  /* Investimento */
+  const linhaValor = document.createElement('div');
+  linhaValor.className = 'linha-valor';
+
+  const rotulo = document.createElement('span');
+  rotulo.className = 'rotulo';
+  rotulo.textContent = 'Investimento R$';
+
+  const valor = document.createElement('input');
+  valor.type = 'text';
+  valor.inputMode = 'decimal';
+  valor.placeholder = '150.000,00 — deixe vazio para não mostrar';
+  valor.value = amb.valor;
+  valor.addEventListener('input', () => { amb.valor = valor.value; });
+  valor.addEventListener('blur', () => {
+    amb.valor = formatarValor(valor.value);
+    valor.value = amb.valor;
+  });
+
+  linhaValor.append(rotulo, valor);
+
+  /* Área de upload */
+  const solta = document.createElement('div');
+  solta.className = 'solta';
+
+  const entrada = document.createElement('input');
+  entrada.type = 'file';
+  entrada.accept = 'image/*';
+  entrada.multiple = true;
+
+  const titulo = document.createElement('strong');
+  titulo.textContent = 'Adicionar imagens';
+
+  const dica = document.createElement('span');
+  dica.textContent = 'Selecione várias de uma vez, ou arraste os arquivos aqui.';
+
+  solta.append(entrada, titulo, dica);
+
+  entrada.addEventListener('change', () => {
+    amb.imagens = amb.imagens.concat(Array.from(entrada.files || []));
+    entrada.value = '';
+    desenharAmbientes();
+  });
+
+  /* Arrastar e soltar */
+  ['dragenter', 'dragover'].forEach((ev) =>
+    solta.addEventListener(ev, (e) => { e.preventDefault(); solta.classList.add('ativa'); })
+  );
+  ['dragleave', 'drop'].forEach((ev) =>
+    solta.addEventListener(ev, (e) => { e.preventDefault(); solta.classList.remove('ativa'); })
+  );
+  solta.addEventListener('drop', (e) => {
+    const arquivos = Array.from(e.dataTransfer.files || [])
+      .filter((f) => f.type.startsWith('image/'));
+    if (!arquivos.length) return;
+    amb.imagens = amb.imagens.concat(arquivos);
+    desenharAmbientes();
+  });
+
+  cartao.append(topo, linhaValor, solta);
+
+  /* Miniaturas */
+  if (amb.imagens.length) {
+    const grade = document.createElement('div');
+    grade.className = 'miniaturas';
+
+    amb.imagens.forEach((arquivo, i) => {
+      const mini = document.createElement('div');
+      mini.className = 'mini';
+
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = URL.createObjectURL(arquivo);
+      img.onload = () => URL.revokeObjectURL(img.src);
+
+      const ordem = document.createElement('span');
+      ordem.className = 'ordem';
+      ordem.textContent = i + 1;
+
+      const acoes = document.createElement('div');
+      acoes.className = 'mini-acoes';
+
+      if (i > 0) acoes.appendChild(botaoMini('‹', 'Mover para trás', () => {
+        [amb.imagens[i - 1], amb.imagens[i]] = [amb.imagens[i], amb.imagens[i - 1]];
+        desenharAmbientes();
+      }));
+
+      if (i < amb.imagens.length - 1) acoes.appendChild(botaoMini('›', 'Mover para frente', () => {
+        [amb.imagens[i + 1], amb.imagens[i]] = [amb.imagens[i], amb.imagens[i + 1]];
+        desenharAmbientes();
+      }));
+
+      acoes.appendChild(botaoMini('×', 'Remover imagem', () => {
+        amb.imagens.splice(i, 1);
+        desenharAmbientes();
+      }));
+
+      mini.append(img, ordem, acoes);
+      grade.appendChild(mini);
+    });
+
+    cartao.appendChild(grade);
+  }
+
+  return cartao;
+}
+
+function botaoMini(texto, titulo, aoClicar) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = texto;
+  b.title = titulo;
+  b.addEventListener('click', aoClicar);
+  return b;
+}
+
+/** Aceita 150000, 150.000 ou 150000,00 e devolve 150.000,00 */
+function formatarValor(bruto) {
+  const texto = String(bruto || '').trim();
+  if (!texto) return '';
+
+  const limpo = texto.replace(/[^\d,.]/g, '');
+  if (!limpo) return '';
+
+  /* A última vírgula ou ponto seguido de 1 ou 2 dígitos são os centavos */
+  const centavos = limpo.match(/[.,](\d{1,2})$/);
+  const inteiros = (centavos ? limpo.slice(0, centavos.index) : limpo).replace(/\D/g, '');
+
+  if (!inteiros) return '';
+
+  const comPontos = inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const fim = centavos ? centavos[1].padEnd(2, '0') : '00';
+
+  return comPontos + ',' + fim;
+}
+
+/* Começa com um ambiente pronto para preencher */
+ambientes.push({ id: proximoId++, nome: '', valor: '', imagens: [] });
+desenharAmbientes();
+
+/* ============================================================
+   PV
+   ============================================================ */
+
+chkPv.addEventListener('change', () => {
+  areaPv.classList.toggle('oculto', !chkPv.checked);
+  if (!chkPv.checked) {
+    arquivoPv = null;
+    inputPv.value = '';
+    el('pv-nome').textContent = 'Exportado do sistema, com valores e forma de pagamento.';
+  }
+});
+
+inputPv.addEventListener('change', () => {
+  arquivoPv = inputPv.files && inputPv.files[0] ? inputPv.files[0] : null;
+  el('pv-nome').textContent = arquivoPv
+    ? arquivoPv.name
+    : 'Exportado do sistema, com valores e forma de pagamento.';
+});
+
+/* ============================================================
+   GERAÇÃO DO PDF
+   ============================================================ */
+
+btnGerar.addEventListener('click', gerar);
+
+async function gerar() {
+
+  const cliente = el('cliente').value.trim();
+  const arquiteto = el('arquiteto').value.trim();
+
+  const faltando = [];
+  if (!cliente) faltando.push('Nome do cliente');
+
+  const comImagem = ambientes.filter((a) => a.imagens.length);
+  if (!comImagem.length) faltando.push('ao menos um ambiente com imagens');
+  comImagem.forEach((a, i) => {
+    if (!a.nome.trim()) faltando.push('nome do ambiente ' + (i + 1));
+  });
+  if (chkPv.checked && !arquivoPv) faltando.push('o PDF do PV');
+
+  if (faltando.length) {
+    erro('Falta preencher: ' + faltando.join(', ') + '.');
+    return;
+  }
+
+  const total = comImagem.reduce((n, a) => n + a.imagens.length, 0);
+
+  btnGerar.disabled = true;
+  progresso('Carregando os arquivos base...', 0);
+
+  try {
+    const { PDFDocument } = PDFLib;
+
+    /* --- Arquivos base da loja escolhida --- */
+    const [basesBytes, mediaBytes, negritoBytes, marcaBytes] = await Promise.all([
+      baixar(CONFIG.arquivos.bases[selLoja.value]),
+      baixar(CONFIG.arquivos.fonteMedia),
+      baixar(CONFIG.arquivos.fonteNegrito),
+      CONFIG.MARCA.usar ? baixar(CONFIG.arquivos.marca).catch(() => null) : Promise.resolve(null)
+    ]);
+
+    const bases = await PDFDocument.load(basesBytes);
+    const doc = await PDFDocument.create();
+    doc.registerFontkit(fontkit);
+
+    const fontes = {
+      media:   await doc.embedFont(mediaBytes,   { subset: true }),
+      negrito: await doc.embedFont(negritoBytes, { subset: true })
+    };
+
+    const marca = marcaBytes ? await doc.embedPng(marcaBytes) : null;
+
+    const P = CONFIG.PAGINAS;
+
+    /* Tamanho do slide, lido da própria arte */
+    const amostra = bases.getPage(P.capa);
+    const LARGURA = amostra.getWidth();
+    const ALTURA = amostra.getHeight();
+    const pagina = { LARGURA, ALTURA, fontes };
+
+    /* --- 1. Capa, com os dados do projeto --- */
+    progresso('Montando a abertura...', 2);
+
+    const [pCapa] = await doc.copyPages(bases, [P.capa]);
+    doc.addPage(pCapa);
+
+    escreverDireita(pCapa, cliente, CONFIG.CAPA.cliente, pagina);
+
+    if (arquiteto) {
+      escreverDireita(
+        pCapa,
+        (CONFIG.CAPA.arquiteto.prefixo || '') + arquiteto,
+        CONFIG.CAPA.arquiteto,
+        pagina
+      );
+    }
+
+    /* --- 2. Páginas institucionais --- */
+    const institucionais = await doc.copyPages(bases, P.institucionais);
+    institucionais.forEach((p) => doc.addPage(p));
+
+    /* --- 3. Ambientes --- */
+    let feitas = 0;
+
+    for (const amb of comImagem) {
+
+      const [pAmb] = await doc.copyPages(bases, [P.ambiente]);
+      doc.addPage(pAmb);
+      escreverCapaAmbiente(pAmb, amb, pagina);
+
+      for (const arquivo of amb.imagens) {
+        feitas++;
+        progresso(
+          'Processando imagem ' + feitas + ' de ' + total + ' — ' + amb.nome.trim(),
+          5 + Math.round((feitas / total) * 88)
+        );
+
+        const jpeg = await reduzirImagem(arquivo);
+        const imagem = await doc.embedJpg(jpeg);
+
+        const pFoto = doc.addPage([LARGURA, ALTURA]);
+        desenharPreenchendo(pFoto, imagem, LARGURA, ALTURA);
+
+        if (marca) {
+          const l = LARGURA * CONFIG.MARCA.largura;
+          const a = l * (marca.height / marca.width);
+          pFoto.drawImage(marca, {
+            x: LARGURA - l - LARGURA * CONFIG.MARCA.direita,
+            y: ALTURA * CONFIG.MARCA.base,
+            width: l,
+            height: a
+          });
+        }
+
+        /* Deixa o navegador respirar entre as imagens */
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+
+    /* --- 4. PV, se houver --- */
+    if (chkPv.checked && arquivoPv) {
+      progresso('Anexando o PV...', 95);
+
+      const pvDoc = await PDFDocument.load(await arquivoPv.arrayBuffer());
+      const incorporadas = await doc.embedPdf(pvDoc, pvDoc.getPageIndices());
+
+      incorporadas.forEach((pv) => {
+        const p = doc.addPage([LARGURA, ALTURA]);
+        p.drawRectangle({
+          x: 0, y: 0, width: LARGURA, height: ALTURA,
+          color: PDFLib.rgb(1, 1, 1)
+        });
+
+        const margem = 0.04;
+        const escala = Math.min(
+          (LARGURA * (1 - margem * 2)) / pv.width,
+          (ALTURA * (1 - margem * 2)) / pv.height
+        );
+
+        p.drawPage(pv, {
+          x: (LARGURA - pv.width * escala) / 2,
+          y: (ALTURA - pv.height * escala) / 2,
+          width: pv.width * escala,
+          height: pv.height * escala
+        });
+      });
+    }
+
+    /* --- 5. Contracapa --- */
+    progresso('Fechando o arquivo...', 98);
+
+    if (P.contracapa !== undefined) {
+      const [pFim] = await doc.copyPages(bases, [P.contracapa]);
+      doc.addPage(pFim);
+    }
+
+    const bytes = await doc.save();
+
+    ultimo = { nome: montarNome(cliente), bytes: bytes };
+    pronto(doc.getPageCount(), bytes.length);
+
+  } catch (e) {
+    console.error(e);
+    erro(mensagemDeErro(e));
+  } finally {
+    btnGerar.disabled = false;
+  }
+}
+
+
+/* ============================================================
+   DESENHO
+   ============================================================ */
+
+/** Texto de uma linha, alinhado à direita */
+function escreverDireita(p, texto, pos, pg) {
+  const fonte = pos.negrito ? pg.fontes.negrito : pg.fontes.media;
+  const tamanho = pg.ALTURA * pos.tamanho;
+
+  p.drawText(texto, {
+    x: pg.LARGURA * pos.xDireita - fonte.widthOfTextAtSize(texto, tamanho),
+    y: pg.ALTURA * pos.y,
+    size: tamanho,
+    font: fonte,
+    color: hexParaRgb(pos.cor || CONFIG.COR_TEXTO)
+  });
+}
+
+/**
+ * Capa do ambiente: título alinhado à direita, régua logo abaixo
+ * e o investimento em seguida.
+ * Título longo quebra em mais linhas e CRESCE PARA CIMA, para que
+ * a régua e o investimento fiquem sempre no mesmo lugar.
+ */
+function escreverCapaAmbiente(p, amb, pg) {
+  const C = CONFIG.AMBIENTE;
+  const fonte = pg.fontes.negrito;
+
+  const tamanho = pg.ALTURA * C.titulo.tamanho;
+  const linhas = quebrarLinhas(
+    amb.nome.trim(), fonte, tamanho, pg.LARGURA * C.titulo.larguraMax
+  );
+
+  const alturaLinha = tamanho * C.titulo.entrelinha;
+  const baseUltima = pg.ALTURA * C.titulo.y;
+
+  linhas.forEach((linha, i) => {
+    const deDentroParaCima = (linhas.length - 1 - i) * alturaLinha;
+    p.drawText(linha, {
+      x: pg.LARGURA * C.titulo.xDireita - fonte.widthOfTextAtSize(linha, tamanho),
+      y: baseUltima + deDentroParaCima,
+      size: tamanho,
+      font: fonte,
+      color: hexParaRgb(CONFIG.COR_TEXTO)
+    });
+  });
+
+  /* Régua */
+  const yRegua = baseUltima - pg.ALTURA * C.regua.abaixoDoTitulo;
+  const espessura = pg.ALTURA * C.regua.espessura;
+
+  p.drawRectangle({
+    x: pg.LARGURA * C.regua.x0,
+    y: yRegua,
+    width: pg.LARGURA * (C.regua.x1 - C.regua.x0),
+    height: espessura,
+    color: hexParaRgb(C.regua.cor)
+  });
+
+  /* Investimento, só quando preenchido */
+  const valor = formatarValor(amb.valor);
+  if (!valor) return;
+
+  const tamanhoValor = pg.ALTURA * C.investimento.tamanho;
+  const texto = (C.investimento.prefixo || '') + valor;
+
+  p.drawText(texto, {
+    x: pg.LARGURA * C.investimento.xDireita -
+       pg.fontes.media.widthOfTextAtSize(texto, tamanhoValor),
+    y: baseUltima - pg.ALTURA * C.investimento.abaixoDoTitulo,
+    size: tamanhoValor,
+    font: pg.fontes.media,
+    color: hexParaRgb(CONFIG.COR_TEXTO)
+  });
+}
+
+function quebrarLinhas(texto, fonte, tamanho, larguraMax) {
+  const palavras = String(texto).split(/\s+/);
+  const linhas = [];
+  let atual = '';
+
+  palavras.forEach((palavra) => {
+    const teste = atual ? atual + ' ' + palavra : palavra;
+    if (fonte.widthOfTextAtSize(teste, tamanho) <= larguraMax || !atual) {
+      atual = teste;
+    } else {
+      linhas.push(atual);
+      atual = palavra;
+    }
+  });
+
+  if (atual) linhas.push(atual);
+  return linhas;
+}
+
+/** Desenha a imagem preenchendo a página, cortando o excedente */
+function desenharPreenchendo(p, imagem, LARGURA, ALTURA) {
+  const escala = Math.max(LARGURA / imagem.width, ALTURA / imagem.height);
+  const l = imagem.width * escala;
+  const a = imagem.height * escala;
+
+  p.drawImage(imagem, {
+    x: (LARGURA - l) / 2,
+    y: (ALTURA - a) / 2,
+    width: l,
+    height: a
+  });
+}
+
+
+/* ============================================================
+   IMAGENS
+   ============================================================ */
+
+/**
+ * Reduz a imagem e devolve JPEG. Renders costumam vir em 4K e
+ * pesar vários MB; a 1920 o resultado é visualmente idêntico
+ * numa apresentação e o PDF fica muitas vezes menor.
+ */
+async function reduzirImagem(arquivo) {
+  const bitmap = await carregarBitmap(arquivo);
+
+  const escala = Math.min(1, CONFIG.IMAGEM.larguraMax / bitmap.width);
+  const largura = Math.round(bitmap.width * escala);
+  const altura = Math.round(bitmap.height * escala);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = largura;
+  canvas.height = altura;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, largura, altura);
+  ctx.drawImage(bitmap, 0, 0, largura, altura);
+
+  if (bitmap.close) bitmap.close();
+
+  const blob = await new Promise((r) =>
+    canvas.toBlob(r, 'image/jpeg', CONFIG.IMAGEM.qualidade)
+  );
+
+  canvas.width = canvas.height = 0;   // libera a memória
+  return await blob.arrayBuffer();
+}
+
+function carregarBitmap(arquivo) {
+  if (window.createImageBitmap) {
+    return createImageBitmap(arquivo, { imageOrientation: 'from-image' })
+      .catch(() => carregarImg(arquivo));
+  }
+  return carregarImg(arquivo);
+}
+
+function carregarImg(arquivo) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('imagem inválida')); };
+    img.src = url;
+  });
+}
+
+
+/* ============================================================
+   UTILITÁRIOS
+   ============================================================ */
+
+async function baixar(caminho) {
+  const r = await fetch(caminho, { cache: 'no-cache' });
+
+  /* O servidor devolve a página inicial quando o endereço não existe,
+     em vez de um 404. Sem essa checagem, receberíamos HTML achando
+     que é PDF e o erro sairia incompreensível. */
+  const tipo = (r.headers.get('content-type') || '').toLowerCase();
+
+  if (!r.ok || tipo.indexOf('text/html') !== -1) {
+    throw new Error('ARQUIVO_FALTANDO:' + caminho);
+  }
+
+  return await r.arrayBuffer();
+}
+
+function hexParaRgb(hex) {
+  const h = String(hex).replace('#', '');
+  return PDFLib.rgb(
+    parseInt(h.substring(0, 2), 16) / 255,
+    parseInt(h.substring(2, 4), 16) / 255,
+    parseInt(h.substring(4, 6), 16) / 255
+  );
+}
+
+function montarNome(cliente) {
+  const data = new Date().toISOString().slice(0, 10);
+  return (data + ' - Projeto ' + cliente).replace(/[\\\/:*?"<>|]/g, '-') + '.pdf';
+}
+
+function mensagemDeErro(e) {
+  const m = String(e && e.message || e);
+
+  if (m.indexOf('ARQUIVO_FALTANDO:') === 0) {
+    return 'Não encontrei o arquivo "' + m.split(':')[1] + '" ao lado desta página. ' +
+           'Suba bases-sjc.pdf, bases-cgt.pdf, Krub-Medium.ttf e Krub-Bold.ttf ' +
+           'na mesma pasta do projeto.html.';
+  }
+  if (/encrypt/i.test(m)) {
+    return 'O PDF do PV está protegido por senha. Exporte uma versão sem proteção.';
+  }
+  if (/memory|allocation/i.test(m)) {
+    return 'O navegador ficou sem memória. Tente gerar com menos imagens por vez, ' +
+           'ou reduza a largura máxima na configuração.';
+  }
+  return 'Algo deu errado ao montar o PDF: ' + m;
+}
+
+
+/* ============================================================
+   INTERFACE DE SAÍDA
+   ============================================================ */
+
+function progresso(texto, porcento) {
+  saida.innerHTML = '';
+
+  const p = document.createElement('p');
+  p.className = 'msg';
+  p.textContent = texto;
+
+  const barra = document.createElement('div');
+  barra.className = 'barra';
+  const dentro = document.createElement('i');
+  dentro.style.width = porcento + '%';
+  barra.appendChild(dentro);
+
+  saida.append(p, barra);
+}
+
+function erro(texto) {
+  saida.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'msg erro';
+  p.textContent = texto;
+  saida.appendChild(p);
+}
+
+function pronto(paginas, bytes) {
+  saida.innerHTML = '';
+
+  const cartao = document.createElement('div');
+  cartao.className = 'arquivo-pronto';
+
+  const selo = document.createElement('span');
+  selo.className = 'selo';
+  selo.textContent = 'PDF';
+
+  const texto = document.createElement('div');
+  const nome = document.createElement('div');
+  nome.className = 'nome';
+  nome.textContent = ultimo.nome;
+
+  const sub = document.createElement('div');
+  sub.className = 'sub';
+  sub.textContent = paginas + ' páginas · ' + (bytes / 1048576).toFixed(1) + ' MB';
+
+  texto.append(nome, sub);
+  cartao.append(selo, texto);
+
+  const baixar = document.createElement('button');
+  baixar.className = 'botao verde';
+  baixar.textContent = 'Baixar apresentação';
+  baixar.addEventListener('click', () => salvar(false));
+
+  const abrir = document.createElement('button');
+  abrir.className = 'botao vazado';
+  abrir.style.marginTop = '8px';
+  abrir.textContent = 'Abrir para conferir';
+  abrir.addEventListener('click', () => salvar(true));
+
+  saida.append(cartao, baixar, abrir);
+}
+
+function salvar(abrir) {
+  const url = URL.createObjectURL(
+    new Blob([ultimo.bytes], { type: 'application/pdf' })
+  );
+
+  const EH_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (abrir || EH_IOS) {
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = ultimo.nome;
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 1000);
+}
+
+
+/* ============================================================
+   CHECAGEM DOS ARQUIVOS BASE, ao abrir a página
+   ============================================================ */
+
+(async function conferirArquivos() {
+  const obrigatorios = Object.values(CONFIG.arquivos.bases)
+    .concat([CONFIG.arquivos.fonteMedia, CONFIG.arquivos.fonteNegrito]);
+
+  const faltando = [];
+  let erroDeRede = false;
+
+  for (const caminho of obrigatorios) {
+    try {
+      /* Pedimos só o primeiro byte: confirma que o arquivo existe e
+         qual é o tipo, sem baixar os 800 KB do PDF. */
+      const r = await fetch(caminho, {
+        cache: 'no-cache',
+        headers: { Range: 'bytes=0-0' }
+      });
+
+      const tipo = (r.headers.get('content-type') || '').toLowerCase();
+
+      if (!r.ok || tipo.indexOf('text/html') !== -1) faltando.push(caminho);
+
+    } catch (e) {
+      faltando.push(caminho);
+      erroDeRede = true;
+    }
+  }
+
+  if (!faltando.length) return;
+
+  const aviso = el('aviso-arquivos');
+  aviso.classList.remove('oculto');
+
+  /* Abrir o arquivo com dois cliques (endereço file://) impede a página
+     de ler qualquer outro arquivo do disco. Como nesse caso TODOS
+     falham por erro de rede, dá para distinguir dos arquivos ausentes. */
+  if (erroDeRede && location.protocol === 'file:') {
+    aviso.innerHTML =
+      '<strong>Esta página precisa ser aberta por um endereço, não pelo arquivo.</strong> ' +
+      'Abrindo com dois cliques, o navegador bloqueia a leitura dos arquivos base. ' +
+      'Suba a pasta no servidor, ou rode <code>python3 -m http.server 8000</code> ' +
+      'dentro dela e abra <code>http://localhost:8000/projeto.html</code>.';
+    return;
+  }
+
+  aviso.innerHTML =
+    '<strong>Falta subir ' + (faltando.length > 1 ? 'os arquivos' : 'o arquivo') + ':</strong> ' +
+    faltando.map((f) => '<code>' + f + '</code>').join(', ') +
+    '. Eles precisam ficar na mesma pasta desta página.';
+})();
+</script>
+
+</body>
+</html>
