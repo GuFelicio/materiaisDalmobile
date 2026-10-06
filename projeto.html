@@ -356,12 +356,11 @@
           dois, então os outros pesos ficam de reserva sem pesar
           nada no carregamento.
 
-   marca-preta.png e marca-branca.png (opcionais)
-        → logo para aparecer sobre as fotos dos ambientes. A página
-          mede a claridade do canto onde o logo cai e escolhe sozinha
-          a versão que contrasta: foto clara ali → logo preto; foto
-          escura → logo branco. Se só uma das duas subir, ela é usada
-          em todas as fotos. Só entra se MARCA.usar = true.
+   marca.png (opcional)
+        → etiqueta da marca, aplicada no canto inferior direito de
+          cada foto de ambiente. Como a etiqueta já tem fundo próprio,
+          ela funciona sobre foto clara ou escura. Só entra se
+          MARCA.usar = true.
 
    POSIÇÕES: tudo em fração da página (0 a 1), medido direto no
    PDF que você enviou. x cresce para a direita, y cresce PARA
@@ -412,7 +411,12 @@ const CONFIG = {
   AMBIENTE: {
     titulo: {
       xDireita: 0.9451,
-      y: 0.5583,          // linha de base da ÚLTIMA linha do título
+      y: 0.5583,          // âncora medida na arte: régua e investimento
+      /* Quanto o título sobe acima da âncora, para não encostar na
+         régua. Sem isso a perna do "j" e do "ç" chega na linha.
+         Suba para 0.030 se quiser mais ar, zere para voltar ao
+         encaixe original. */
+      respiro: 0.022,
       tamanho: 0.09630,
       larguraMax: 0.60,   // antes de quebrar a linha
       entrelinha: 1.14    // títulos longos crescem para cima
@@ -431,22 +435,20 @@ const CONFIG = {
     }
   },
 
-  /* Logo sobre as fotos dos ambientes.
-     Suba as duas versões: a página mede a claridade do canto de cada
-     foto e usa a que tem contraste. Se só uma das duas existir, ela é
-     usada em todas. Se nenhuma existir, as fotos saem sem logo e a
-     tela avisa o motivo. */
+  /* Etiqueta da marca, no canto inferior direito das fotos.
+     A altura sai sozinha da proporção do PNG — só a largura é
+     informada. Se o arquivo faltar ou o PDF não aceitar o PNG, as
+     fotos saem sem etiqueta e a tela avisa o motivo. */
   MARCA: {
     usar: true,
-    escura: 'marca-preta.png',    // para fotos de canto claro
-    clara:  'marca-branca.png',   // para fotos de canto escuro
-    largura: 0.085,
+    arquivo: 'marca.png',
+    /* Fração da largura da página. 0.12 ≈ 12% — a etiqueta é larga
+       e deitada, então precisa de mais espaço que um logo isolado.
+       Suba para 0.15 se quiser ela mais presente, desça para 0.09
+       se quiser mais discreta. */
+    largura: 0.12,
     direita: 0.030,
-    base: 0.045,
-    /* Claridade média do canto, de 0 (preto) a 1 (branco), acima da
-       qual o fundo é considerado claro. Suba se o logo branco estiver
-       aparecendo em fotos que já são claras. */
-    limiar: 0.55
+    base: 0.045
   },
 
   /* Qualidade das imagens dentro do PDF.
@@ -764,34 +766,21 @@ async function gerar() {
       negrito: await doc.embedFont(negritoBytes, { subset: true })
     };
 
-    /* O logo sobre as fotos é opcional, mas quando falha o motivo
-       precisa aparecer — senão a peça sai sem ele e sem explicação. */
-    const marcas = { escura: null, clara: null };
+    /* A etiqueta é opcional, mas quando falha o motivo precisa
+       aparecer — senão a peça sai sem ela e sem explicação. */
+    let marca = null;
     let avisoMarca = '';
 
-    if (CONFIG.MARCA.usar) {
-      const problemas = [];
-
-      for (const tom of ['escura', 'clara']) {
-        const caminho = CONFIG.MARCA[tom];
-        if (!caminho) continue;
-        try {
-          marcas[tom] = await doc.embedPng(await baixar(caminho));
-        } catch (e) {
-          problemas.push(
-            caminho + (/ARQUIVO_FALTANDO/.test(String(e.message))
-              ? ' (não encontrado)'
-              : ' (não é um PNG que o PDF aceita — reexporte sem ' +
-                'entrelaçamento, em 8 bits)')
-          );
-        }
-      }
-
-      if (!marcas.escura && !marcas.clara) {
-        avisoMarca = 'O logo não entrou nas fotos: ' + problemas.join('; ') + '.';
-      } else if (problemas.length) {
-        avisoMarca = 'Usei só uma versão do logo em todas as fotos, porque ' +
-                     problemas.join('; ') + '.';
+    if (CONFIG.MARCA.usar && CONFIG.MARCA.arquivo) {
+      try {
+        marca = await doc.embedPng(await baixar(CONFIG.MARCA.arquivo));
+      } catch (e) {
+        avisoMarca = 'A etiqueta não entrou nas fotos: ' +
+          CONFIG.MARCA.arquivo +
+          (/ARQUIVO_FALTANDO/.test(String(e.message))
+            ? ' não foi encontrado na pasta.'
+            : ' não é um PNG que o PDF aceita — reexporte sem ' +
+              'entrelaçamento, em 8 bits.');
       }
     }
 
@@ -840,17 +829,10 @@ async function gerar() {
           5 + Math.round((feitas / total) * 88)
         );
 
-        const preparada = await reduzirImagem(arquivo, LARGURA, ALTURA);
-        const imagem = await doc.embedJpg(preparada.bytes);
+        const imagem = await doc.embedJpg(await reduzirImagem(arquivo));
 
         const pFoto = doc.addPage([LARGURA, ALTURA]);
         desenharPreenchendo(pFoto, imagem, LARGURA, ALTURA);
-
-        /* Canto claro pede logo escuro, e vice-versa. Com só uma das
-           versões disponível, usa essa mesma em todas. */
-        const preferida = preparada.cantoClaro ? 'escura' : 'clara';
-        const marca = marcas[preferida] ||
-                      marcas[preferida === 'escura' ? 'clara' : 'escura'];
 
         if (marca) {
           const l = LARGURA * CONFIG.MARCA.largura;
@@ -953,7 +935,12 @@ function escreverCapaAmbiente(p, amb, pg) {
   );
 
   const alturaLinha = tamanho * C.titulo.entrelinha;
-  const baseUltima = pg.ALTURA * C.titulo.y;
+
+  /* A régua e o investimento ficam ancorados na posição medida na
+     arte. O título sobe a partir dela pelo 'respiro', então dá para
+     afastar o texto da linha sem mexer no resto da composição. */
+  const ancora = pg.ALTURA * C.titulo.y;
+  const baseUltima = ancora + pg.ALTURA * (C.titulo.respiro || 0);
 
   linhas.forEach((linha, i) => {
     const deDentroParaCima = (linhas.length - 1 - i) * alturaLinha;
@@ -967,7 +954,7 @@ function escreverCapaAmbiente(p, amb, pg) {
   });
 
   /* Régua */
-  const yRegua = baseUltima - pg.ALTURA * C.regua.abaixoDoTitulo;
+  const yRegua = ancora - pg.ALTURA * C.regua.abaixoDoTitulo;
   const espessura = pg.ALTURA * C.regua.espessura;
 
   p.drawRectangle({
@@ -988,7 +975,7 @@ function escreverCapaAmbiente(p, amb, pg) {
   p.drawText(texto, {
     x: pg.LARGURA * C.investimento.xDireita -
        pg.fontes.media.widthOfTextAtSize(texto, tamanhoValor),
-    y: baseUltima - pg.ALTURA * C.investimento.abaixoDoTitulo,
+    y: ancora - pg.ALTURA * C.investimento.abaixoDoTitulo,
     size: tamanhoValor,
     font: pg.fontes.media,
     color: hexParaRgb(CONFIG.COR_TEXTO)
@@ -1034,12 +1021,11 @@ function desenharPreenchendo(p, imagem, LARGURA, ALTURA) {
    ============================================================ */
 
 /**
- * Reduz a imagem e devolve o JPEG mais a informação de se o canto
- * onde o logo vai cair é claro ou escuro.
- * Renders costumam vir em 4K e pesar vários MB; a 1920 o resultado é
- * visualmente idêntico numa apresentação e o PDF fica muito menor.
+ * Reduz a imagem e devolve JPEG. Renders costumam vir em 4K e
+ * pesar vários MB; a 1920 o resultado é visualmente idêntico
+ * numa apresentação e o PDF fica muitas vezes menor.
  */
-async function reduzirImagem(arquivo, LARGURA, ALTURA) {
+async function reduzirImagem(arquivo) {
   const bitmap = await carregarBitmap(arquivo);
 
   const escala = Math.min(1, CONFIG.IMAGEM.larguraMax / bitmap.width);
@@ -1057,68 +1043,12 @@ async function reduzirImagem(arquivo, LARGURA, ALTURA) {
 
   if (bitmap.close) bitmap.close();
 
-  const cantoClaro = CONFIG.MARCA.usar
-    ? medirCantoDoLogo(ctx, largura, altura, LARGURA, ALTURA)
-    : true;
-
   const blob = await new Promise((r) =>
     canvas.toBlob(r, 'image/jpeg', CONFIG.IMAGEM.qualidade)
   );
 
   canvas.width = canvas.height = 0;   // libera a memória
-
-  return { bytes: await blob.arrayBuffer(), cantoClaro: cantoClaro };
-}
-
-/**
- * Mede a claridade média do pedaço da foto que ficará atrás do logo.
- * A foto entra na página cortada pelo centro, então o retângulo do
- * logo é convertido da página de volta para as coordenadas da imagem
- * antes de medir — assim a conta vale mesmo quando a foto não é 16:9.
- */
-function medirCantoDoLogo(ctx, iw, ih, PW, PH) {
-  const M = CONFIG.MARCA;
-
-  /* Mesma transformação do "cover" usado ao desenhar no PDF */
-  const escala = Math.max(PW / iw, PH / ih);
-  const ox = (PW - iw * escala) / 2;
-  const oy = (PH - ih * escala) / 2;
-
-  /* Retângulo do logo, em pontos da página */
-  const lp = PW * M.largura;
-  const x0p = PW - lp - PW * M.direita;
-  const y0p = PH * M.base;
-  const ap = lp * 0.4;   // altura aproximada; sobra margem na medição
-
-  /* De volta para a imagem, lembrando que o eixo y do canvas é invertido */
-  const x0 = (x0p - ox) / escala;
-  const x1 = (x0p + lp - ox) / escala;
-  const yTopo = ih - (y0p + ap - oy) / escala;
-  const yBase = ih - (y0p - oy) / escala;
-
-  const rx = Math.max(0, Math.floor(x0));
-  const ry = Math.max(0, Math.floor(yTopo));
-  const rw = Math.min(iw - rx, Math.ceil(x1 - x0));
-  const rh = Math.min(ih - ry, Math.ceil(yBase - yTopo));
-
-  if (rw < 2 || rh < 2) return true;
-
-  try {
-    const dados = ctx.getImageData(rx, ry, rw, rh).data;
-    let soma = 0;
-    let n = 0;
-
-    /* Amostra de 4 em 4 pixels: precisão de sobra e bem mais rápido */
-    for (let i = 0; i < dados.length; i += 16) {
-      soma += (0.2126 * dados[i] + 0.7152 * dados[i + 1] + 0.0722 * dados[i + 2]) / 255;
-      n++;
-    }
-
-    return n ? (soma / n) >= CONFIG.MARCA.limiar : true;
-
-  } catch (e) {
-    return true;   // na dúvida, logo escuro
-  }
+  return await blob.arrayBuffer();
 }
 
 function carregarBitmap(arquivo) {
