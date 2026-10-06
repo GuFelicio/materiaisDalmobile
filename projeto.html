@@ -442,13 +442,16 @@ const CONFIG = {
   MARCA: {
     usar: true,
     arquivo: 'marca.png',
-    /* Fração da largura da página. 0.12 ≈ 12% — a etiqueta é larga
-       e deitada, então precisa de mais espaço que um logo isolado.
-       Suba para 0.15 se quiser ela mais presente, desça para 0.09
-       se quiser mais discreta. */
-    largura: 0.12,
-    direita: 0.030,
-    base: 0.045
+    /* Fração da largura da página. A etiqueta é larga e deitada,
+       então precisa de mais espaço que um logo isolado. Suba para
+       0.15 se quiser ela mais presente, desça para 0.09 se quiser
+       mais discreta. */
+    largura: 0.126,
+    /* Zero encosta na borda da foto — é o que faz ela ler como
+       etiqueta, e não como um logo solto no canto. Se um dia quiser
+       descolar, 0.015 já dá um respiro visível. */
+    direita: 0,
+    base: 0
   },
 
   /* Qualidade das imagens dentro do PDF.
