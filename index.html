@@ -507,13 +507,29 @@ const CATALOGO = [
     ]
   },
 
-   {
+  {
+    /* Material de página própria: não usa Apps Script.
+       O PDF é montado no navegador, em projeto.html. */
     id: 'projeto',
     nome: 'Apresentação de projeto',
     descricao: 'Criação da apresentação de projeto para o cliente, com fotos, plantas e detalhes do projeto.',
     icone: 'deck',
     formato: 'pdf',
     pagina: 'projeto.html',
+    disponivel: true,
+    endpoints: {},
+    campos: []
+  },
+
+  {
+    /* Material de página própria: não usa Apps Script.
+       O PDF é montado no navegador, em orcamento.html. */
+    id: 'orcamento',
+    nome: 'Orçamento',
+    descricao: 'Entrega só o orçamento ao cliente, sem a apresentação do projeto. Leia o PV ou o OR e a página monta sozinha.',
+    icone: 'cifrao',
+    formato: 'pdf',
+    pagina: 'orcamento.html',
     disponivel: true,
     endpoints: {},
     campos: []
@@ -634,7 +650,9 @@ const ICONES = {
   caixa:      '<path d="M3 7l7-3 7 3v9l-7 3-7-3z"/><path d="M3 7l7 3 7-3M10 10v9"/>',
   calendario: '<path d="M3 5h14v13H3z"/><path d="M3 9h14M7 3v3M13 3v3"/>',
   estrela:    '<path d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4L5.5 17l.9-5L2.8 8.3l5-.7z"/>',
-  impressora: '<path d="M6 8V3h8v5"/><path d="M4 8h12v6H4z"/><path d="M6 12h8v5H6z"/>'
+  impressora: '<path d="M6 8V3h8v5"/><path d="M4 8h12v6H4z"/><path d="M6 12h8v5H6z"/>',
+  deck:       '<path d="M3 4h14v10H3z"/><path d="M7 17h6M10 14v3"/>',
+  cifrao:     '<path d="M10 2.5v15"/><path d="M13.5 6.2C13.5 4.7 12 3.8 10 3.8S6.5 4.7 6.5 6.4c0 4 7 2.3 7 6.4 0 1.8-1.6 2.7-3.5 2.7s-3.5-.9-3.5-2.6"/>'
 };
 
 function svg(nome) {

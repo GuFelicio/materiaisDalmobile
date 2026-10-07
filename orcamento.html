@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dalmóbile · Orçamento</title>
+<style>
+
+  :root {
+    --bg:      #f2f2f0;
+    --card:    #ffffff;
+    --ink:     #141618;
+    --ink-2:   #4a5054;
+    --muted:   #8a9094;
+    --line:    #e0e1df;
+    --line-2:  #c9cbc8;
+    --accent:  #141618;
+    --ok:      #1c6b3f;
+    --erro:    #b3261e;
+    --radius:  14px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 16px 64px; }
+
+  /* ---------- Cabeçalho ---------- */
+
+  .topo {
+    position: relative;
+    padding: 28px 0 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+
+  .tracos {
+    position: absolute; top: 26px; right: 0;
+    display: flex; gap: 5px; align-items: flex-start;
+    opacity: .5; pointer-events: none;
+  }
+  .tracos i { display: block; width: 1px; background: var(--line-2); }
+  .tracos i:nth-child(1) { height: 22px; }
+  .tracos i:nth-child(2) { height: 38px; }
+  .tracos i:nth-child(3) { height: 14px; }
+
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+
+  .assinatura {
+    margin: 3px 0 0; font-size: 10px; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+
+  .voltar {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: none; border: 0; padding: 0; margin-bottom: 18px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--ink-2); cursor: pointer; text-decoration: none;
+  }
+
+  /* ---------- Blocos ---------- */
+
+  .painel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .painel > h2 {
+    margin: 0 0 16px;
+    font-size: 11px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  .campo { margin-bottom: 15px; }
+  .campo:last-child { margin-bottom: 0; }
+
+  .campo > label {
+    display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;
+  }
+
+  .campo .nota {
+    display: block; font-size: 12px; font-weight: 400;
+    color: var(--muted); margin: -2px 0 6px;
+  }
+
+  input[type="text"], select {
+    width: 100%; padding: 12px 13px;
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 16px; font-family: inherit; color: var(--ink);
+    background: var(--card); appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath fill='none' stroke='%238a9094' stroke-width='1.6' d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center;
+    padding-right: 36px; cursor: pointer;
+  }
+
+  input:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(20,22,24,.07);
+  }
+
+  /* ---------- Ambientes ---------- */
+
+  .ambiente {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: var(--bg);
+  }
+
+  .ambiente-topo {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+
+  .ambiente-num {
+    flex: 0 0 auto; width: 26px; height: 26px;
+    display: grid; place-items: center;
+    background: var(--accent); color: #fff;
+    border-radius: 7px; font-size: 12px; font-weight: 700;
+  }
+
+  .ambiente-topo input { flex: 1; }
+
+  .remover {
+    flex: 0 0 auto; background: none; border: 0; padding: 6px;
+    color: var(--muted); cursor: pointer; line-height: 0;
+    border-radius: 6px;
+  }
+  .remover:hover { color: var(--erro); background: #fff; }
+
+  .linha-valor {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .linha-valor .rotulo {
+    flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--ink-2);
+    padding-left: 36px;
+  }
+  .linha-valor input { flex: 1; }
+
+  .solta {
+    position: relative;
+    border: 1px dashed var(--line-2);
+    border-radius: 9px; background: var(--card);
+    padding: 18px 14px; text-align: center;
+    font-size: 13px; color: var(--muted); cursor: pointer;
+    transition: border-color .12s, background .12s;
+  }
+  .solta:hover, .solta.ativa { border-color: var(--accent); background: #fff; }
+  .solta input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .solta strong { display: block; color: var(--ink); font-size: 14px; margin-bottom: 2px; }
+
+  /* --- conferência do orçamento lido do PV --- */
+  .conferencia { margin-top: 14px; }
+
+  .conferencia h3 {
+    font-size: 12px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted);
+    margin: 0 0 10px;
+  }
+
+  .orc-topo {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .orc-topo label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--muted); margin-bottom: 4px;
+  }
+
+  .orc-item {
+    border-bottom: 1px solid var(--line-2);
+    padding-bottom: 8px; margin-bottom: 8px;
+  }
+  .orc-item:last-child { border-bottom: 0; }
+
+  .orc-linha {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .orc-linha input.nome  { flex: 1; }
+  .orc-linha input.valor { flex: 0 0 120px; text-align: right; }
+
+  .orc-desc {
+    display: block; width: 100%; box-sizing: border-box;
+    margin-top: 6px; padding: 7px 9px;
+    border: 1px solid var(--line-2); border-radius: 6px;
+    background: var(--card); color: var(--muted);
+    font-family: inherit; font-size: 12px; line-height: 1.45;
+    resize: vertical; min-height: 34px;
+  }
+  .orc-desc:focus { outline: none; border-color: var(--accent); color: var(--ink); }
+
+  .orc-acoes {
+    display: flex; justify-content: flex-end; margin-bottom: 10px;
+  }
+  .orc-acoes button {
+    border: 1px solid var(--line-2); border-radius: 6px;
+    background: var(--card); color: var(--muted);
+    font-size: 11px; font-family: inherit;
+    padding: 5px 10px; cursor: pointer;
+  }
+  .orc-acoes button:hover { border-color: var(--accent); color: var(--ink); }
+
+  .orc-linha button {
+    flex: 0 0 auto; width: 28px; height: 28px; padding: 0;
+    border: 1px solid var(--line-2); border-radius: 6px;
+    background: var(--card); color: var(--muted);
+    font-size: 14px; line-height: 1; cursor: pointer;
+  }
+  .orc-linha button:hover { border-color: #c75; color: #c75; }
+
+  .orc-soma {
+    display: flex; justify-content: space-between;
+    border-top: 1px solid var(--line-2);
+    margin-top: 10px; padding-top: 10px;
+    font-size: 13px; font-weight: 700; color: var(--ink);
+  }
+
+  .orc-aviso {
+    margin-top: 10px; padding: 9px 11px;
+    border-radius: 7px; font-size: 12px; line-height: 1.5;
+    background: #fdf1e7; border: 1px solid #f0cfae; color: #8a4b12;
+  }
+  .orc-ok {
+    margin-top: 10px; font-size: 12px; color: var(--muted);
+  }
+
+  .miniaturas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px; margin-top: 12px;
+  }
+
+  .mini {
+    position: relative; aspect-ratio: 16/9;
+    border-radius: 6px; overflow: hidden;
+    border: 1px solid var(--line-2); background: #fff;
+  }
+
+  .mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .mini .ordem {
+    position: absolute; left: 4px; top: 4px;
+    background: rgba(20,22,24,.78); color: #fff;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 5px; border-radius: 4px;
+  }
+
+  .mini-acoes {
+    position: absolute; right: 3px; bottom: 3px;
+    display: flex; gap: 2px;
+  }
+
+  .mini-acoes button {
+    width: 20px; height: 20px; padding: 0;
+    border: 0; border-radius: 4px;
+    background: rgba(20,22,24,.78); color: #fff;
+    font-size: 11px; line-height: 1; cursor: pointer;
+  }
+  .mini-acoes button:hover { background: #141618; }
+
+  .botao {
+    width: 100%; padding: 15px; border: 0; border-radius: 9px;
+    background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    cursor: pointer;
+  }
+  .botao:disabled { opacity: .45; cursor: default; }
+  .botao.verde { background: var(--ok); margin-top: 12px; }
+  .botao.vazado {
+    background: none; color: var(--ink-2);
+    border: 1px solid var(--line-2);
+  }
+
+  .add-ambiente { margin-top: 4px; }
+
+  .toggle {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 14px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-weight: 600; cursor: pointer; user-select: none;
+    margin-bottom: 12px;
+  }
+  .toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+  /* ---------- Resultado ---------- */
+
+  #saida { margin-top: 18px; }
+
+  .msg { font-size: 14px; text-align: center; color: var(--ink-2); margin: 0; }
+  .msg.erro { color: var(--erro); font-weight: 500; text-align: left; }
+
+  .barra {
+    height: 6px; background: var(--line); border-radius: 99px;
+    overflow: hidden; margin-top: 10px;
+  }
+  .barra i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+  .arquivo-pronto {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+  }
+  .arquivo-pronto .selo {
+    flex: 0 0 auto; font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    color: #fff; background: var(--erro); padding: 5px 7px; border-radius: 5px;
+  }
+  .arquivo-pronto .nome { font-size: 13px; font-weight: 600; word-break: break-word; }
+  .arquivo-pronto .sub { font-size: 12px; color: var(--muted); }
+
+  .aviso-config {
+    border: 1px solid #e8d7a8; background: #fdf8ea;
+    border-radius: 9px; padding: 14px 16px;
+    font-size: 13px; color: #6b5a24; margin-bottom: 16px;
+  }
+  .aviso-config code { background: #fff; padding: 1px 4px; border-radius: 4px; }
+
+  .rodape {
+    margin-top: 32px; text-align: center; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topo">
+    <div class="tracos"><i></i><i></i><i></i></div>
+    <h1 class="marca">Dalmóbile <span>· Orçamento</span></h1>
+    <p class="assinatura">Crie seu mundo</p>
+  </header>
+
+  <a class="voltar" href="./">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Central de Peças
+  </a>
+
+  <div id="aviso-arquivos" class="aviso-config oculto"></div>
+
+  <div class="painel">
+    <h2>Dados</h2>
+
+    <div class="campo">
+      <label for="loja">Loja</label>
+      <select id="loja"></select>
+    </div>
+
+    <div class="campo">
+      <label for="arquiteto">Projeto por</label>
+      <input id="arquiteto" type="text" placeholder="Ex.: Camila Prado (opcional)" autocomplete="off">
+      <p class="nota">O nome do cliente vem do próprio orçamento, na conferência abaixo.</p>
+    </div>
+  </div>
+
+  <div class="painel">
+    <h2>Orçamento</h2>
+
+    <div class="solta" id="area-pv">
+      <input type="file" id="pv" accept="application/pdf">
+      <strong>Escolher o PDF do orçamento</strong>
+      <span id="pv-nome">Serve o PV do sistema novo e o OR do antigo.</span>
+    </div>
+
+    <div class="conferencia oculto" id="orc-conferencia"></div>
+  </div>
+
+  <button class="botao" id="gerar">Gerar orçamento</button>
+  <div id="saida"></div>
+
+  <p class="rodape">Lumina · Uso interno</p>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+<script>
+
+/* ============================================================
+   ORÇAMENTO AVULSO — Dalmóbile
+   ------------------------------------------------------------
+   Entrega só o orçamento, sem a apresentação do projeto. O
+   documento sai assim:
+
+       capa (com o nome do cliente)
+       3 páginas institucionais da fábrica
+       divisória escrita "Investimento"
+       página(s) de valores
+       contracapa da loja
+
+   O leitor do PV/OR, a tela de conferência e o desenho da página
+   de valores são os MESMOS do projeto.html, copiados sem alteração.
+   Mexeu num, mexa no outro.
+
+   ARQUIVOS QUE PRECISAM ESTAR AO LADO DESTA PÁGINA:
+   bases-sjc.pdf, bases-cgt.pdf, Krub-Medium.ttf, Krub-Bold.ttf
+   ============================================================ */
+
+const CONFIG = {
+
+  arquivos: {
+    bases: {
+      sjc: 'bases-sjc.pdf',
+      cgt: 'bases-cgt.pdf'
+    },
+    /* Nomes como vêm do Google Fonts. Maiúsculas e minúsculas
+       importam no servidor — se renomear os arquivos, ajuste aqui. */
+    fonteMedia:   'Krub-Medium.ttf',
+    fonteNegrito: 'Krub-Bold.ttf'
+  },
+  PAGINAS: {
+    capa:           0,
+    institucionais: [1, 2, 3],
+    ambiente:       4,
+    contracapa:     5
+  },
+  LOJAS: [
+    { id: 'sjc', nome: 'São José dos Campos' },
+    { id: 'cgt', nome: 'Caraguatatuba' }
+  ],
+  COR_TEXTO: '#595959',
+  CAPA: {
+    cliente: {
+      xDireita: 0.9563, y: 0.3612, tamanho: 0.04444, negrito: false
+    },
+    arquiteto: {
+      xDireita: 0.9563, y: 0.2985, tamanho: 0.02963, negrito: false,
+      prefixo: 'Projeto por: '
+    }
+  },
+  AMBIENTE: {
+    titulo: {
+      xDireita: 0.9451,
+      y: 0.5583,          // âncora medida na arte: régua e investimento
+      /* Quanto o título sobe acima da âncora, para não encostar na
+         régua. Sem isso a perna do "j" e do "ç" chega na linha.
+         Suba para 0.030 se quiser mais ar, zere para voltar ao
+         encaixe original. */
+      respiro: 0.022,
+      tamanho: 0.09630,
+      larguraMax: 0.60,   // antes de quebrar a linha
+      entrelinha: 1.14    // títulos longos crescem para cima
+    },
+    regua: {
+      x0: 0.6308, x1: 0.9386,
+      abaixoDoTitulo: 0.01012,
+      espessura: 0.00284,
+      cor: '#000000'
+    },
+    investimento: {
+      xDireita: 0.9379,
+      abaixoDoTitulo: 0.07753,
+      tamanho: 0.02963,
+      prefixo: 'Investimento: R$'
+    }
+  },
+  ORCAMENTO: {
+    pagina: 4,           // índice da página em branco dentro da base
+    x0: 0.055,           // a faixa agora ocupa a página toda,
+    xDireita: 0.945,     // porque a lista virou duas colunas
+
+    /* Duas colunas lado a lado. A lista é dividida ao meio, então
+       com 6 ambientes saem 3 de cada lado — fica equilibrado em vez
+       de encher a esquerda e deixar a direita vazia. */
+    colunas: { quantidade: 2, intervalo: 0.040 },
+
+    /* Cabeçalho centralizado na página */
+    rotulo: { texto: 'INVESTIMENTO', y: 0.860, tamanho: 0.0247, espacamento: 0.14 },
+    titulo: { y: 0.785, tamanho: 0.0617, tamanhoMinimo: 0.038 },   // nome do cliente
+    regua:  { y: 0.760, espessura: 0.00284, cor: '#000000' },
+    meta:   { y: 0.722, tamanho: 0.0247 },     // "6 ambientes · Orçamento de ..."
+
+    /* Títulos de cada coluna. As alturas são medidas a partir da
+       primeira linha da lista, para valerem também na continuação. */
+    cabecalho: {
+      usar: true,
+      ambiente: 'AMBIENTE', valor: 'VALOR',
+      tamanho: 0.0222, espacamento: 0.12,
+      acimaDaPrimeira: 0.055,
+      regua: { acimaDaPrimeira: 0.038, espessura: 0.0012, cor: '#9A9A9A' }
+    },
+
+    lista: {
+      primeiraLinha: 0.600,
+      entrelinha: 0.052,
+      tamanho: 0.0296,
+      /* Com duas colunas a largura caiu pela metade, então nome
+         comprido encolhe um pouco antes de ganhar reticências. */
+      tamanhoMinimo: 0.0240,
+      /* Até onde a lista pode descer. 0.222 é logo acima do logo e
+         do grafismo do canto, medidos na arte da base. */
+      piso: 0.222,
+      valorEmNegrito: true,
+      /* O fio fica acima do PRÓXIMO nome, e precisa limpar a altura
+         da letra dele (~0.72 do corpo) para não cortar o texto. */
+      separador: { usar: true, acimaDoProximo: 0.034, espessura: 0.0012, cor: '#CBCBCB' },
+
+      /* Descrição opcional, logo abaixo do nome do ambiente.
+         Quebra sozinha na largura da coluna, e a altura do item
+         acompanha — a paginação mede, não conta linhas. */
+      descricao: {
+        usar: true,
+        tamanho: 0.0210,        // menor que o nome, para não competir
+        entrelinha: 1.30,
+        abaixoDoNome: 0.032,    // do pé do nome à primeira linha
+        /* Distância da ÚLTIMA linha da descrição ao nome do próximo
+           ambiente. Precisa caber a perna da descrição mais a altura
+           da letra do nome seguinte — com menos que isso, os dois se
+           sobrepõem. */
+        depois: 0.042,
+        larguraMax: 0.93,       // fração da largura da coluna
+        cor: '#8A8A8A'
+      }
+    },
+
+    /* Fecha a última página */
+    total: {
+      usar: true,
+      rotulo: 'INVESTIMENTO TOTAL',
+      /* O total sobe junto com a lista: fica 'folgaAcima' abaixo da
+         última linha, mas nunca sobe acima disso nem desce de 'y'.
+         Sem isso, uma lista curta deixa um buraco no meio da página. */
+      folgaAcima: 0.085,
+      /* Só a ÚLTIMA página reserva espaço para o total — nas outras
+         a lista aproveita a página inteira. */
+      pisoNaUltima: 0.310,
+      regua: { y: 0.270, espessura: 0.00284, cor: '#000000' },
+      y: 0.215,
+      tamanhoRotulo: 0.0247, espacamento: 0.14,
+      tamanhoValor: 0.050
+    },
+
+    /* Páginas seguintes, quando a lista não cabe em uma só */
+    continuacao: { primeiraLinha: 0.700, rotulo: 'INVESTIMENTO · CONTINUAÇÃO' },
+
+    /* Limpeza dos nomes que vêm do sistema.
+       Novo:   "ARES GALATA - COZINHA E LAVANDERIA" → "Cozinha e Lavanderia"
+       Antigo: "Projeto - WC PCD"                   → "WC PCD" */
+    limparNomes: true,
+    /* Siglas que NUNCA viram caixa de nome próprio */
+    siglas: ['wc', 'pcd', 'tv', 'dvd', 'ar', 'spa', 'led'],
+    /* Como começa a linha de um item no orçamento detalhado */
+    prefixosDeItem: ['Projeto'],
+    /* "Projeto - Cozinha - Corrediças FGV com..." → "Cozinha".
+       Tudo depois do segundo hífen é descrição técnica, não nome. */
+    cortarDetalhes: true,
+    minusculas: ['e', 'de', 'da', 'do', 'das', 'dos', 'em', 'com', 'para', 'a', 'o'],
+    /* O sistema exporta sem acento. Acrescente aqui o que faltar —
+       a chave é a palavra em minúscula e sem acento. */
+    acentos: {
+      dormitorio: 'Dormitório', suite: 'Suíte', escritorio: 'Escritório',
+      area: 'Área', servico: 'Serviço', patio: 'Pátio', sotao: 'Sótão',
+      banheiro: 'Banheiro', varanda: 'Varanda', sacada: 'Sacada',
+      closet: 'Closet', lavabo: 'Lavabo', mezanino: 'Mezanino',
+      consultorio: 'Consultório', recepcao: 'Recepção', corredor: 'Corredor',
+      copa: 'Copa', garagem: 'Garagem', despensa: 'Despensa'
+    }
+  },
+
+  /* Página divisória, antes dos valores. Usa a mesma arte e o mesmo
+     tratamento das capas de ambiente da apresentação. */
+  DIVISORIA: {
+    usar: true,
+    texto: 'Investimento'
+  }
+};
+
+
+const el = (id) => document.getElementById(id);
+
+const selLoja   = el('loja');
+const inputPv   = el('pv');
+const areaPv    = el('area-pv');
+const btnGerar  = el('gerar');
+const saida     = el('saida');
+
+const painelOrc   = el('orc-conferencia');
+
+let arquivoPv = null;
+let orcamento = null;
+let ultimo = null;
+
+/* Esta página não tem o anexo do PV original nem a caixa que o
+   liga — as funções copiadas esperam esses nomes, então ficam
+   desligados aqui. */
+const chkPv     = { checked: true };
+const chkAnexar = { checked: false };
+const linhaAnexar = { classList: { toggle: function () {}, add: function () {} } };
+
+
+/* ============================================================
+   LOJA
+   ============================================================ */
+
+CONFIG.LOJAS.forEach((loja) => {
+  const opt = document.createElement('option');
+  opt.value = loja.id;
+  opt.textContent = loja.nome;
+  selLoja.appendChild(opt);
+});
+
+try {
+  const salva = localStorage.getItem('dalmobile:loja');
+  if (salva && CONFIG.LOJAS.some((l) => l.id === salva)) selLoja.value = salva;
+} catch (e) {}
+
+selLoja.addEventListener('change', () => {
+  try { localStorage.setItem('dalmobile:loja', selLoja.value); } catch (e) {}
+});
+
+
+/* ============================================================
+   ARQUIVO DO ORÇAMENTO
+   ============================================================ */
+
+const TEXTO_PV = 'Serve o PV do sistema novo e o OR do antigo.';
+
+inputPv.addEventListener('change', async () => {
+  arquivoPv = inputPv.files && inputPv.files[0] ? inputPv.files[0] : null;
+  el('pv-nome').textContent = arquivoPv ? arquivoPv.name : TEXTO_PV;
+
+  orcamento = null;
+  painelOrc.innerHTML = '';
+  painelOrc.classList.toggle('oculto', !arquivoPv);
+
+  if (!arquivoPv) return;
+
+  painelOrc.innerHTML = '<p class="orc-ok">Lendo o orçamento...</p>';
+
+  try {
+    orcamento = await lerOrcamento(arquivoPv);
+    montarConferencia();
+  } catch (e) {
+    console.error(e);
+    painelOrc.innerHTML =
+      '<div class="orc-aviso"><strong>Não consegui ler esse PDF.</strong> ' +
+      escaparHtml(e.message || '') + '</div>';
+  }
+});
+
+painelOrc.addEventListener('input', () => { if (orcamento) recalcular(); });
+
+painelOrc.addEventListener('click', (ev) => {
+  if (!orcamento) return;
+
+  if (ev.target.id === 'orc-limpar') {
+    painelOrc.querySelectorAll('.orc-desc').forEach((t) => { t.value = ''; });
+    return;
+  }
+
+  const b = ev.target.closest('.orc-linha button');
+  if (!b) return;
+  b.closest('.orc-item').remove();
+  recalcular();
+});
+
+
+/* ============================================================
+   GERAÇÃO DO PDF
+   ============================================================ */
+
+btnGerar.addEventListener('click', gerar);
+
+async function gerar() {
+
+  if (!arquivoPv || !orcamento) {
+    erro('Escolha o PDF do orçamento primeiro.');
+    return;
+  }
+
+  const conferido = lerConferencia();
+
+  if (!conferido.cliente.trim()) {
+    erro('Falta o nome do cliente na conferência.');
+    return;
+  }
+  if (!conferido.ambientes.length) {
+    erro('Não sobrou nenhum ambiente na lista.');
+    return;
+  }
+
+  const arquiteto = el('arquiteto').value.trim();
+
+  btnGerar.disabled = true;
+  progresso('Carregando os arquivos base...', 5);
+
+  try {
+    const { PDFDocument } = PDFLib;
+
+    const [basesBytes, mediaBytes, negritoBytes] = await Promise.all([
+      baixar(CONFIG.arquivos.bases[selLoja.value]),
+      baixar(CONFIG.arquivos.fonteMedia),
+      baixar(CONFIG.arquivos.fonteNegrito)
+    ]);
+
+    const bases = await PDFDocument.load(basesBytes);
+    const doc = await PDFDocument.create();
+    doc.registerFontkit(fontkit);
+
+    const fontes = {
+      media:   await doc.embedFont(mediaBytes,   { subset: true }),
+      negrito: await doc.embedFont(negritoBytes, { subset: true })
+    };
+
+    const P = CONFIG.PAGINAS;
+    const amostra = bases.getPage(P.capa);
+    const LARGURA = amostra.getWidth();
+    const ALTURA = amostra.getHeight();
+    const pagina = { LARGURA, ALTURA, fontes };
+
+    /* --- 1. Capa --- */
+    progresso('Montando a capa...', 20);
+
+    const [pCapa] = await doc.copyPages(bases, [P.capa]);
+    doc.addPage(pCapa);
+
+    escreverDireita(pCapa, conferido.cliente, CONFIG.CAPA.cliente, pagina);
+
+    if (arquiteto) {
+      escreverDireita(
+        pCapa,
+        (CONFIG.CAPA.arquiteto.prefixo || '') + arquiteto,
+        CONFIG.CAPA.arquiteto,
+        pagina
+      );
+    }
+
+    /* --- 2. Institucionais da fábrica --- */
+    progresso('Incluindo as páginas da fábrica...', 40);
+
+    const institucionais = await doc.copyPages(bases, P.institucionais);
+    institucionais.forEach((p) => doc.addPage(p));
+
+    /* --- 3. Divisória "Investimento" --- */
+    if (CONFIG.DIVISORIA.usar) {
+      progresso('Montando a divisória...', 55);
+
+      const [pDiv] = await doc.copyPages(bases, [CONFIG.ORCAMENTO.pagina]);
+      doc.addPage(pDiv);
+
+      /* Mesmo tratamento das capas de ambiente: título à direita e
+         régua logo abaixo. Sem valor, o investimento não é escrito. */
+      escreverCapaAmbiente(pDiv, { nome: CONFIG.DIVISORIA.texto, valor: '' }, pagina);
+    }
+
+    /* --- 4. Valores --- */
+    progresso('Montando o investimento...', 70);
+    await desenharOrcamento(doc, bases, pagina, conferido);
+
+    /* --- 5. Contracapa --- */
+    progresso('Fechando o arquivo...', 92);
+
+    if (P.contracapa !== undefined) {
+      const [pFim] = await doc.copyPages(bases, [P.contracapa]);
+      doc.addPage(pFim);
+    }
+
+    const bytes = await doc.save();
+
+    ultimo = { nome: montarNome(conferido.cliente), bytes: bytes };
+    pronto(doc.getPageCount(), bytes.length, '');
+
+  } catch (e) {
+    console.error(e);
+    erro(mensagemDeErro(e));
+  } finally {
+    btnGerar.disabled = false;
+  }
+}
+
+function montarNome(cliente) {
+  const data = new Date().toISOString().slice(0, 10);
+  return (data + ' - Orçamento ' + cliente).replace(/[\\\/:*?"<>|]/g, '-') + '.pdf';
+}
+
+function mensagemDeErro(e) {
+  const m = String(e && e.message || e);
+
+  if (m.indexOf('ARQUIVO_FALTANDO:') === 0) {
+    return 'Não encontrei o arquivo "' + m.split(':')[1] + '" ao lado desta página. ' +
+           'Suba bases-sjc.pdf, bases-cgt.pdf, Krub-Medium.ttf e Krub-Bold.ttf ' +
+           'na mesma pasta do orcamento.html.';
+  }
+  if (/encrypt/i.test(m)) {
+    return 'O PDF do orçamento está protegido por senha. Exporte uma versão sem proteção.';
+  }
+  return 'Algo deu errado ao montar o PDF: ' + m;
+}
+
+
+/* ============================================================
+   FUNÇÕES COPIADAS DO projeto.html — não edite só aqui
+   ============================================================ */
+
+const juntarLinha = (b) =>
+  b.itens.map((i) => i.t).join(' ').replace(/\s+/g, ' ').trim();
+
+function numeroBR(s) {
+  return parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
+}
+
+function moedaBR(n) {
+  return Number(n || 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+
+function escaparHtml(s) {
+  return String(s).replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function limparNomeAmbiente(bruto) {
+  const O = CONFIG.ORCAMENTO;
+  let s = String(bruto).trim();
+  if (!O.limparNomes) return s;
+
+  /* Corta o prefixo antes do hífen: nos dois sistemas ele é lixo —
+     no novo é o empreendimento ("ARES GALATA - COZINHA"), no antigo
+     é a palavra "Projeto" ("Projeto - Copa"). */
+  const h = s.indexOf(' - ');
+  if (h !== -1) s = s.slice(h + 3).trim();
+
+  /* No orçamento detalhado sobra a descrição técnica depois de um
+     segundo hífen — ela não cabe nem interessa na apresentação. */
+  if (O.cortarDetalhes) {
+    const h2 = s.indexOf(' - ');
+    if (h2 !== -1) s = s.slice(0, h2).trim();
+  }
+
+  /* Só reescreve o caixa quando o nome inteiro veio em maiúscula.
+     Acentos e siglas, porém, são corrigidos sempre. */
+  const todoMaiusculo = s === s.toUpperCase();
+
+  return s.split(/\s+/).map((p, i) => {
+    const chave = p.toLowerCase();
+
+    if (O.siglas.indexOf(chave) !== -1) return p.toUpperCase();
+    if (O.acentos[chave]) return O.acentos[chave];
+    if (!todoMaiusculo) return p;
+    if (i > 0 && O.minusculas.indexOf(chave) !== -1) return chave;
+
+    return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+function arrumarCaixaDeNome(bruto) {
+  const s = String(bruto || '').trim();
+  if (!s || s !== s.toUpperCase()) return s;
+
+  const curtas = CONFIG.ORCAMENTO.minusculas;
+
+  return s.split(/\s+/).map((p, i) => {
+    const chave = p.toLowerCase();
+    if (i > 0 && curtas.indexOf(chave) !== -1) return chave;
+    return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+function limparDescricao(bruto, detalhe) {
+  let s = String(detalhe || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+
+  /* O trecho "Projeto - Cozinha - " já virou nome; o que vem depois
+     do segundo hífen é a descrição e pode estar na mesma string. */
+  const nome = String(bruto || '');
+  const h1 = nome.indexOf(' - ');
+  const h2 = h1 === -1 ? -1 : nome.indexOf(' - ', h1 + 3);
+  if (h2 !== -1) s = (nome.slice(h2 + 3) + ' ' + s).replace(/\s+/g, ' ').trim();
+
+  return s.replace(/^[\/\s,;.-]+/, '').replace(/[\s\/]+$/, '').trim();
+}
+
+function semTelefone(s) {
+  return String(s || '').replace(/\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}.*$/, '').trim();
+}
+
+function agruparEmLinhas(itens, tol) {
+  const bandas = [];
+
+  itens.forEach((it) => {
+    const b = bandas.find((b) => Math.abs(b.y - it.y) <= tol);
+    if (b) b.itens.push(it);
+    else bandas.push({ y: it.y, itens: [it] });
+  });
+
+  bandas.sort((a, b) => b.y - a.y);
+  bandas.forEach((b) => b.itens.sort((p, q) => p.x - q.x));
+  return bandas;
+}
+
+function lerFormatoPV(linhas, texto, largura) {
+  const d = { formato: 'novo', ambientes: [], total: null };
+
+  let m;
+  if ((m = texto.match(/\b(PV\d{6,})\b/)))                 d.pedido    = m[1];
+  if ((m = texto.match(/(\d{2}\/\d{2}\/\d{4})/)))          d.data      = m[1];
+  if ((m = texto.match(/Consultor:\s*(.+?)\s+Telefone:/))) d.consultor = m[1].trim();
+  if ((m = texto.match(/Nome\s+CPF\/CNPJ\s*\n(.+)/)))      d.cliente   = m[1].trim();
+
+  const meio = largura / 2;
+  let dentro = false;
+  const brutos = [];
+
+  for (const b of linhas) {
+    const t = juntarLinha(b);
+
+    if (/^\d+\.\s*Ambientes/i.test(t)) { dentro = true; continue; }
+    if (!dentro) continue;
+    if (/^\d+\.\s/.test(t)) break;          // começou a seção seguinte
+
+    /* O total atravessa as duas colunas — trata antes de fatiar */
+    if (/VALOR DO CONTRATO/i.test(t)) {
+      const mv = t.match(/R\$\s*([\d.]+,\d{2})/);
+      if (mv) d.total = numeroBR(mv[1]);
+      continue;
+    }
+
+    for (const faixa of [[-1e9, meio], [meio, 1e9]]) {
+      const col = b.itens.filter((i) => i.x >= faixa[0] && i.x < faixa[1]);
+      if (!col.length) continue;
+
+      const txt = col.map((i) => i.t).join(' ').replace(/\s+/g, ' ').trim();
+      const mv = txt.match(/R\$\s*([\d.]+,\d{2})/);
+      const nome = txt.replace(/R\$\s*[\d.]+,\d{2}.*/, '').trim();
+
+      if (!nome && !mv) continue;
+      brutos.push({ nome: nome, valor: mv ? numeroBR(mv[1]) : null });
+    }
+  }
+
+  /* Nome que quebrou em duas linhas vem sem valor, e o valor cai
+     sozinho na linha debaixo — junta os dois. */
+  let pendente = null;
+  for (const a of brutos) {
+    if (a.nome && a.valor === null) { pendente = a; continue; }
+    if (!a.nome && a.valor !== null && pendente) {
+      pendente.valor = a.valor;
+      d.ambientes.push(pendente);
+      pendente = null;
+      continue;
+    }
+    if (a.nome && a.valor !== null) d.ambientes.push(a);
+  }
+
+  return d;
+}
+
+function lerFormatoOR(linhas, texto) {
+  const O = CONFIG.ORCAMENTO;
+  const d = { formato: 'antigo', ambientes: [], total: null };
+
+  let m;
+  if ((m = texto.match(/Or[çc]amento\s+(OR-[A-Z0-9-]+)/i))) d.pedido = m[1];
+  if ((m = texto.match(/(\d{2}\/\d{2}\/\d{4})/)))           d.data   = m[1];
+
+  /* CLIENTE: e VENDEDOR: ficam sozinhos na linha, com o nome abaixo */
+  if ((m = texto.match(/CLIENTE:\s*\n(.+)/i)))  d.cliente   = semTelefone(m[1]);
+  if ((m = texto.match(/VENDEDOR:\s*\n(.+)/i))) d.consultor = semTelefone(m[1]);
+
+  /* O total do orçamento antigo chama "Valor líquido" */
+  if ((m = texto.match(/Valor\s+l[íi]quido\s+R\$\s*([\d.]+,\d{2})/i))) {
+    d.total = numeroBR(m[1]);
+  }
+
+  /* Qtd · unidade · (texto no meio) · valor unitário · TOTAL.
+     São dois valores; o que vale é o ÚLTIMO. */
+  const VALORES = /^(\d+(?:[.,]\d+)?)\s+(\S+)\s*(.*?)\s*R\$\s*([\d.]+,\d{2})\s+R\$\s*([\d.]+,\d{2})$/;
+
+  const comecaItem = (t) =>
+    O.prefixosDeItem.some((p) =>
+      t.toLowerCase().indexOf(String(p).toLowerCase() + ' ') === 0);
+
+  const itens = [];
+  let dentro = false;
+  let atual = null;
+
+  const fechar = () => {
+    if (atual && atual.valor !== null) itens.push(atual);
+    atual = null;
+  };
+
+  for (const b of linhas) {
+    const t = juntarLinha(b);
+
+    if (/Qtd\.?\s+Item/i.test(t)) { dentro = true; continue; }
+    if (!dentro) continue;
+    if (/Valor\s+l[íi]quido|Condi[çc][ãa]o:|Pagamento:/i.test(t)) break;
+
+    /* Cabeçalho repetido e rodapé das páginas seguintes */
+    if (/^\d{2}\/\d{2}\/\d{4}\s+Or[çc]amento/i.test(t)) continue;
+    if (/^\d+\s+de\s+\d+$/i.test(t)) continue;
+
+    const mv = t.match(VALORES);
+
+    if (mv) {
+      const meio = mv[3].trim();
+      const valor = numeroBR(mv[5]);
+
+      if (atual && atual.valor === null) {
+        /* Saída detalhada: o item já estava aberto, isto é só o
+           valor dele. O texto do meio é continuação da descrição. */
+        atual.valor = valor;
+        if (meio) atual.detalhe += ' ' + meio;
+      } else {
+        /* Saída enxuta: nome e valor na mesma linha. Fecha o item
+           anterior e abre e encerra este de uma vez. */
+        fechar();
+        itens.push({ nome: meio, valor: valor, detalhe: '' });
+      }
+      continue;
+    }
+
+    if (comecaItem(t)) { fechar(); atual = { nome: t, valor: null, detalhe: '' }; continue; }
+
+    if (atual) atual.detalhe += ' ' + t;
+  }
+
+  fechar();
+
+  d.ambientes = itens.map((a) => ({
+    nome: a.nome,
+    valor: a.valor,
+    detalhe: String(a.detalhe || '').replace(/\s+/g, ' ').trim()
+  }));
+
+  return d;
+}
+
+async function lerOrcamento(arquivo) {
+  if (!window.pdfjsLib) {
+    throw new Error('O leitor de PDF não carregou — verifique a conexão e recarregue a página.');
+  }
+
+  const pdf = await pdfjsLib.getDocument({
+    data: new Uint8Array(await arquivo.arrayBuffer())
+  }).promise;
+
+  let linhas = [];
+  let largura = 595;
+
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const pg = await pdf.getPage(n);
+    largura = pg.getViewport({ scale: 1 }).width;
+
+    /* O deslocamento por página mantém a ordem de leitura quando o
+       orçamento tem mais de uma folha. */
+    const itens = (await pg.getTextContent()).items
+      .filter((it) => it.str && it.str.trim())
+      .map((it) => ({
+        x: it.transform[4],
+        y: it.transform[5] - n * 10000,
+        t: it.str.trim()
+      }));
+
+    linhas = linhas.concat(agruparEmLinhas(itens, 4));
+  }
+
+  const texto = linhas.map(juntarLinha).join('\n');
+
+  /* Os dois sistemas convivem durante a troca, então a página
+     reconhece cada um pela sua marca registrada. */
+  const ehNovo = /\bPV\d{6,}\b/.test(texto) || /Ambientes do Projeto/i.test(texto);
+  const ehAntigo = /OR-[A-Z]{2,}-\d+/i.test(texto) ||
+                   /Qtd\.?\s+Item\s+Valor\s+unit/i.test(texto);
+
+  let d;
+  if (ehNovo)        d = lerFormatoPV(linhas, texto, largura);
+  else if (ehAntigo) d = lerFormatoOR(linhas, texto);
+  else {
+    throw new Error('Não reconheci o modelo desse orçamento. ' +
+                    'A página lê o PV do sistema novo e o OR do antigo.');
+  }
+
+  if (!d.ambientes.length) {
+    throw new Error('Reconheci o modelo (' + d.formato + '), mas não achei ' +
+                    'a lista de ambientes. Confira se o arquivo está completo.');
+  }
+
+  d.cliente = arrumarCaixaDeNome(d.cliente);
+  d.ambientes = d.ambientes.map((a) => ({
+    nome: limparNomeAmbiente(a.nome),
+    valor: a.valor,
+    /* O orçamento detalhado já traz o que foi usado no ambiente.
+       Entra preenchido na tela para você aparar, não para aceitar
+       como veio: é texto técnico de fábrica, não de apresentação. */
+    descricao: limparDescricao(a.nome, a.detalhe)
+  }));
+
+  return d;
+}
+
+function montarConferencia() {
+  const d = orcamento;
+
+  const linhas = d.ambientes.map((a, i) => `
+    <div class="orc-item" data-i="${i}">
+      <div class="orc-linha">
+        <input class="nome"  type="text" value="${escaparHtml(a.nome)}">
+        <input class="valor" type="text" value="${moedaBR(a.valor)}" inputmode="decimal">
+        <button type="button" title="Remover ambiente">&times;</button>
+      </div>
+      <textarea class="orc-desc" rows="2"
+        placeholder="Descrição do ambiente (opcional) — o que foi usado, acabamentos, detalhes."
+        >${escaparHtml(a.descricao || '')}</textarea>
+    </div>`).join('');
+
+  const origem = d.formato === 'antigo'
+    ? 'sistema antigo (OR)' : 'sistema novo (PV)';
+
+  painelOrc.innerHTML = `
+    <h3>Confira o que eu li do orçamento</h3>
+    <p class="orc-ok" style="margin:-4px 0 10px">
+      Reconheci como ${origem}${d.pedido ? ' · ' + escaparHtml(d.pedido) : ''}.
+    </p>
+
+    <div class="orc-topo">
+      <div>
+        <label for="orc-cliente">Cliente, como vai aparecer na página</label>
+        <input id="orc-cliente" type="text" value="${escaparHtml(d.cliente || '')}">
+      </div>
+      <div>
+        <label for="orc-data">Data do orçamento</label>
+        <input id="orc-data" type="text" value="${escaparHtml(d.data || '')}">
+      </div>
+    </div>
+
+    <div class="orc-acoes">
+      <button type="button" id="orc-limpar">Limpar todas as descrições</button>
+    </div>
+
+    <div id="orc-linhas">${linhas}</div>
+
+    <div class="orc-soma">
+      <span id="orc-contagem"></span>
+      <span id="orc-valor"></span>
+    </div>
+
+    <div id="orc-estado"></div>`;
+
+  painelOrc.classList.remove('oculto');
+  recalcular();
+}
+
+function lerConferencia() {
+  const itens = [];
+
+  painelOrc.querySelectorAll('.orc-item').forEach((l) => {
+    const nome = l.querySelector('.nome').value.trim();
+    const valor = numeroBR(l.querySelector('.valor').value.replace(/[^\d.,]/g, ''));
+    const desc = l.querySelector('.orc-desc').value.trim();
+    if (nome) {
+      itens.push({
+        nome: nome,
+        valor: isNaN(valor) ? 0 : valor,
+        descricao: desc
+      });
+    }
+  });
+
+  /* O total impresso na página tem que ser o MESMO do orçamento
+     assinado. Os dois sistemas arredondam por item, então a soma
+     pode ficar centavos longe — nesse caso vale o número do
+     documento. Só quando a lista é mexida de verdade (ambiente
+     removido ou valor corrigido) é que a soma assume. */
+  const soma = itens.reduce((s, a) => s + a.valor, 0);
+  const folga = Math.max(0.05, 0.01 * itens.length);
+  const daOrigem = orcamento && orcamento.total !== null &&
+                   Math.abs(soma - orcamento.total) <= folga;
+
+  return {
+    cliente: (el('orc-cliente') || {}).value || '',
+    data: (el('orc-data') || {}).value || '',
+    ambientes: itens,
+    total: daOrigem ? orcamento.total : soma
+  };
+}
+
+function recalcular() {
+  const atual = lerConferencia();
+  const soma = atual.ambientes.reduce((s, a) => s + a.valor, 0);
+  const n = atual.ambientes.length;
+
+  el('orc-contagem').textContent = n + (n === 1 ? ' ambiente' : ' ambientes');
+  el('orc-valor').textContent = 'R$ ' + moedaBR(atual.total);
+
+  const estado = el('orc-estado');
+  const total = orcamento.total;
+
+  /* Os dois sistemas arredondam por item, então a soma pode ficar
+     alguns centavos longe do total impresso. Isso é esperado — o
+     que não pode passar batido é diferença de verdade. */
+  const folga = Math.max(0.05, 0.01 * atual.ambientes.length);
+
+  if (total === null) {
+    estado.innerHTML = '<p class="orc-ok">O orçamento não trazia um total ' +
+      'para eu conferir. Vale a pena bater os valores a olho.</p>';
+  } else if (Math.abs(soma - total) <= folga) {
+    estado.innerHTML = '<p class="orc-ok">Confere com o VALOR DO CONTRATO ' +
+      'do orçamento (R$ ' + moedaBR(total) + ').</p>';
+  } else {
+    estado.innerHTML = '<div class="orc-aviso"><strong>A soma não bate.</strong> ' +
+      'Aqui deu R$ ' + moedaBR(soma) + ', mas o orçamento diz R$ ' + moedaBR(total) +
+      '. Se você tirou algum ambiente de propósito, pode seguir — ' +
+      'senão, confira os valores.</div>';
+  }
+}
+
+function escreverDireita(p, texto, pos, pg) {
+  const fonte = pos.negrito ? pg.fontes.negrito : pg.fontes.media;
+  const tamanho = pg.ALTURA * pos.tamanho;
+
+  p.drawText(texto, {
+    x: pg.LARGURA * pos.xDireita - fonte.widthOfTextAtSize(texto, tamanho),
+    y: pg.ALTURA * pos.y,
+    size: tamanho,
+    font: fonte,
+    color: hexParaRgb(pos.cor || CONFIG.COR_TEXTO)
+  });
+}
+
+function escreverCapaAmbiente(p, amb, pg) {
+  const C = CONFIG.AMBIENTE;
+  const fonte = pg.fontes.negrito;
+
+  const tamanho = pg.ALTURA * C.titulo.tamanho;
+  const linhas = quebrarLinhas(
+    amb.nome.trim(), fonte, tamanho, pg.LARGURA * C.titulo.larguraMax
+  );
+
+  const alturaLinha = tamanho * C.titulo.entrelinha;
+
+  /* A régua e o investimento ficam ancorados na posição medida na
+     arte. O título sobe a partir dela pelo 'respiro', então dá para
+     afastar o texto da linha sem mexer no resto da composição. */
+  const ancora = pg.ALTURA * C.titulo.y;
+  const baseUltima = ancora + pg.ALTURA * (C.titulo.respiro || 0);
+
+  linhas.forEach((linha, i) => {
+    const deDentroParaCima = (linhas.length - 1 - i) * alturaLinha;
+    p.drawText(linha, {
+      x: pg.LARGURA * C.titulo.xDireita - fonte.widthOfTextAtSize(linha, tamanho),
+      y: baseUltima + deDentroParaCima,
+      size: tamanho,
+      font: fonte,
+      color: hexParaRgb(CONFIG.COR_TEXTO)
+    });
+  });
+
+  /* Régua */
+  const yRegua = ancora - pg.ALTURA * C.regua.abaixoDoTitulo;
+  const espessura = pg.ALTURA * C.regua.espessura;
+
+  p.drawRectangle({
+    x: pg.LARGURA * C.regua.x0,
+    y: yRegua,
+    width: pg.LARGURA * (C.regua.x1 - C.regua.x0),
+    height: espessura,
+    color: hexParaRgb(C.regua.cor)
+  });
+
+  /* Investimento, só quando preenchido */
+  const valor = formatarValor(amb.valor);
+  if (!valor) return;
+
+  const tamanhoValor = pg.ALTURA * C.investimento.tamanho;
+  const texto = (C.investimento.prefixo || '') + valor;
+
+  p.drawText(texto, {
+    x: pg.LARGURA * C.investimento.xDireita -
+       pg.fontes.media.widthOfTextAtSize(texto, tamanhoValor),
+    y: ancora - pg.ALTURA * C.investimento.abaixoDoTitulo,
+    size: tamanhoValor,
+    font: pg.fontes.media,
+    color: hexParaRgb(CONFIG.COR_TEXTO)
+  });
+}
+
+function larguraEspacada(texto, fonte, tamanho, espaco) {
+  let l = 0;
+  for (const c of texto) l += fonte.widthOfTextAtSize(c, tamanho) + espaco;
+  return l - (texto.length ? espaco : 0);
+}
+
+function escreverEspacado(p, texto, op) {
+  let x = op.x;
+  for (const c of texto) {
+    p.drawText(c, { x: x, y: op.y, size: op.size, font: op.font, color: op.color });
+    x += op.font.widthOfTextAtSize(c, op.size) + op.espaco;
+  }
+}
+
+function cortarPara(texto, fonte, tamanho, larguraMax) {
+  if (fonte.widthOfTextAtSize(texto, tamanho) <= larguraMax) return texto;
+
+  let s = texto;
+  while (s.length > 1 &&
+         fonte.widthOfTextAtSize(s + '…', tamanho) > larguraMax) {
+    s = s.slice(0, -1);
+  }
+  return s.trim() + '…';
+}
+
+function quebrarLinhas(texto, fonte, tamanho, larguraMax) {
+  const palavras = String(texto).split(/\s+/);
+  const linhas = [];
+  let atual = '';
+
+  palavras.forEach((palavra) => {
+    const teste = atual ? atual + ' ' + palavra : palavra;
+    if (fonte.widthOfTextAtSize(teste, tamanho) <= larguraMax || !atual) {
+      atual = teste;
+    } else {
+      linhas.push(atual);
+      atual = palavra;
+    }
+  });
+
+  if (atual) linhas.push(atual);
+  return linhas;
+}
+
+function formatarValor(bruto) {
+  const texto = String(bruto || '').trim();
+  if (!texto) return '';
+
+  const limpo = texto.replace(/[^\d,.]/g, '');
+  if (!limpo) return '';
+
+  /* A última vírgula ou ponto seguido de 1 ou 2 dígitos são os centavos */
+  const centavos = limpo.match(/[.,](\d{1,2})$/);
+  const inteiros = (centavos ? limpo.slice(0, centavos.index) : limpo).replace(/\D/g, '');
+
+  if (!inteiros) return '';
+
+  const comPontos = inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const fim = centavos ? centavos[1].padEnd(2, '0') : '00';
+
+  return comPontos + ',' + fim;
+}
+
+async function desenharOrcamento(doc, bases, pg, dados) {
+  const O = CONFIG.ORCAMENTO;
+  const L = O.lista;
+  const C = O.cabecalho;
+  const D = L.descricao;
+
+  const x0 = pg.LARGURA * O.x0;
+  const xDir = pg.LARGURA * O.xDireita;
+  const meioPagina = pg.LARGURA / 2;
+  const piso = pg.ALTURA * L.piso;
+  const passo = pg.ALTURA * L.entrelinha;
+  const corpo = pg.ALTURA * L.tamanho;
+  const cor = hexParaRgb(CONFIG.COR_TEXTO);
+
+  /* Geometria das colunas */
+  const qtd = Math.max(1, O.colunas.quantidade);
+  const vao = pg.LARGURA * O.colunas.intervalo;
+  const larguraCol = (xDir - x0 - vao * (qtd - 1)) / qtd;
+  const colunaEm = (k) => ({
+    esq: x0 + k * (larguraCol + vao),
+    dir: x0 + k * (larguraCol + vao) + larguraCol
+  });
+
+  const fonteValor = L.valorEmNegrito ? pg.fontes.negrito : pg.fontes.media;
+  const tamDesc = pg.ALTURA * D.tamanho;
+  const alturaDesc = tamDesc * D.entrelinha;
+
+  /* ----- mede cada item: quebra a descrição e calcula a altura ----- */
+  const medir = (a) => {
+    const valor = 'R$ ' + moedaBR(a.valor);
+    const larguraValor = fonteValor.widthOfTextAtSize(valor, corpo);
+    const espacoNome = larguraCol - larguraValor - corpo;
+
+    /* Nome encolhe até caber antes de ganhar reticências */
+    let tamNome = corpo;
+    const minNome = pg.ALTURA * L.tamanhoMinimo;
+    while (tamNome > minNome &&
+           pg.fontes.media.widthOfTextAtSize(a.nome, tamNome) > espacoNome) {
+      tamNome -= 0.25;
+    }
+
+    const texto = D.usar ? String(a.descricao || '').trim() : '';
+    const linhas = texto
+      ? quebrarLinhas(texto, pg.fontes.media, tamDesc, larguraCol * D.larguraMax)
+      : [];
+
+    const altura = linhas.length
+      ? Math.max(passo, pg.ALTURA * D.abaixoDoNome +
+                        (linhas.length - 1) * alturaDesc +
+                        pg.ALTURA * D.depois)
+      : passo;
+
+    return {
+      nome: a.nome, valor: a.valor, texto: valor,
+      tamNome: tamNome, espacoNome: espacoNome, larguraValor: larguraValor,
+      linhas: linhas, altura: altura
+    };
+  };
+
+  const medidos = dados.ambientes.map(medir);
+
+  /* ----- divide em páginas e equilibra as colunas por altura -----
+     A página que fecha a lista precisa de espaço para o total; as
+     outras usam a folha inteira. Como só dá para saber qual é a
+     última depois de paginar, pagina-se e repete-se até estabilizar
+     (converge em uma ou duas voltas). */
+  const pisoUltima = pg.ALTURA *
+    (O.total.usar ? O.total.pisoNaUltima : L.piso);
+
+  const paginar = (indiceDaUltima) => {
+    const saida = [];
+    let primeira = true;
+    let i = 0;
+
+    while (i < medidos.length) {
+      const yInicio = pg.ALTURA *
+        (primeira ? L.primeiraLinha : O.continuacao.primeiraLinha);
+      const disponivel = yInicio -
+        (saida.length === indiceDaUltima ? pisoUltima : piso);
+
+      /* Quantos itens cabem nesta página, enchendo coluna a coluna */
+      let cabem = 0, col = 0, usado = 0;
+      for (let k = i; k < medidos.length; k++) {
+        const h = medidos[k].altura;
+        if (usado > 0 && usado + h > disponivel) { col++; usado = 0; }
+        if (col >= qtd) break;
+        usado += h;
+        cabem++;
+      }
+      if (!cabem) cabem = 1;      // item gigante: entra sozinho
+
+      const bloco = medidos.slice(i, i + cabem);
+
+      /* Melhor ponto de corte entre as colunas: o que deixa as duas
+         mais parecidas, desde que ambas caibam. */
+      let corte = bloco.length;
+      let melhor = Infinity;
+      const soma = (ini, fim) =>
+        bloco.slice(ini, fim).reduce((s, b) => s + b.altura, 0);
+
+      for (let k = 1; k <= bloco.length; k++) {
+        const esq = soma(0, k);
+        const dir = soma(k, bloco.length);
+        if (esq > disponivel || dir > disponivel) continue;
+        const dif = Math.abs(esq - dir);
+        if (dif < melhor) { melhor = dif; corte = k; }
+      }
+
+      saida.push({
+        primeira: primeira,
+        yInicio: yInicio,
+        colunas: qtd === 2
+          ? [bloco.slice(0, corte), bloco.slice(corte)]
+          : [bloco]
+      });
+
+      i += cabem;
+      primeira = false;
+    }
+
+    return saida;
+  };
+
+  let paginas = paginar(-1);
+  for (let volta = 0; volta < 4; volta++) {
+    const tentativa = paginar(paginas.length - 1);
+    const estavel = tentativa.length === paginas.length;
+    paginas = tentativa;
+    if (estavel) break;
+  }
+
+  /* Uma cópia da página em branco por bloco, de uma vez só */
+  const copias = await doc.copyPages(bases, paginas.map(() => O.pagina));
+
+  const escreverCentro = (p, texto, y, tamanho, fonte) => {
+    p.drawText(texto, {
+      x: meioPagina - fonte.widthOfTextAtSize(texto, tamanho) / 2,
+      y: y, size: tamanho, font: fonte, color: cor
+    });
+  };
+
+  paginas.forEach((bloco, k) => {
+    const p = copias[k];
+    const ultima = k === paginas.length - 1;
+    doc.addPage(p);
+
+    /* ---------- cabeçalho da página ---------- */
+    const tamRot = pg.ALTURA * O.rotulo.tamanho;
+    const espRot = tamRot * O.rotulo.espacamento;
+    const rotulo = bloco.primeira ? O.rotulo.texto : O.continuacao.rotulo;
+
+    escreverEspacado(p, rotulo, {
+      x: meioPagina - larguraEspacada(rotulo, pg.fontes.media, tamRot, espRot) / 2,
+      y: pg.ALTURA * O.rotulo.y,
+      size: tamRot, font: pg.fontes.media, color: cor, espaco: espRot
+    });
+
+    if (bloco.primeira) {
+      /* Nome de cliente não se corta: encolhe até caber, e só usa
+         reticências se nem no tamanho mínimo couber. */
+      const titulo = dados.cliente || '';
+      let tamTit = pg.ALTURA * O.titulo.tamanho;
+      const minimo = pg.ALTURA * O.titulo.tamanhoMinimo;
+
+      while (tamTit > minimo &&
+             pg.fontes.negrito.widthOfTextAtSize(titulo, tamTit) > xDir - x0) {
+        tamTit -= 0.5;
+      }
+
+      escreverCentro(
+        p, cortarPara(titulo, pg.fontes.negrito, tamTit, xDir - x0),
+        pg.ALTURA * O.titulo.y, tamTit, pg.fontes.negrito
+      );
+
+      p.drawRectangle({
+        x: x0, y: pg.ALTURA * O.regua.y,
+        width: xDir - x0, height: pg.ALTURA * O.regua.espessura,
+        color: hexParaRgb(O.regua.cor)
+      });
+
+      const n = dados.ambientes.length;
+      const partes = [n + (n === 1 ? ' ambiente' : ' ambientes')];
+      if (dados.data) partes.push('Orçamento de ' + dados.data);
+      const meta = partes.join('  ·  ');
+
+      escreverCentro(p, meta, pg.ALTURA * O.meta.y,
+                     pg.ALTURA * O.meta.tamanho, pg.fontes.media);
+    }
+
+    /* ---------- colunas ---------- */
+    let maisBaixo = bloco.yInicio;
+
+    bloco.colunas.forEach((itens, c) => {
+      if (!itens.length) return;
+      const col = colunaEm(c);
+
+      /* --- títulos AMBIENTE / VALOR --- */
+      if (C.usar) {
+        const tamCab = pg.ALTURA * C.tamanho;
+        const espCab = tamCab * C.espacamento;
+        const yCab = bloco.yInicio + pg.ALTURA * C.acimaDaPrimeira;
+
+        escreverEspacado(p, C.ambiente, {
+          x: col.esq, y: yCab,
+          size: tamCab, font: pg.fontes.media, color: cor, espaco: espCab
+        });
+
+        escreverEspacado(p, C.valor, {
+          x: col.dir - larguraEspacada(C.valor, pg.fontes.media, tamCab, espCab),
+          y: yCab,
+          size: tamCab, font: pg.fontes.media, color: cor, espaco: espCab
+        });
+
+        p.drawRectangle({
+          x: col.esq,
+          y: bloco.yInicio + pg.ALTURA * C.regua.acimaDaPrimeira,
+          width: col.dir - col.esq,
+          height: pg.ALTURA * C.regua.espessura,
+          color: hexParaRgb(C.regua.cor)
+        });
+      }
+
+      /* --- itens --- */
+      let y = bloco.yInicio;
+
+      itens.forEach((it, idx) => {
+        p.drawText(cortarPara(it.nome, pg.fontes.media, it.tamNome, it.espacoNome), {
+          x: col.esq, y: y, size: it.tamNome, font: pg.fontes.media, color: cor
+        });
+
+        p.drawText(it.texto, {
+          x: col.dir - it.larguraValor, y: y,
+          size: corpo, font: fonteValor, color: cor
+        });
+
+        /* --- descrição, quando houver --- */
+        it.linhas.forEach((linha, j) => {
+          p.drawText(linha, {
+            x: col.esq,
+            y: y - pg.ALTURA * D.abaixoDoNome - j * alturaDesc,
+            size: tamDesc, font: pg.fontes.media, color: hexParaRgb(D.cor)
+          });
+        });
+
+        const proximo = y - it.altura;
+
+        if (L.separador.usar && idx < itens.length - 1) {
+          p.drawRectangle({
+            x: col.esq, y: proximo + pg.ALTURA * L.separador.acimaDoProximo,
+            width: col.dir - col.esq,
+            height: pg.ALTURA * L.separador.espessura,
+            color: hexParaRgb(L.separador.cor)
+          });
+        }
+
+        y = proximo;
+      });
+
+      if (y < maisBaixo) maisBaixo = y;
+    });
+
+    /* ---------- total, só na última página ---------- */
+    if (O.total.usar && ultima) {
+      const T = O.total;
+      const soma = (dados.total !== undefined && dados.total !== null)
+        ? dados.total
+        : dados.ambientes.reduce((s, a) => s + (a.valor || 0), 0);
+
+      /* O total encosta na coluna que desceu mais, com um piso para
+         não cair em cima do logo quando a lista é longa. */
+      const yRegua = Math.max(
+        pg.ALTURA * T.regua.y,
+        maisBaixo + passo - pg.ALTURA * T.folgaAcima
+      );
+      const yTexto = yRegua - pg.ALTURA * (T.regua.y - T.y);
+
+      p.drawRectangle({
+        x: x0, y: yRegua,
+        width: xDir - x0, height: pg.ALTURA * T.regua.espessura,
+        color: hexParaRgb(T.regua.cor)
+      });
+
+      const tamRotT = pg.ALTURA * T.tamanhoRotulo;
+      escreverEspacado(p, T.rotulo, {
+        x: x0, y: yTexto,
+        size: tamRotT, font: pg.fontes.media, color: cor,
+        espaco: tamRotT * T.espacamento
+      });
+
+      const tamValor = pg.ALTURA * T.tamanhoValor;
+      const valor = 'R$ ' + moedaBR(soma);
+
+      p.drawText(valor, {
+        x: xDir - pg.fontes.negrito.widthOfTextAtSize(valor, tamValor),
+        y: yTexto,
+        size: tamValor, font: pg.fontes.negrito, color: cor
+      });
+    }
+  });
+
+  return paginas.length;
+}
+
+async function baixar(caminho) {
+  const r = await fetch(caminho, { cache: 'no-cache' });
+
+  /* O servidor devolve a página inicial quando o endereço não existe,
+     em vez de um 404. Sem essa checagem, receberíamos HTML achando
+     que é PDF e o erro sairia incompreensível. */
+  const tipo = (r.headers.get('content-type') || '').toLowerCase();
+
+  if (!r.ok || tipo.indexOf('text/html') !== -1) {
+    throw new Error('ARQUIVO_FALTANDO:' + caminho);
+  }
+
+  return await r.arrayBuffer();
+}
+
+function hexParaRgb(hex) {
+  const h = String(hex).replace('#', '');
+  return PDFLib.rgb(
+    parseInt(h.substring(0, 2), 16) / 255,
+    parseInt(h.substring(2, 4), 16) / 255,
+    parseInt(h.substring(4, 6), 16) / 255
+  );
+}
+
+function progresso(texto, porcento) {
+  saida.innerHTML = '';
+
+  const p = document.createElement('p');
+  p.className = 'msg';
+  p.textContent = texto;
+
+  const barra = document.createElement('div');
+  barra.className = 'barra';
+  const dentro = document.createElement('i');
+  dentro.style.width = porcento + '%';
+  barra.appendChild(dentro);
+
+  saida.append(p, barra);
+}
+
+function erro(texto) {
+  saida.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'msg erro';
+  p.textContent = texto;
+  saida.appendChild(p);
+}
+
+function pronto(paginas, bytes, aviso) {
+  saida.innerHTML = '';
+
+  const cartao = document.createElement('div');
+  cartao.className = 'arquivo-pronto';
+
+  const selo = document.createElement('span');
+  selo.className = 'selo';
+  selo.textContent = 'PDF';
+
+  const texto = document.createElement('div');
+  const nome = document.createElement('div');
+  nome.className = 'nome';
+  nome.textContent = ultimo.nome;
+
+  const sub = document.createElement('div');
+  sub.className = 'sub';
+  sub.textContent = paginas + ' páginas · ' + (bytes / 1048576).toFixed(1) + ' MB';
+
+  texto.append(nome, sub);
+  cartao.append(selo, texto);
+
+  const baixar = document.createElement('button');
+  baixar.className = 'botao verde';
+  baixar.textContent = 'Baixar apresentação';
+  baixar.addEventListener('click', () => salvar(false));
+
+  const abrir = document.createElement('button');
+  abrir.className = 'botao vazado';
+  abrir.style.marginTop = '8px';
+  abrir.textContent = 'Abrir para conferir';
+  abrir.addEventListener('click', () => salvar(true));
+
+  saida.append(cartao, baixar, abrir);
+
+  if (aviso) {
+    const p = document.createElement('p');
+    p.className = 'msg erro';
+    p.style.marginTop = '12px';
+    p.textContent = aviso;
+    saida.appendChild(p);
+  }
+}
+
+function salvar(abrir) {
+  const url = URL.createObjectURL(
+    new Blob([ultimo.bytes], { type: 'application/pdf' })
+  );
+
+  const EH_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (abrir || EH_IOS) {
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = ultimo.nome;
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 1000);
+}
+
+
+/* ============================================================
+   CONFERÊNCIA DOS ARQUIVOS BASE
+   ============================================================ */
+
+(async function conferirArquivos() {
+  const obrigatorios = Object.values(CONFIG.arquivos.bases)
+    .concat([CONFIG.arquivos.fonteMedia, CONFIG.arquivos.fonteNegrito]);
+
+  const faltando = [];
+  let erroDeRede = false;
+
+  for (const caminho of obrigatorios) {
+    try {
+      const r = await fetch(caminho, {
+        cache: 'no-cache',
+        headers: { Range: 'bytes=0-0' }
+      });
+      const tipo = (r.headers.get('content-type') || '').toLowerCase();
+      if (!r.ok || tipo.indexOf('text/html') !== -1) faltando.push(caminho);
+    } catch (e) {
+      faltando.push(caminho);
+      erroDeRede = true;
+    }
+  }
+
+  if (!faltando.length) return;
+
+  const aviso = el('aviso-arquivos');
+  aviso.classList.remove('oculto');
+
+  if (erroDeRede && location.protocol === 'file:') {
+    aviso.innerHTML =
+      '<strong>Esta página precisa ser aberta por um endereço, não pelo arquivo.</strong> ' +
+      'Abrindo com dois cliques, o navegador bloqueia a leitura dos arquivos base. ' +
+      'Suba a pasta no servidor, ou rode <code>python3 -m http.server 8000</code> ' +
+      'dentro dela e abra <code>http://localhost:8000/orcamento.html</code>.';
+    return;
+  }
+
+  aviso.innerHTML =
+    '<strong>Falta subir ' + (faltando.length === 1 ? 'um arquivo' : 'alguns arquivos') +
+    ':</strong> ' + faltando.join(', ') + '. Eles precisam estar na mesma pasta desta página.';
+})();
+
+</script>
+
+</body>
+</html>
