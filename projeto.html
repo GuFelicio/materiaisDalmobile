@@ -185,11 +185,38 @@
     color: var(--muted); margin-bottom: 4px;
   }
 
+  .orc-item {
+    border-bottom: 1px solid var(--line-2);
+    padding-bottom: 8px; margin-bottom: 8px;
+  }
+  .orc-item:last-child { border-bottom: 0; }
+
   .orc-linha {
-    display: flex; gap: 8px; align-items: center; margin-bottom: 6px;
+    display: flex; gap: 8px; align-items: center;
   }
   .orc-linha input.nome  { flex: 1; }
   .orc-linha input.valor { flex: 0 0 120px; text-align: right; }
+
+  .orc-desc {
+    display: block; width: 100%; box-sizing: border-box;
+    margin-top: 6px; padding: 7px 9px;
+    border: 1px solid var(--line-2); border-radius: 6px;
+    background: var(--card); color: var(--muted);
+    font-family: inherit; font-size: 12px; line-height: 1.45;
+    resize: vertical; min-height: 34px;
+  }
+  .orc-desc:focus { outline: none; border-color: var(--accent); color: var(--ink); }
+
+  .orc-acoes {
+    display: flex; justify-content: flex-end; margin-bottom: 10px;
+  }
+  .orc-acoes button {
+    border: 1px solid var(--line-2); border-radius: 6px;
+    background: var(--card); color: var(--muted);
+    font-size: 11px; font-family: inherit;
+    padding: 5px 10px; cursor: pointer;
+  }
+  .orc-acoes button:hover { border-color: var(--accent); color: var(--ink); }
 
   .orc-linha button {
     flex: 0 0 auto; width: 28px; height: 28px; padding: 0;
@@ -559,9 +586,30 @@ const CONFIG = {
       /* Com duas colunas a largura caiu pela metade, então nome
          comprido encolhe um pouco antes de ganhar reticências. */
       tamanhoMinimo: 0.0240,
-      piso: 0.310,              // deixa espaço para o total embaixo
+      /* Até onde a lista pode descer. 0.222 é logo acima do logo e
+         do grafismo do canto, medidos na arte da base. */
+      piso: 0.222,
       valorEmNegrito: true,
-      separador: { usar: true, abaixo: 0.016, espessura: 0.0012, cor: '#CBCBCB' }
+      /* O fio fica acima do PRÓXIMO nome, e precisa limpar a altura
+         da letra dele (~0.72 do corpo) para não cortar o texto. */
+      separador: { usar: true, acimaDoProximo: 0.034, espessura: 0.0012, cor: '#CBCBCB' },
+
+      /* Descrição opcional, logo abaixo do nome do ambiente.
+         Quebra sozinha na largura da coluna, e a altura do item
+         acompanha — a paginação mede, não conta linhas. */
+      descricao: {
+        usar: true,
+        tamanho: 0.0210,        // menor que o nome, para não competir
+        entrelinha: 1.30,
+        abaixoDoNome: 0.032,    // do pé do nome à primeira linha
+        /* Distância da ÚLTIMA linha da descrição ao nome do próximo
+           ambiente. Precisa caber a perna da descrição mais a altura
+           da letra do nome seguinte — com menos que isso, os dois se
+           sobrepõem. */
+        depois: 0.042,
+        larguraMax: 0.93,       // fração da largura da coluna
+        cor: '#8A8A8A'
+      }
     },
 
     /* Fecha a última página */
@@ -572,6 +620,9 @@ const CONFIG = {
          última linha, mas nunca sobe acima disso nem desce de 'y'.
          Sem isso, uma lista curta deixa um buraco no meio da página. */
       folgaAcima: 0.085,
+      /* Só a ÚLTIMA página reserva espaço para o total — nas outras
+         a lista aproveita a página inteira. */
+      pisoNaUltima: 0.310,
       regua: { y: 0.270, espessura: 0.00284, cor: '#000000' },
       y: 0.215,
       tamanhoRotulo: 0.0247, espacamento: 0.14,
@@ -974,6 +1025,22 @@ function arrumarCaixaDeNome(bruto) {
   }).join(' ');
 }
 
+/* Junta o resto da linha do item com as linhas de continuação e
+   tira o que sobrou do nome, deixando só a descrição. */
+function limparDescricao(bruto, detalhe) {
+  let s = String(detalhe || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+
+  /* O trecho "Projeto - Cozinha - " já virou nome; o que vem depois
+     do segundo hífen é a descrição e pode estar na mesma string. */
+  const nome = String(bruto || '');
+  const h1 = nome.indexOf(' - ');
+  const h2 = h1 === -1 ? -1 : nome.indexOf(' - ', h1 + 3);
+  if (h2 !== -1) s = (nome.slice(h2 + 3) + ' ' + s).replace(/\s+/g, ' ').trim();
+
+  return s.replace(/^[\/\s,;.-]+/, '').replace(/[\s\/]+$/, '').trim();
+}
+
 /* Tira o telefone que vem grudado no fim do nome */
 function semTelefone(s) {
   return String(s || '').replace(/\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}.*$/, '').trim();
@@ -1203,7 +1270,12 @@ async function lerOrcamento(arquivo) {
 
   d.cliente = arrumarCaixaDeNome(d.cliente);
   d.ambientes = d.ambientes.map((a) => ({
-    nome: limparNomeAmbiente(a.nome), valor: a.valor
+    nome: limparNomeAmbiente(a.nome),
+    valor: a.valor,
+    /* O orçamento detalhado já traz o que foi usado no ambiente.
+       Entra preenchido na tela para você aparar, não para aceitar
+       como veio: é texto técnico de fábrica, não de apresentação. */
+    descricao: limparDescricao(a.nome, a.detalhe)
   }));
 
   return d;
@@ -1215,10 +1287,15 @@ function montarConferencia() {
   const d = orcamento;
 
   const linhas = d.ambientes.map((a, i) => `
-    <div class="orc-linha" data-i="${i}">
-      <input class="nome"  type="text" value="${escaparHtml(a.nome)}">
-      <input class="valor" type="text" value="${moedaBR(a.valor)}" inputmode="decimal">
-      <button type="button" title="Remover">&times;</button>
+    <div class="orc-item" data-i="${i}">
+      <div class="orc-linha">
+        <input class="nome"  type="text" value="${escaparHtml(a.nome)}">
+        <input class="valor" type="text" value="${moedaBR(a.valor)}" inputmode="decimal">
+        <button type="button" title="Remover ambiente">&times;</button>
+      </div>
+      <textarea class="orc-desc" rows="2"
+        placeholder="Descrição do ambiente (opcional) — o que foi usado, acabamentos, detalhes."
+        >${escaparHtml(a.descricao || '')}</textarea>
     </div>`).join('');
 
   const origem = d.formato === 'antigo'
@@ -1241,6 +1318,10 @@ function montarConferencia() {
       </div>
     </div>
 
+    <div class="orc-acoes">
+      <button type="button" id="orc-limpar">Limpar todas as descrições</button>
+    </div>
+
     <div id="orc-linhas">${linhas}</div>
 
     <div class="orc-soma">
@@ -1259,9 +1340,16 @@ function montarConferencia() {
 painelOrc.addEventListener('input', () => { if (orcamento) recalcular(); });
 
 painelOrc.addEventListener('click', (ev) => {
+  if (!orcamento) return;
+
+  if (ev.target.id === 'orc-limpar') {
+    painelOrc.querySelectorAll('.orc-desc').forEach((t) => { t.value = ''; });
+    return;
+  }
+
   const b = ev.target.closest('.orc-linha button');
-  if (!b || !orcamento) return;
-  b.closest('.orc-linha').remove();
+  if (!b) return;
+  b.closest('.orc-item').remove();
   recalcular();
 });
 
@@ -1270,10 +1358,17 @@ painelOrc.addEventListener('click', (ev) => {
 function lerConferencia() {
   const itens = [];
 
-  painelOrc.querySelectorAll('.orc-linha').forEach((l) => {
+  painelOrc.querySelectorAll('.orc-item').forEach((l) => {
     const nome = l.querySelector('.nome').value.trim();
     const valor = numeroBR(l.querySelector('.valor').value.replace(/[^\d.,]/g, ''));
-    if (nome) itens.push({ nome: nome, valor: isNaN(valor) ? 0 : valor });
+    const desc = l.querySelector('.orc-desc').value.trim();
+    if (nome) {
+      itens.push({
+        nome: nome,
+        valor: isNaN(valor) ? 0 : valor,
+        descricao: desc
+      });
+    }
   });
 
   /* O total impresso na página tem que ser o MESMO do orçamento
@@ -1570,15 +1665,19 @@ function cortarPara(texto, fonte, tamanho, larguraMax) {
 }
 
 /**
- * Página de investimento, desenhada sobre a página em branco da
- * base. A lista transborda para páginas seguintes quando não cabe —
- * preferi isso a encolher a fonte, que faria cada apresentação sair
- * com um tamanho diferente.
+ * Página de investimento, desenhada sobre a página em branco da base.
+ *
+ * Com descrição opcional cada item deixa de ter altura fixa, então a
+ * paginação não conta linhas: ela mede. As colunas são equilibradas
+ * por ALTURA, não por quantidade — com descrições de tamanhos
+ * diferentes, dividir a lista ao meio deixaria uma coluna comprida e
+ * a outra curta.
  */
 async function desenharOrcamento(doc, bases, pg, dados) {
   const O = CONFIG.ORCAMENTO;
   const L = O.lista;
   const C = O.cabecalho;
+  const D = L.descricao;
 
   const x0 = pg.LARGURA * O.x0;
   const xDir = pg.LARGURA * O.xDireita;
@@ -1597,24 +1696,112 @@ async function desenharOrcamento(doc, bases, pg, dados) {
     dir: x0 + k * (larguraCol + vao) + larguraCol
   });
 
-  /* Quantas linhas cabem em UMA coluna, a partir de uma altura */
-  const linhasEm = (y) => Math.max(1, Math.floor((y - piso) / passo) + 1);
+  const fonteValor = L.valorEmNegrito ? pg.fontes.negrito : pg.fontes.media;
+  const tamDesc = pg.ALTURA * D.tamanho;
+  const alturaDesc = tamDesc * D.entrelinha;
 
-  /* --- divide os ambientes em páginas --- */
-  const restantes = dados.ambientes.slice();
-  const paginas = [];
-  let primeira = true;
+  /* ----- mede cada item: quebra a descrição e calcula a altura ----- */
+  const medir = (a) => {
+    const valor = 'R$ ' + moedaBR(a.valor);
+    const larguraValor = fonteValor.widthOfTextAtSize(valor, corpo);
+    const espacoNome = larguraCol - larguraValor - corpo;
 
-  while (restantes.length) {
-    const yInicio = pg.ALTURA *
-      (primeira ? L.primeiraLinha : O.continuacao.primeiraLinha);
+    /* Nome encolhe até caber antes de ganhar reticências */
+    let tamNome = corpo;
+    const minNome = pg.ALTURA * L.tamanhoMinimo;
+    while (tamNome > minNome &&
+           pg.fontes.media.widthOfTextAtSize(a.nome, tamNome) > espacoNome) {
+      tamNome -= 0.25;
+    }
 
-    paginas.push({
-      primeira: primeira,
-      yInicio: yInicio,
-      itens: restantes.splice(0, linhasEm(yInicio) * qtd)
-    });
-    primeira = false;
+    const texto = D.usar ? String(a.descricao || '').trim() : '';
+    const linhas = texto
+      ? quebrarLinhas(texto, pg.fontes.media, tamDesc, larguraCol * D.larguraMax)
+      : [];
+
+    const altura = linhas.length
+      ? Math.max(passo, pg.ALTURA * D.abaixoDoNome +
+                        (linhas.length - 1) * alturaDesc +
+                        pg.ALTURA * D.depois)
+      : passo;
+
+    return {
+      nome: a.nome, valor: a.valor, texto: valor,
+      tamNome: tamNome, espacoNome: espacoNome, larguraValor: larguraValor,
+      linhas: linhas, altura: altura
+    };
+  };
+
+  const medidos = dados.ambientes.map(medir);
+
+  /* ----- divide em páginas e equilibra as colunas por altura -----
+     A página que fecha a lista precisa de espaço para o total; as
+     outras usam a folha inteira. Como só dá para saber qual é a
+     última depois de paginar, pagina-se e repete-se até estabilizar
+     (converge em uma ou duas voltas). */
+  const pisoUltima = pg.ALTURA *
+    (O.total.usar ? O.total.pisoNaUltima : L.piso);
+
+  const paginar = (indiceDaUltima) => {
+    const saida = [];
+    let primeira = true;
+    let i = 0;
+
+    while (i < medidos.length) {
+      const yInicio = pg.ALTURA *
+        (primeira ? L.primeiraLinha : O.continuacao.primeiraLinha);
+      const disponivel = yInicio -
+        (saida.length === indiceDaUltima ? pisoUltima : piso);
+
+      /* Quantos itens cabem nesta página, enchendo coluna a coluna */
+      let cabem = 0, col = 0, usado = 0;
+      for (let k = i; k < medidos.length; k++) {
+        const h = medidos[k].altura;
+        if (usado > 0 && usado + h > disponivel) { col++; usado = 0; }
+        if (col >= qtd) break;
+        usado += h;
+        cabem++;
+      }
+      if (!cabem) cabem = 1;      // item gigante: entra sozinho
+
+      const bloco = medidos.slice(i, i + cabem);
+
+      /* Melhor ponto de corte entre as colunas: o que deixa as duas
+         mais parecidas, desde que ambas caibam. */
+      let corte = bloco.length;
+      let melhor = Infinity;
+      const soma = (ini, fim) =>
+        bloco.slice(ini, fim).reduce((s, b) => s + b.altura, 0);
+
+      for (let k = 1; k <= bloco.length; k++) {
+        const esq = soma(0, k);
+        const dir = soma(k, bloco.length);
+        if (esq > disponivel || dir > disponivel) continue;
+        const dif = Math.abs(esq - dir);
+        if (dif < melhor) { melhor = dif; corte = k; }
+      }
+
+      saida.push({
+        primeira: primeira,
+        yInicio: yInicio,
+        colunas: qtd === 2
+          ? [bloco.slice(0, corte), bloco.slice(corte)]
+          : [bloco]
+      });
+
+      i += cabem;
+      primeira = false;
+    }
+
+    return saida;
+  };
+
+  let paginas = paginar(-1);
+  for (let volta = 0; volta < 4; volta++) {
+    const tentativa = paginar(paginas.length - 1);
+    const estavel = tentativa.length === paginas.length;
+    paginas = tentativa;
+    if (estavel) break;
   }
 
   /* Uma cópia da página em branco por bloco, de uma vez só */
@@ -1675,16 +1862,10 @@ async function desenharOrcamento(doc, bases, pg, dados) {
                      pg.ALTURA * O.meta.tamanho, pg.fontes.media);
     }
 
-    /* ---------- divide o bloco entre as colunas ---------- */
-    const porColuna = Math.ceil(bloco.itens.length / qtd);
-    const colunas = [];
-    for (let c = 0; c < qtd; c++) {
-      colunas.push(bloco.itens.slice(c * porColuna, (c + 1) * porColuna));
-    }
+    /* ---------- colunas ---------- */
+    let maisBaixo = bloco.yInicio;
 
-    const fonteValor = L.valorEmNegrito ? pg.fontes.negrito : pg.fontes.media;
-
-    colunas.forEach((itens, c) => {
+    bloco.colunas.forEach((itens, c) => {
       if (!itens.length) return;
       const col = colunaEm(c);
 
@@ -1714,40 +1895,43 @@ async function desenharOrcamento(doc, bases, pg, dados) {
         });
       }
 
-      /* --- linhas --- */
-      itens.forEach((a, i) => {
-        const y = bloco.yInicio - i * passo;
-        const valor = 'R$ ' + moedaBR(a.valor);
-        const larguraValor = fonteValor.widthOfTextAtSize(valor, corpo);
-        const espacoNome = col.dir - col.esq - larguraValor - corpo;
+      /* --- itens --- */
+      let y = bloco.yInicio;
 
-        /* Encolhe o nome até caber antes de recorrer às reticências */
-        let tamNome = corpo;
-        const minNome = pg.ALTURA * L.tamanhoMinimo;
-        while (tamNome > minNome &&
-               pg.fontes.media.widthOfTextAtSize(a.nome, tamNome) > espacoNome) {
-          tamNome -= 0.25;
-        }
+      itens.forEach((it, idx) => {
+        p.drawText(cortarPara(it.nome, pg.fontes.media, it.tamNome, it.espacoNome), {
+          x: col.esq, y: y, size: it.tamNome, font: pg.fontes.media, color: cor
+        });
 
-        p.drawText(
-          cortarPara(a.nome, pg.fontes.media, tamNome, espacoNome),
-          { x: col.esq, y: y, size: tamNome, font: pg.fontes.media, color: cor }
-        );
-
-        p.drawText(valor, {
-          x: col.dir - larguraValor, y: y,
+        p.drawText(it.texto, {
+          x: col.dir - it.larguraValor, y: y,
           size: corpo, font: fonteValor, color: cor
         });
 
-        if (L.separador.usar && i < itens.length - 1) {
+        /* --- descrição, quando houver --- */
+        it.linhas.forEach((linha, j) => {
+          p.drawText(linha, {
+            x: col.esq,
+            y: y - pg.ALTURA * D.abaixoDoNome - j * alturaDesc,
+            size: tamDesc, font: pg.fontes.media, color: hexParaRgb(D.cor)
+          });
+        });
+
+        const proximo = y - it.altura;
+
+        if (L.separador.usar && idx < itens.length - 1) {
           p.drawRectangle({
-            x: col.esq, y: y - pg.ALTURA * L.separador.abaixo,
+            x: col.esq, y: proximo + pg.ALTURA * L.separador.acimaDoProximo,
             width: col.dir - col.esq,
             height: pg.ALTURA * L.separador.espessura,
             color: hexParaRgb(L.separador.cor)
           });
         }
+
+        y = proximo;
       });
+
+      if (y < maisBaixo) maisBaixo = y;
     });
 
     /* ---------- total, só na última página ---------- */
@@ -1757,14 +1941,11 @@ async function desenharOrcamento(doc, bases, pg, dados) {
         ? dados.total
         : dados.ambientes.reduce((s, a) => s + (a.valor || 0), 0);
 
-      /* A última linha da coluna mais cheia define até onde a lista
-         desceu; o total encosta nela em vez de ficar preso no pé. */
-      const maiorColuna = Math.max.apply(null, colunas.map((c) => c.length));
-      const ultimaLinha = bloco.yInicio - (maiorColuna - 1) * passo;
-
+      /* O total encosta na coluna que desceu mais, com um piso para
+         não cair em cima do logo quando a lista é longa. */
       const yRegua = Math.max(
         pg.ALTURA * T.regua.y,
-        ultimaLinha - pg.ALTURA * T.folgaAcima
+        maisBaixo + passo - pg.ALTURA * T.folgaAcima
       );
       const yTexto = yRegua - pg.ALTURA * (T.regua.y - T.y);
 
