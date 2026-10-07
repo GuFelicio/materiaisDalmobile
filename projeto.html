@@ -166,6 +166,55 @@
   .solta input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .solta strong { display: block; color: var(--ink); font-size: 14px; margin-bottom: 2px; }
 
+  /* --- conferência do orçamento lido do PV --- */
+  .conferencia { margin-top: 14px; }
+
+  .conferencia h3 {
+    font-size: 12px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted);
+    margin: 0 0 10px;
+  }
+
+  .orc-topo {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .orc-topo label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--muted); margin-bottom: 4px;
+  }
+
+  .orc-linha {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 6px;
+  }
+  .orc-linha input.nome  { flex: 1; }
+  .orc-linha input.valor { flex: 0 0 120px; text-align: right; }
+
+  .orc-linha button {
+    flex: 0 0 auto; width: 28px; height: 28px; padding: 0;
+    border: 1px solid var(--line-2); border-radius: 6px;
+    background: var(--card); color: var(--muted);
+    font-size: 14px; line-height: 1; cursor: pointer;
+  }
+  .orc-linha button:hover { border-color: #c75; color: #c75; }
+
+  .orc-soma {
+    display: flex; justify-content: space-between;
+    border-top: 1px solid var(--line-2);
+    margin-top: 10px; padding-top: 10px;
+    font-size: 13px; font-weight: 700; color: var(--ink);
+  }
+
+  .orc-aviso {
+    margin-top: 10px; padding: 9px 11px;
+    border-radius: 7px; font-size: 12px; line-height: 1.5;
+    background: #fdf1e7; border: 1px solid #f0cfae; color: #8a4b12;
+  }
+  .orc-ok {
+    margin-top: 10px; font-size: 12px; color: var(--muted);
+  }
+
   .miniaturas {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
@@ -314,14 +363,21 @@
 
     <label class="toggle" for="temPv">
       <input type="checkbox" id="temPv">
-      Anexar o PV no fim da apresentação
+      Incluir o orçamento no fim da apresentação
     </label>
 
     <div class="solta oculto" id="area-pv">
       <input type="file" id="pv" accept="application/pdf">
       <strong>Escolher o PDF do PV</strong>
-      <span id="pv-nome">Exportado do sistema, com valores e forma de pagamento.</span>
+      <span id="pv-nome">Exportado do sistema, com os ambientes e valores.</span>
     </div>
+
+    <div class="conferencia oculto" id="orc-conferencia"></div>
+
+    <label class="toggle oculto" for="anexarPv" id="linha-anexar">
+      <input type="checkbox" id="anexarPv">
+      Anexar também o PV original, como ele sai do sistema
+    </label>
   </div>
 
   <button class="botao" id="gerar">Gerar apresentação</button>
@@ -333,6 +389,15 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  /* pdf.js só é usado para LER o orçamento. Se o CDN não responder,
+     o resto da página continua funcionando e a leitura avisa. */
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 <script>
 /* ============================================================
    CONFIGURAÇÃO
@@ -454,6 +519,82 @@ const CONFIG = {
     base: 0
   },
 
+  /* ============================================================
+     PÁGINA DE INVESTIMENTO (lida do PV)
+     Desenhada por cima da página em branco da base (a mesma da
+     capa de ambiente). Medi o fundo: o logo ocupa até 39pt a
+     partir da base e o grafismo do canto até 79pt — por isso o
+     piso da lista é 0.222 (90pt).
+     ============================================================ */
+  ORCAMENTO: {
+    pagina: 4,           // índice da página em branco dentro da base
+    x0: 0.055,           // a faixa agora ocupa a página toda,
+    xDireita: 0.945,     // porque a lista virou duas colunas
+
+    /* Duas colunas lado a lado. A lista é dividida ao meio, então
+       com 6 ambientes saem 3 de cada lado — fica equilibrado em vez
+       de encher a esquerda e deixar a direita vazia. */
+    colunas: { quantidade: 2, intervalo: 0.040 },
+
+    /* Cabeçalho centralizado na página */
+    rotulo: { texto: 'INVESTIMENTO', y: 0.860, tamanho: 0.0247, espacamento: 0.14 },
+    titulo: { y: 0.785, tamanho: 0.0617, tamanhoMinimo: 0.038 },   // nome do cliente
+    regua:  { y: 0.760, espessura: 0.00284, cor: '#000000' },
+    meta:   { y: 0.722, tamanho: 0.0247 },     // "6 ambientes · Orçamento de ..."
+
+    /* Títulos de cada coluna. As alturas são medidas a partir da
+       primeira linha da lista, para valerem também na continuação. */
+    cabecalho: {
+      usar: true,
+      ambiente: 'AMBIENTE', valor: 'VALOR',
+      tamanho: 0.0222, espacamento: 0.12,
+      acimaDaPrimeira: 0.055,
+      regua: { acimaDaPrimeira: 0.038, espessura: 0.0012, cor: '#9A9A9A' }
+    },
+
+    lista: {
+      primeiraLinha: 0.600,
+      entrelinha: 0.052,
+      tamanho: 0.0296,
+      /* Com duas colunas a largura caiu pela metade, então nome
+         comprido encolhe um pouco antes de ganhar reticências. */
+      tamanhoMinimo: 0.0240,
+      piso: 0.310,              // deixa espaço para o total embaixo
+      valorEmNegrito: true,
+      separador: { usar: true, abaixo: 0.016, espessura: 0.0012, cor: '#CBCBCB' }
+    },
+
+    /* Fecha a última página */
+    total: {
+      usar: true,
+      rotulo: 'INVESTIMENTO TOTAL',
+      /* O total sobe junto com a lista: fica 'folgaAcima' abaixo da
+         última linha, mas nunca sobe acima disso nem desce de 'y'.
+         Sem isso, uma lista curta deixa um buraco no meio da página. */
+      folgaAcima: 0.085,
+      regua: { y: 0.270, espessura: 0.00284, cor: '#000000' },
+      y: 0.215,
+      tamanhoRotulo: 0.0247, espacamento: 0.14,
+      tamanhoValor: 0.050
+    },
+
+    /* Páginas seguintes, quando a lista não cabe em uma só */
+    continuacao: { primeiraLinha: 0.700, rotulo: 'INVESTIMENTO · CONTINUAÇÃO' },
+
+    /* Limpeza dos nomes que vêm do sistema.
+       "ARES GALATA - COZINHA E LAVANDERIA" → "Cozinha e Lavanderia" */
+    limparNomes: true,
+    minusculas: ['e', 'de', 'da', 'do', 'das', 'dos', 'em', 'com', 'para', 'a', 'o'],
+    /* O sistema exporta sem acento. Acrescente aqui o que faltar —
+       a chave é a palavra em minúscula e sem acento. */
+    acentos: {
+      dormitorio: 'Dormitório', suite: 'Suíte', escritorio: 'Escritório',
+      area: 'Área', servico: 'Serviço', patio: 'Pátio', sotao: 'Sótão',
+      banheiro: 'Banheiro', varanda: 'Varanda', sacada: 'Sacada',
+      closet: 'Closet', lavabo: 'Lavabo', mezanino: 'Mezanino'
+    }
+  },
+
   /* Qualidade das imagens dentro do PDF.
      1920 é mais que suficiente para apresentação em tela e
      mantém o arquivo leve. Suba para 2560 se for imprimir. */
@@ -481,6 +622,13 @@ const inputPv   = el('pv');
 let ambientes = [];   // [{ id, nome, valor, imagens: [File] }]
 let proximoId = 1;
 let arquivoPv = null;
+
+const painelOrc   = el('orc-conferencia');
+const linhaAnexar = el('linha-anexar');
+const chkAnexar   = el('anexarPv');
+
+/* Dados lidos do PV, já conferidos/corrigidos na tela */
+let orcamento = null;
 let ultimo = null;    // { nome, bytes }
 
 /* ============================================================
@@ -703,21 +851,297 @@ desenharAmbientes();
    PV
    ============================================================ */
 
+const TEXTO_PV = 'Exportado do sistema, com os ambientes e valores.';
+
 chkPv.addEventListener('change', () => {
   areaPv.classList.toggle('oculto', !chkPv.checked);
   if (!chkPv.checked) {
     arquivoPv = null;
+    orcamento = null;
     inputPv.value = '';
-    el('pv-nome').textContent = 'Exportado do sistema, com valores e forma de pagamento.';
+    el('pv-nome').textContent = TEXTO_PV;
+    painelOrc.classList.add('oculto');
+    painelOrc.innerHTML = '';
+    linhaAnexar.classList.add('oculto');
   }
 });
 
-inputPv.addEventListener('change', () => {
+inputPv.addEventListener('change', async () => {
   arquivoPv = inputPv.files && inputPv.files[0] ? inputPv.files[0] : null;
-  el('pv-nome').textContent = arquivoPv
-    ? arquivoPv.name
-    : 'Exportado do sistema, com valores e forma de pagamento.';
+  el('pv-nome').textContent = arquivoPv ? arquivoPv.name : TEXTO_PV;
+
+  orcamento = null;
+  painelOrc.innerHTML = '';
+  painelOrc.classList.toggle('oculto', !arquivoPv);
+  linhaAnexar.classList.toggle('oculto', !arquivoPv);
+
+  if (!arquivoPv) return;
+
+  painelOrc.innerHTML = '<p class="orc-ok">Lendo o orçamento...</p>';
+
+  try {
+    orcamento = await lerOrcamento(arquivoPv);
+    montarConferencia();
+  } catch (e) {
+    console.error(e);
+    painelOrc.innerHTML =
+      '<div class="orc-aviso"><strong>Não consegui ler esse PDF.</strong> ' +
+      escaparHtml(e.message || '') +
+      ' Você ainda pode anexar o PV original marcando a opção abaixo.</div>';
+  }
 });
+
+/* ============================================================
+   ORÇAMENTO — leitura do PV e conferência na tela
+   ------------------------------------------------------------
+   O PV sai do sistema com camada de texto e posições fixas, o que
+   permite ler os ambientes sem OCR. Mesmo assim NADA vai para o
+   PDF sem passar pela tela de conferência: valor errado numa
+   apresentação assinada é problema comercial, não bug.
+   ============================================================ */
+
+function numeroBR(s) {
+  return parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
+}
+
+function moedaBR(n) {
+  return Number(n || 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+
+function escaparHtml(s) {
+  return String(s).replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* "ARES GALATA - COZINHA E LAVANDERIA" → "Cozinha e Lavanderia" */
+function limparNomeAmbiente(bruto) {
+  const O = CONFIG.ORCAMENTO;
+  let s = String(bruto).trim();
+  if (!O.limparNomes) return s;
+
+  /* Corta o prefixo do empreendimento, quando existe */
+  const h = s.indexOf(' - ');
+  if (h !== -1) s = s.slice(h + 3).trim();
+
+  /* Só reescreve o caixa se veio tudo em maiúscula. Se o sistema já
+     mandou com acento e caixa certa, não mexe. */
+  if (s !== s.toUpperCase()) return s;
+
+  return s.toLowerCase().split(/\s+/).map((p, i) => {
+    if (i > 0 && O.minusculas.indexOf(p) !== -1) return p;
+    if (O.acentos[p]) return O.acentos[p];
+    return p.charAt(0).toUpperCase() + p.slice(1);
+  }).join(' ');
+}
+
+/* Agrupa os pedaços soltos de texto em linhas, pela altura */
+function agruparEmLinhas(itens, tol) {
+  const bandas = [];
+
+  itens.forEach((it) => {
+    const b = bandas.find((b) => Math.abs(b.y - it.y) <= tol);
+    if (b) b.itens.push(it);
+    else bandas.push({ y: it.y, itens: [it] });
+  });
+
+  bandas.sort((a, b) => b.y - a.y);
+  bandas.forEach((b) => b.itens.sort((p, q) => p.x - q.x));
+  return bandas;
+}
+
+const juntarLinha = (b) =>
+  b.itens.map((i) => i.t).join(' ').replace(/\s+/g, ' ').trim();
+
+async function lerOrcamento(arquivo) {
+  if (!window.pdfjsLib) {
+    throw new Error('O leitor de PDF não carregou — verifique a conexão e recarregue a página.');
+  }
+
+  const pdf = await pdfjsLib.getDocument({
+    data: new Uint8Array(await arquivo.arrayBuffer())
+  }).promise;
+
+  let linhas = [];
+  let largura = 595;
+
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const pg = await pdf.getPage(n);
+    largura = pg.getViewport({ scale: 1 }).width;
+
+    /* O deslocamento por página mantém a ordem de leitura quando o
+       orçamento tem mais de uma folha. */
+    const itens = (await pg.getTextContent()).items
+      .filter((it) => it.str && it.str.trim())
+      .map((it) => ({
+        x: it.transform[4],
+        y: it.transform[5] - n * 10000,
+        t: it.str.trim()
+      }));
+
+    linhas = linhas.concat(agruparEmLinhas(itens, 4));
+  }
+
+  const texto = linhas.map(juntarLinha).join('\n');
+  const d = { ambientes: [], total: null, avisos: [] };
+
+  let m;
+  if ((m = texto.match(/\b(PV\d{6,})\b/)))                 d.pedido    = m[1];
+  if ((m = texto.match(/(\d{2}\/\d{2}\/\d{4})/)))          d.data      = m[1];
+  if ((m = texto.match(/Consultor:\s*(.+?)\s+Telefone:/))) d.consultor = m[1].trim();
+  if ((m = texto.match(/Nome\s+CPF\/CNPJ\s*\n(.+)/)))      d.cliente   = m[1].trim();
+
+  /* --- ambientes: o PV lista em duas colunas --- */
+  const meio = largura / 2;
+  let dentro = false;
+  const brutos = [];
+
+  for (const b of linhas) {
+    const t = juntarLinha(b);
+
+    if (/^\d+\.\s*Ambientes/i.test(t)) { dentro = true; continue; }
+    if (!dentro) continue;
+    if (/^\d+\.\s/.test(t)) break;          // começou a seção seguinte
+
+    /* O total atravessa as duas colunas — trata antes de fatiar */
+    if (/VALOR DO CONTRATO/i.test(t)) {
+      const mv = t.match(/R\$\s*([\d.]+,\d{2})/);
+      if (mv) d.total = numeroBR(mv[1]);
+      continue;
+    }
+
+    for (const faixa of [[-1e9, meio], [meio, 1e9]]) {
+      const col = b.itens.filter((i) => i.x >= faixa[0] && i.x < faixa[1]);
+      if (!col.length) continue;
+
+      const txt = col.map((i) => i.t).join(' ').replace(/\s+/g, ' ').trim();
+      const mv = txt.match(/R\$\s*([\d.]+,\d{2})/);
+      const nome = txt.replace(/R\$\s*[\d.]+,\d{2}.*/, '').trim();
+
+      if (!nome && !mv) continue;
+      brutos.push({ nome: nome, valor: mv ? numeroBR(mv[1]) : null });
+    }
+  }
+
+  /* Nome que quebrou em duas linhas vem sem valor, e o valor cai
+     sozinho na linha debaixo — junta os dois. */
+  let pendente = null;
+  for (const a of brutos) {
+    if (a.nome && a.valor === null) { pendente = a; continue; }
+    if (!a.nome && a.valor !== null && pendente) {
+      pendente.valor = a.valor;
+      d.ambientes.push(pendente);
+      pendente = null;
+      continue;
+    }
+    if (a.nome && a.valor !== null) d.ambientes.push(a);
+  }
+
+  d.ambientes = d.ambientes.map((a) => ({
+    nome: limparNomeAmbiente(a.nome), valor: a.valor
+  }));
+
+  if (!d.ambientes.length) {
+    throw new Error('Não encontrei a lista de ambientes nesse arquivo. ' +
+                    'Confira se é mesmo o PV exportado do sistema.');
+  }
+
+  return d;
+}
+
+/* --- tela de conferência, com tudo editável --- */
+
+function montarConferencia() {
+  const d = orcamento;
+
+  const linhas = d.ambientes.map((a, i) => `
+    <div class="orc-linha" data-i="${i}">
+      <input class="nome"  type="text" value="${escaparHtml(a.nome)}">
+      <input class="valor" type="text" value="${moedaBR(a.valor)}" inputmode="decimal">
+      <button type="button" title="Remover">&times;</button>
+    </div>`).join('');
+
+  painelOrc.innerHTML = `
+    <h3>Confira o que eu li do orçamento</h3>
+
+    <div class="orc-topo">
+      <div>
+        <label for="orc-cliente">Cliente, como vai aparecer na página</label>
+        <input id="orc-cliente" type="text" value="${escaparHtml(d.cliente || '')}">
+      </div>
+      <div>
+        <label for="orc-data">Data do orçamento</label>
+        <input id="orc-data" type="text" value="${escaparHtml(d.data || '')}">
+      </div>
+    </div>
+
+    <div id="orc-linhas">${linhas}</div>
+
+    <div class="orc-soma">
+      <span id="orc-contagem"></span>
+      <span id="orc-valor"></span>
+    </div>
+
+    <div id="orc-estado"></div>`;
+
+  painelOrc.classList.remove('oculto');
+  recalcular();
+}
+
+/* Os ouvintes ficam no painel, que nunca é recriado. Dentro de
+   montarConferencia, cada PV novo somaria mais uma cópia deles. */
+painelOrc.addEventListener('input', () => { if (orcamento) recalcular(); });
+
+painelOrc.addEventListener('click', (ev) => {
+  const b = ev.target.closest('.orc-linha button');
+  if (!b || !orcamento) return;
+  b.closest('.orc-linha').remove();
+  recalcular();
+});
+
+/* Lê os campos da tela — é essa leitura, e não o PDF, que vai para
+   a apresentação. O que o usuário corrigir, vale. */
+function lerConferencia() {
+  const itens = [];
+
+  painelOrc.querySelectorAll('.orc-linha').forEach((l) => {
+    const nome = l.querySelector('.nome').value.trim();
+    const valor = numeroBR(l.querySelector('.valor').value.replace(/[^\d.,]/g, ''));
+    if (nome) itens.push({ nome: nome, valor: isNaN(valor) ? 0 : valor });
+  });
+
+  return {
+    cliente: (el('orc-cliente') || {}).value || '',
+    data: (el('orc-data') || {}).value || '',
+    ambientes: itens
+  };
+}
+
+function recalcular() {
+  const atual = lerConferencia();
+  const soma = atual.ambientes.reduce((s, a) => s + a.valor, 0);
+  const n = atual.ambientes.length;
+
+  el('orc-contagem').textContent = n + (n === 1 ? ' ambiente' : ' ambientes');
+  el('orc-valor').textContent = 'R$ ' + moedaBR(soma);
+
+  const estado = el('orc-estado');
+  const total = orcamento.total;
+
+  if (total === null) {
+    estado.innerHTML = '<p class="orc-ok">O orçamento não trazia um total ' +
+      'para eu conferir. Vale a pena bater os valores a olho.</p>';
+  } else if (Math.abs(soma - total) < 0.01) {
+    estado.innerHTML = '<p class="orc-ok">Confere com o VALOR DO CONTRATO ' +
+      'do orçamento (R$ ' + moedaBR(total) + ').</p>';
+  } else {
+    estado.innerHTML = '<div class="orc-aviso"><strong>A soma não bate.</strong> ' +
+      'Aqui deu R$ ' + moedaBR(soma) + ', mas o orçamento diz R$ ' + moedaBR(total) +
+      '. Se você tirou algum ambiente de propósito, pode seguir — ' +
+      'senão, confira os valores.</div>';
+  }
+}
 
 /* ============================================================
    GERAÇÃO DO PDF
@@ -853,9 +1277,19 @@ async function gerar() {
       }
     }
 
-    /* --- 4. PV, se houver --- */
-    if (chkPv.checked && arquivoPv) {
-      progresso('Anexando o PV...', 95);
+    /* --- 4a. Página de investimento, montada do PV --- */
+    if (chkPv.checked && orcamento) {
+      progresso('Montando o investimento...', 94);
+
+      const conferido = lerConferencia();
+      if (conferido.ambientes.length) {
+        await desenharOrcamento(doc, bases, pagina, conferido);
+      }
+    }
+
+    /* --- 4b. PV original, quando pedido --- */
+    if (chkPv.checked && arquivoPv && chkAnexar.checked) {
+      progresso('Anexando o PV original...', 96);
 
       const pvDoc = await PDFDocument.load(await arquivoPv.arrayBuffer());
       const incorporadas = await doc.embedPdf(pvDoc, pvDoc.getPageIndices());
@@ -920,6 +1354,262 @@ function escreverDireita(p, texto, pos, pg) {
     font: fonte,
     color: hexParaRgb(pos.cor || CONFIG.COR_TEXTO)
   });
+}
+
+/**
+ * Texto com espaçamento entre letras — o pdf-lib não tem essa
+ * propriedade, então desenha caractere por caractere. Usado só no
+ * rótulo pequeno em caixa alta, que fica pobre sem respiro.
+ * Devolve a largura total, para poder alinhar à direita.
+ */
+function larguraEspacada(texto, fonte, tamanho, espaco) {
+  let l = 0;
+  for (const c of texto) l += fonte.widthOfTextAtSize(c, tamanho) + espaco;
+  return l - (texto.length ? espaco : 0);
+}
+
+function escreverEspacado(p, texto, op) {
+  let x = op.x;
+  for (const c of texto) {
+    p.drawText(c, { x: x, y: op.y, size: op.size, font: op.font, color: op.color });
+    x += op.font.widthOfTextAtSize(c, op.size) + op.espaco;
+  }
+}
+
+/* Corta o texto com reticências quando não cabe na largura dada */
+function cortarPara(texto, fonte, tamanho, larguraMax) {
+  if (fonte.widthOfTextAtSize(texto, tamanho) <= larguraMax) return texto;
+
+  let s = texto;
+  while (s.length > 1 &&
+         fonte.widthOfTextAtSize(s + '…', tamanho) > larguraMax) {
+    s = s.slice(0, -1);
+  }
+  return s.trim() + '…';
+}
+
+/**
+ * Página de investimento, desenhada sobre a página em branco da
+ * base. A lista transborda para páginas seguintes quando não cabe —
+ * preferi isso a encolher a fonte, que faria cada apresentação sair
+ * com um tamanho diferente.
+ */
+async function desenharOrcamento(doc, bases, pg, dados) {
+  const O = CONFIG.ORCAMENTO;
+  const L = O.lista;
+  const C = O.cabecalho;
+
+  const x0 = pg.LARGURA * O.x0;
+  const xDir = pg.LARGURA * O.xDireita;
+  const meioPagina = pg.LARGURA / 2;
+  const piso = pg.ALTURA * L.piso;
+  const passo = pg.ALTURA * L.entrelinha;
+  const corpo = pg.ALTURA * L.tamanho;
+  const cor = hexParaRgb(CONFIG.COR_TEXTO);
+
+  /* Geometria das colunas */
+  const qtd = Math.max(1, O.colunas.quantidade);
+  const vao = pg.LARGURA * O.colunas.intervalo;
+  const larguraCol = (xDir - x0 - vao * (qtd - 1)) / qtd;
+  const colunaEm = (k) => ({
+    esq: x0 + k * (larguraCol + vao),
+    dir: x0 + k * (larguraCol + vao) + larguraCol
+  });
+
+  /* Quantas linhas cabem em UMA coluna, a partir de uma altura */
+  const linhasEm = (y) => Math.max(1, Math.floor((y - piso) / passo) + 1);
+
+  /* --- divide os ambientes em páginas --- */
+  const restantes = dados.ambientes.slice();
+  const paginas = [];
+  let primeira = true;
+
+  while (restantes.length) {
+    const yInicio = pg.ALTURA *
+      (primeira ? L.primeiraLinha : O.continuacao.primeiraLinha);
+
+    paginas.push({
+      primeira: primeira,
+      yInicio: yInicio,
+      itens: restantes.splice(0, linhasEm(yInicio) * qtd)
+    });
+    primeira = false;
+  }
+
+  /* Uma cópia da página em branco por bloco, de uma vez só */
+  const copias = await doc.copyPages(bases, paginas.map(() => O.pagina));
+
+  const escreverCentro = (p, texto, y, tamanho, fonte) => {
+    p.drawText(texto, {
+      x: meioPagina - fonte.widthOfTextAtSize(texto, tamanho) / 2,
+      y: y, size: tamanho, font: fonte, color: cor
+    });
+  };
+
+  paginas.forEach((bloco, k) => {
+    const p = copias[k];
+    const ultima = k === paginas.length - 1;
+    doc.addPage(p);
+
+    /* ---------- cabeçalho da página ---------- */
+    const tamRot = pg.ALTURA * O.rotulo.tamanho;
+    const espRot = tamRot * O.rotulo.espacamento;
+    const rotulo = bloco.primeira ? O.rotulo.texto : O.continuacao.rotulo;
+
+    escreverEspacado(p, rotulo, {
+      x: meioPagina - larguraEspacada(rotulo, pg.fontes.media, tamRot, espRot) / 2,
+      y: pg.ALTURA * O.rotulo.y,
+      size: tamRot, font: pg.fontes.media, color: cor, espaco: espRot
+    });
+
+    if (bloco.primeira) {
+      /* Nome de cliente não se corta: encolhe até caber, e só usa
+         reticências se nem no tamanho mínimo couber. */
+      const titulo = dados.cliente || '';
+      let tamTit = pg.ALTURA * O.titulo.tamanho;
+      const minimo = pg.ALTURA * O.titulo.tamanhoMinimo;
+
+      while (tamTit > minimo &&
+             pg.fontes.negrito.widthOfTextAtSize(titulo, tamTit) > xDir - x0) {
+        tamTit -= 0.5;
+      }
+
+      escreverCentro(
+        p, cortarPara(titulo, pg.fontes.negrito, tamTit, xDir - x0),
+        pg.ALTURA * O.titulo.y, tamTit, pg.fontes.negrito
+      );
+
+      p.drawRectangle({
+        x: x0, y: pg.ALTURA * O.regua.y,
+        width: xDir - x0, height: pg.ALTURA * O.regua.espessura,
+        color: hexParaRgb(O.regua.cor)
+      });
+
+      const n = dados.ambientes.length;
+      const partes = [n + (n === 1 ? ' ambiente' : ' ambientes')];
+      if (dados.data) partes.push('Orçamento de ' + dados.data);
+      const meta = partes.join('  ·  ');
+
+      escreverCentro(p, meta, pg.ALTURA * O.meta.y,
+                     pg.ALTURA * O.meta.tamanho, pg.fontes.media);
+    }
+
+    /* ---------- divide o bloco entre as colunas ---------- */
+    const porColuna = Math.ceil(bloco.itens.length / qtd);
+    const colunas = [];
+    for (let c = 0; c < qtd; c++) {
+      colunas.push(bloco.itens.slice(c * porColuna, (c + 1) * porColuna));
+    }
+
+    const fonteValor = L.valorEmNegrito ? pg.fontes.negrito : pg.fontes.media;
+
+    colunas.forEach((itens, c) => {
+      if (!itens.length) return;
+      const col = colunaEm(c);
+
+      /* --- títulos AMBIENTE / VALOR --- */
+      if (C.usar) {
+        const tamCab = pg.ALTURA * C.tamanho;
+        const espCab = tamCab * C.espacamento;
+        const yCab = bloco.yInicio + pg.ALTURA * C.acimaDaPrimeira;
+
+        escreverEspacado(p, C.ambiente, {
+          x: col.esq, y: yCab,
+          size: tamCab, font: pg.fontes.media, color: cor, espaco: espCab
+        });
+
+        escreverEspacado(p, C.valor, {
+          x: col.dir - larguraEspacada(C.valor, pg.fontes.media, tamCab, espCab),
+          y: yCab,
+          size: tamCab, font: pg.fontes.media, color: cor, espaco: espCab
+        });
+
+        p.drawRectangle({
+          x: col.esq,
+          y: bloco.yInicio + pg.ALTURA * C.regua.acimaDaPrimeira,
+          width: col.dir - col.esq,
+          height: pg.ALTURA * C.regua.espessura,
+          color: hexParaRgb(C.regua.cor)
+        });
+      }
+
+      /* --- linhas --- */
+      itens.forEach((a, i) => {
+        const y = bloco.yInicio - i * passo;
+        const valor = 'R$ ' + moedaBR(a.valor);
+        const larguraValor = fonteValor.widthOfTextAtSize(valor, corpo);
+        const espacoNome = col.dir - col.esq - larguraValor - corpo;
+
+        /* Encolhe o nome até caber antes de recorrer às reticências */
+        let tamNome = corpo;
+        const minNome = pg.ALTURA * L.tamanhoMinimo;
+        while (tamNome > minNome &&
+               pg.fontes.media.widthOfTextAtSize(a.nome, tamNome) > espacoNome) {
+          tamNome -= 0.25;
+        }
+
+        p.drawText(
+          cortarPara(a.nome, pg.fontes.media, tamNome, espacoNome),
+          { x: col.esq, y: y, size: tamNome, font: pg.fontes.media, color: cor }
+        );
+
+        p.drawText(valor, {
+          x: col.dir - larguraValor, y: y,
+          size: corpo, font: fonteValor, color: cor
+        });
+
+        if (L.separador.usar && i < itens.length - 1) {
+          p.drawRectangle({
+            x: col.esq, y: y - pg.ALTURA * L.separador.abaixo,
+            width: col.dir - col.esq,
+            height: pg.ALTURA * L.separador.espessura,
+            color: hexParaRgb(L.separador.cor)
+          });
+        }
+      });
+    });
+
+    /* ---------- total, só na última página ---------- */
+    if (O.total.usar && ultima) {
+      const T = O.total;
+      const soma = dados.ambientes.reduce((s, a) => s + (a.valor || 0), 0);
+
+      /* A última linha da coluna mais cheia define até onde a lista
+         desceu; o total encosta nela em vez de ficar preso no pé. */
+      const maiorColuna = Math.max.apply(null, colunas.map((c) => c.length));
+      const ultimaLinha = bloco.yInicio - (maiorColuna - 1) * passo;
+
+      const yRegua = Math.max(
+        pg.ALTURA * T.regua.y,
+        ultimaLinha - pg.ALTURA * T.folgaAcima
+      );
+      const yTexto = yRegua - pg.ALTURA * (T.regua.y - T.y);
+
+      p.drawRectangle({
+        x: x0, y: yRegua,
+        width: xDir - x0, height: pg.ALTURA * T.regua.espessura,
+        color: hexParaRgb(T.regua.cor)
+      });
+
+      const tamRotT = pg.ALTURA * T.tamanhoRotulo;
+      escreverEspacado(p, T.rotulo, {
+        x: x0, y: yTexto,
+        size: tamRotT, font: pg.fontes.media, color: cor,
+        espaco: tamRotT * T.espacamento
+      });
+
+      const tamValor = pg.ALTURA * T.tamanhoValor;
+      const valor = 'R$ ' + moedaBR(soma);
+
+      p.drawText(valor, {
+        x: xDir - pg.fontes.negrito.widthOfTextAtSize(valor, tamValor),
+        y: yTexto,
+        size: tamValor, font: pg.fontes.negrito, color: cor
+      });
+    }
+  });
+
+  return paginas.length;
 }
 
 /**
