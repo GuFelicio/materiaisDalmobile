@@ -325,6 +325,9 @@
     font-size: 13px; color: var(--muted);
   }
 </style>
+<!-- A página nasce escondida e só aparece quando o auth.js confirma
+     a sessão. Se o auth.js não carregar, nada aparece. -->
+<style id="trava-entrada">html { visibility: hidden; }</style>
 </head>
 <body>
 
@@ -384,6 +387,8 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <script>
 /* ============================================================
    CONFIGURAÇÃO

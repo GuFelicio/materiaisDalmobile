@@ -339,6 +339,9 @@
 
   .oculto { display: none !important; }
 </style>
+<!-- A página nasce escondida e só aparece quando o auth.js confirma
+     a sessão. Se o auth.js não carregar, nada aparece. -->
+<style id="trava-entrada">html { visibility: hidden; }</style>
 </head>
 <body>
 
@@ -414,6 +417,8 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
