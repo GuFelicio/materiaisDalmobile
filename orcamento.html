@@ -1437,16 +1437,42 @@ async function desenharOrcamento(doc, bases, pg, dados) {
   const pisoUltima = pg.ALTURA *
     (O.total.usar ? O.total.pisoNaUltima : L.piso);
 
+  const alturaDe = (lista) => lista.reduce((s, b) => s + b.altura, 0);
+
+  /* Reparte um bloco entre as colunas pelo corte que deixa as duas
+     mais parecidas. Devolve null quando não cabe de jeito nenhum. */
+  const emColunas = (bloco, disponivel) => {
+    if (qtd === 1) {
+      return alturaDe(bloco) <= disponivel ? [bloco] : null;
+    }
+
+    let corte = -1;
+    let melhor = Infinity;
+
+    for (let k = 1; k <= bloco.length; k++) {
+      const esq = alturaDe(bloco.slice(0, k));
+      const dir = alturaDe(bloco.slice(k));
+      if (esq > disponivel || dir > disponivel) continue;
+      const dif = Math.abs(esq - dir);
+      if (dif < melhor) { melhor = dif; corte = k; }
+    }
+
+    return corte === -1 ? null : [bloco.slice(0, corte), bloco.slice(corte)];
+  };
+
+  const alturaInicial = (primeira) => pg.ALTURA *
+    (primeira ? L.primeiraLinha : O.continuacao.primeiraLinha);
+
+  const espacoDe = (primeira, ehUltima) =>
+    alturaInicial(primeira) - (ehUltima ? pisoUltima : piso);
+
   const paginar = (indiceDaUltima) => {
     const saida = [];
     let primeira = true;
     let i = 0;
 
     while (i < medidos.length) {
-      const yInicio = pg.ALTURA *
-        (primeira ? L.primeiraLinha : O.continuacao.primeiraLinha);
-      const disponivel = yInicio -
-        (saida.length === indiceDaUltima ? pisoUltima : piso);
+      const disponivel = espacoDe(primeira, saida.length === indiceDaUltima);
 
       /* Quantos itens cabem nesta página, enchendo coluna a coluna */
       let cabem = 0, col = 0, usado = 0;
@@ -1461,27 +1487,11 @@ async function desenharOrcamento(doc, bases, pg, dados) {
 
       const bloco = medidos.slice(i, i + cabem);
 
-      /* Melhor ponto de corte entre as colunas: o que deixa as duas
-         mais parecidas, desde que ambas caibam. */
-      let corte = bloco.length;
-      let melhor = Infinity;
-      const soma = (ini, fim) =>
-        bloco.slice(ini, fim).reduce((s, b) => s + b.altura, 0);
-
-      for (let k = 1; k <= bloco.length; k++) {
-        const esq = soma(0, k);
-        const dir = soma(k, bloco.length);
-        if (esq > disponivel || dir > disponivel) continue;
-        const dif = Math.abs(esq - dir);
-        if (dif < melhor) { melhor = dif; corte = k; }
-      }
-
       saida.push({
         primeira: primeira,
-        yInicio: yInicio,
-        colunas: qtd === 2
-          ? [bloco.slice(0, corte), bloco.slice(corte)]
-          : [bloco]
+        yInicio: alturaInicial(primeira),
+        itens: bloco,
+        colunas: emColunas(bloco, disponivel) || [bloco]
       });
 
       i += cabem;
@@ -1497,6 +1507,39 @@ async function desenharOrcamento(doc, bases, pg, dados) {
     const estavel = tentativa.length === paginas.length;
     paginas = tentativa;
     if (estavel) break;
+  }
+
+  /* ----- evita a página órfã -----
+     Encher cada página até o limite deixa o resto sozinho na última,
+     que então sai com um ambiente solto e o total. Redistribui as
+     duas últimas para que fiquem parecidas. */
+  if (paginas.length >= 2) {
+    const n = paginas.length;
+    const penultima = paginas[n - 2];
+    const ultima = paginas[n - 1];
+
+    const todos = penultima.itens.concat(ultima.itens);
+    const espacoPenultima = espacoDe(penultima.primeira, false);
+    const espacoUltima = espacoDe(ultima.primeira, true);
+
+    let melhorCorte = -1;
+    let melhorDif = Infinity;
+
+    for (let k = 1; k < todos.length; k++) {
+      const a = emColunas(todos.slice(0, k), espacoPenultima);
+      const b = emColunas(todos.slice(k), espacoUltima);
+      if (!a || !b) continue;
+
+      const dif = Math.abs(alturaDe(todos.slice(0, k)) - alturaDe(todos.slice(k)));
+      if (dif < melhorDif) { melhorDif = dif; melhorCorte = k; }
+    }
+
+    if (melhorCorte !== -1) {
+      penultima.itens = todos.slice(0, melhorCorte);
+      penultima.colunas = emColunas(penultima.itens, espacoPenultima);
+      ultima.itens = todos.slice(melhorCorte);
+      ultima.colunas = emColunas(ultima.itens, espacoUltima);
+    }
   }
 
   /* Uma cópia da página em branco por bloco, de uma vez só */
