@@ -68,20 +68,92 @@ const DADOS = (function () {
      Ler
      -------------------------------------------------------- */
 
-  async function listar(tipo, busca) {
+  /* --------------------------------------------------------
+     Quem sou eu, e o que eu posso ver
+     -------------------------------------------------------- */
+
+  let meuPerfilCache = null;
+
+  async function meuPerfil() {
+    if (meuPerfilCache) return meuPerfilCache;
+
     const c = exigirSessao();
+    const u = usuario();
+    if (!u) return { admin: false };
+
+    const { data, error } = await c
+      .from('perfis').select('id, email, nome, loja, admin').eq('id', u.id).single();
+
+    /* Perfil ausente não é motivo para travar a página — a pessoa
+       só não é administradora. */
+    meuPerfilCache = (error || !data) ? { id: u.id, email: u.email, admin: false } : data;
+    return meuPerfilCache;
+  }
+
+  async function souAdmin() {
+    const p = await meuPerfil();
+    return p.admin === true;
+  }
+
+  /* Nome de exibição de cada autor. Só o administrador consegue
+     ler perfis que não são o dele — para os outros isso devolve
+     um mapa vazio, e a tela nem mostra a coluna. */
+  async function autores(ids) {
+    const c = exigirSessao();
+    const unicos = Array.from(new Set((ids || []).filter(Boolean)));
+    if (!unicos.length) return {};
+
+    const { data, error } = await c
+      .from('perfis').select('id, email, nome').in('id', unicos);
+
+    if (error || !data) return {};
+
+    const mapa = {};
+    data.forEach((p) => {
+      mapa[p.id] = (p.nome && p.nome.trim()) || p.email || 'sem nome';
+    });
+    return mapa;
+  }
+
+  /* Lista de consultores, para o filtro do administrador */
+  async function listaDeConsultores() {
+    const c = exigirSessao();
+    const { data, error } = await c
+      .from('perfis').select('id, email, nome').order('email');
+    if (error || !data) return [];
+    return data.map((p) => ({
+      id: p.id,
+      nome: (p.nome && p.nome.trim()) || p.email || 'sem nome'
+    }));
+  }
+
+  async function listar(tipo, busca, autorId) {
+    const c = exigirSessao();
+    const u = usuario();
 
     let q = c.from('trabalhos')
       .select('id, tipo, loja, cliente, arquiteto, criado_em, atualizado_em, autor')
       .order('atualizado_em', { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (tipo) q = q.eq('tipo', tipo);
     if (busca && busca.trim()) q = q.ilike('cliente', '%' + busca.trim() + '%');
+    if (autorId) q = q.eq('autor', autorId);
 
     const { data, error } = await q;
     if (error) throw new Error(traduzir(error));
-    return data || [];
+
+    const linhas = data || [];
+
+    /* Marca o que é meu e, para o administrador, de quem é o resto */
+    const nomes = await autores(linhas.map((l) => l.autor));
+
+    linhas.forEach((l) => {
+      l.meu = !!(u && l.autor === u.id);
+      l.autorNome = nomes[l.autor] || (l.meu ? 'você' : '');
+    });
+
+    return linhas;
   }
 
   async function abrir(id) {
@@ -185,6 +257,7 @@ const DADOS = (function () {
 
   return {
     salvar, listar, abrir, apagar,
+    souAdmin, meuPerfil, listaDeConsultores,
     marcarFoto, indexar, quando, traduzir
   };
 })();

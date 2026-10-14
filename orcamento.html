@@ -428,6 +428,25 @@
   .repor label:hover { border-color: var(--accent); color: var(--ink); }
   .repor label input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .repor .faltando { margin-top: 9px; color: #8a4b12; }
+
+  .gaveta select.filtro {
+    width: 100%; box-sizing: border-box; margin-bottom: 14px;
+    padding: 11px 12px; font-size: 13px; font-family: inherit;
+    border: 1px solid var(--line-2); border-radius: 9px; background: #fff;
+    color: var(--ink);
+  }
+  .gaveta select.filtro.oculto { display: none; }
+
+  .trabalho .autor {
+    display: inline-block; margin-top: 6px;
+    padding: 2px 7px; border-radius: 5px;
+    background: var(--bg); border: 1px solid var(--line);
+    font-size: 11px; color: var(--ink-2);
+  }
+  .trabalho .autor.meu { background: #eef3ee; border-color: #cfe0d2; color: #2c5137; }
+
+  .aberto.alheio { background: #fdf1e7; border-color: #f0cfae; color: #8a4b12; }
+  .aberto.alheio button { color: #8a4b12; }
 </style>
 <!-- A página nasce escondida e só aparece quando o auth.js confirma
      a sessão. Se o auth.js não carregar, nada aparece. -->
@@ -506,6 +525,9 @@
       </div>
       <input class="busca" id="busca-trabalho" type="search"
              placeholder="Procurar pelo nome do cliente">
+      <select class="filtro oculto" id="filtro-autor">
+        <option value="">Todos os consultores</option>
+      </select>
       <div id="lista-trabalhos"></div>
     </div>
   </div>
@@ -2124,7 +2146,7 @@ el('btn-salvar').addEventListener('click', async () => {
 
   try {
     trabalhoAberto = await DADOS.salvar(ficha, trabalhoAberto);
-    mostrarAberto(ficha.cliente, 'salvo agora');
+    mostrarAberto(ficha.cliente, 'salvo agora', donoAberto);
     botao.textContent = 'Salvo';
     setTimeout(() => { botao.textContent = 'Salvar'; }, 1800);
   } catch (e) {
@@ -2136,15 +2158,24 @@ el('btn-salvar').addEventListener('click', async () => {
   }
 });
 
-function mostrarAberto(cliente, quando) {
+function mostrarAberto(cliente, quando, autor) {
   avisoAberto.classList.remove('oculto');
+
+  /* Mexer no trabalho de outra pessoa sem perceber é fácil demais;
+     a tarja muda de cor e diz de quem é. */
+  const alheio = !!autor;
+  avisoAberto.className = 'aberto' + (alheio ? ' alheio' : '');
+
   avisoAberto.innerHTML =
-    '<span>Editando <strong>' + escaparHtml(cliente) + '</strong> · ' + quando + '</span>' +
+    '<span>Editando <strong>' + escaparHtml(cliente) + '</strong>' +
+    (alheio ? ', de ' + escaparHtml(autor) : '') +
+    ' · ' + quando + '</span>' +
     '<button type="button" id="soltar-trabalho">começar um novo</button>';
 
   el('soltar-trabalho').addEventListener('click', () => {
     trabalhoAberto = null;
-    avisoAberto.classList.add('oculto');
+    donoAberto = null;
+    avisoAberto.className = 'aberto oculto';
     avisoAberto.innerHTML = '';
   });
 }
@@ -2166,18 +2197,52 @@ campoBusca.addEventListener('input', () => {
   buscaDemora = setTimeout(carregarLista, 280);
 });
 
+let ehAdmin = false;
+let consultores = [];
+let donoAberto = null;   // nome do autor, quando o trabalho não é meu
+
+/* Descobre uma vez se este usuário enxerga o trabalho dos outros.
+   Enquanto não souber, a gaveta se comporta como a de um consultor
+   comum — o que é o lado seguro de errar. */
+(async function descobrirPapel() {
+  try {
+    ehAdmin = await DADOS.souAdmin();
+    if (!ehAdmin) return;
+
+    document.querySelector('.gaveta-topo h2').textContent = 'Trabalhos da equipe';
+
+    consultores = await DADOS.listaDeConsultores();
+    const filtro = el('filtro-autor');
+
+    consultores.forEach((c) => {
+      const op = document.createElement('option');
+      op.value = c.id;
+      op.textContent = c.nome;
+      filtro.appendChild(op);
+    });
+
+    filtro.classList.remove('oculto');
+    filtro.addEventListener('change', carregarLista);
+  } catch (e) {
+    console.error(e);
+  }
+})();
+
 async function carregarLista() {
   listaTrabalhos.innerHTML = '<p class="msg">Carregando...</p>';
 
+  const filtro = el('filtro-autor');
+  const autorId = filtro && !filtro.classList.contains('oculto') ? filtro.value : '';
+
   try {
-    const linhas = await DADOS.listar('orcamento', campoBusca.value);
+    const linhas = await DADOS.listar('orcamento', campoBusca.value, autorId);
 
     if (!linhas.length) {
       listaTrabalhos.innerHTML =
         '<p class="msg">' +
-        (campoBusca.value.trim()
-          ? 'Nenhum orçamento com esse cliente.'
-          : 'Você ainda não salvou nenhum orçamento.') +
+        (campoBusca.value.trim() || autorId
+          ? 'Nada encontrado com esse filtro.'
+          : 'Ainda não há nenhum orçamento salvo.') +
         '</p>';
       return;
     }
@@ -2187,10 +2252,20 @@ async function carregarLista() {
     linhas.forEach((l) => {
       const cartao = document.createElement('div');
       cartao.className = 'trabalho';
+
+      /* O autor só aparece para quem enxerga o trabalho dos outros.
+         Para o consultor comum a lista é toda dele, e o selo seria
+         ruído. */
+      const selo = (ehAdmin && l.autorNome)
+        ? '<span class="autor' + (l.meu ? ' meu' : '') + '">' +
+          escaparHtml(l.meu ? 'você' : l.autorNome) + '</span>'
+        : '';
+
       cartao.innerHTML =
         '<div class="nome">' + escaparHtml(l.cliente) + '</div>' +
         '<div class="sub">' + (l.loja || '').toUpperCase() +
         ' · ' + DADOS.quando(l.atualizado_em) + '</div>' +
+        selo +
         '<div class="acoes">' +
         '<button type="button" class="abrir">abrir</button>' +
         '<button type="button" class="apagar">apagar</button>' +
@@ -2199,7 +2274,8 @@ async function carregarLista() {
       cartao.querySelector('.abrir').addEventListener('click', () => abrirTrabalho(l.id));
 
       cartao.querySelector('.apagar').addEventListener('click', async () => {
-        if (!confirm('Apagar o orçamento de ' + l.cliente + '?')) return;
+        const dono = (!l.meu && l.autorNome) ? ' (de ' + l.autorNome + ')' : '';
+        if (!confirm('Apagar o orçamento de ' + l.cliente + dono + '?')) return;
         try { await DADOS.apagar(l.id); carregarLista(); }
         catch (e) { erro(e.message); }
       });
@@ -2239,7 +2315,16 @@ async function abrirTrabalho(id) {
     montarConferencia();
 
     trabalhoAberto = t.id;
-    mostrarAberto(t.cliente, 'salvo ' + DADOS.quando(t.atualizado_em));
+
+    /* Se não for meu, a tarja mostra de quem é */
+    const meuId = window.dalmobileAuth && window.dalmobileAuth.usuario
+      ? window.dalmobileAuth.usuario.id : null;
+    const dono = (ehAdmin && t.autor && t.autor !== meuId)
+      ? (consultores.find((c) => c.id === t.autor) || {}).nome || 'outro consultor'
+      : null;
+
+    donoAberto = dono;
+    mostrarAberto(t.cliente, 'salvo ' + DADOS.quando(t.atualizado_em), dono);
     gaveta.classList.add('oculto');
 
   } catch (e) {
