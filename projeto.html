@@ -338,6 +338,96 @@
   }
 
   .oculto { display: none !important; }
+
+  /* --- trabalhos salvos --- */
+  .barra-salvar {
+    display: flex; gap: 8px; margin-bottom: 18px;
+  }
+  .barra-salvar button {
+    flex: 1; padding: 11px 12px;
+    border: 1px solid var(--line-2); border-radius: 9px;
+    background: var(--card); color: var(--ink-2);
+    font-size: 13px; font-weight: 600; font-family: inherit;
+    cursor: pointer;
+  }
+  .barra-salvar button:hover { border-color: var(--accent); color: var(--ink); }
+  .barra-salvar button:disabled { opacity: .45; cursor: default; }
+  .barra-salvar .ativo { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .aberto {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: -8px 0 16px; padding: 9px 11px;
+    background: #eef3ee; border: 1px solid #cfe0d2; border-radius: 8px;
+    font-size: 12px; color: #2c5137;
+  }
+  .aberto button {
+    margin-left: auto; background: none; border: 0; padding: 0;
+    font-size: 12px; font-family: inherit; color: #2c5137;
+    text-decoration: underline; cursor: pointer;
+  }
+
+  .gaveta {
+    position: fixed; inset: 0; z-index: 400;
+    background: rgba(20,22,24,.42);
+    display: flex; justify-content: flex-end;
+  }
+  .gaveta.oculto { display: none; }
+  .gaveta-painel {
+    width: 100%; max-width: 440px; height: 100%;
+    background: var(--bg); overflow-y: auto;
+    padding: 22px 20px 40px;
+    box-shadow: -8px 0 32px rgba(0,0,0,.14);
+  }
+  .gaveta-topo {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .gaveta-topo h2 { font-size: 16px; margin: 0; }
+  .gaveta-topo button {
+    background: none; border: 0; font-size: 22px; line-height: 1;
+    color: var(--muted); cursor: pointer; padding: 0 4px;
+  }
+  .gaveta input.busca {
+    width: 100%; box-sizing: border-box; margin-bottom: 14px;
+    padding: 11px 12px; font-size: 14px; font-family: inherit;
+    border: 1px solid var(--line-2); border-radius: 9px; background: #fff;
+  }
+
+  .trabalho {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 13px 14px; margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .trabalho:hover { border-color: var(--line-2); }
+  .trabalho .nome { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .trabalho .sub  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .trabalho .acoes { margin-top: 9px; display: flex; gap: 12px; }
+  .trabalho .acoes button {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font-size: 12px; font-family: inherit; color: var(--muted);
+    text-decoration: underline;
+  }
+  .trabalho .acoes button:hover { color: var(--ink); }
+  .trabalho .acoes .apagar:hover { color: #b3261e; }
+
+  .repor {
+    margin: 12px 0 0; padding: 12px 13px;
+    border: 1px dashed var(--line-2); border-radius: 9px;
+    background: var(--card); font-size: 12px; color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .repor strong { display: block; color: var(--ink); font-size: 13px; margin-bottom: 3px; }
+  .repor .botoes { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .repor label {
+    position: relative; overflow: hidden;
+    display: inline-block; padding: 8px 12px;
+    border: 1px solid var(--line-2); border-radius: 7px;
+    background: var(--bg); font-size: 12px; font-weight: 600;
+    color: var(--ink-2); cursor: pointer;
+  }
+  .repor label:hover { border-color: var(--accent); color: var(--ink); }
+  .repor label input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .repor .faltando { margin-top: 9px; color: #8a4b12; }
 </style>
 <!-- A página nasce escondida e só aparece quando o auth.js confirma
      a sessão. Se o auth.js não carregar, nada aparece. -->
@@ -360,6 +450,13 @@
     </svg>
     Central de Peças
   </a>
+
+  <div class="barra-salvar">
+    <button type="button" id="btn-salvar">Salvar</button>
+    <button type="button" id="btn-abrir">Meus trabalhos</button>
+  </div>
+
+  <div class="aberto oculto" id="aviso-aberto"></div>
 
   <div id="aviso-arquivos" class="aviso-config oculto"></div>
 
@@ -413,12 +510,26 @@
   <button class="botao" id="gerar">Gerar apresentação</button>
   <div id="saida"></div>
 
+
+  <div class="gaveta oculto" id="gaveta">
+    <div class="gaveta-painel">
+      <div class="gaveta-topo">
+        <h2>Meus trabalhos</h2>
+        <button type="button" id="fechar-gaveta" title="Fechar">&times;</button>
+      </div>
+      <input class="busca" id="busca-trabalho" type="search"
+             placeholder="Procurar pelo nome do cliente">
+      <div id="lista-trabalhos"></div>
+    </div>
+  </div>
+
   <p class="rodape">Lumina · Uso interno</p>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
+<script src="dados.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2399,6 +2510,273 @@ function salvar(abrir) {
     faltando.map((f) => '<code>' + f + '</code>').join(', ') +
     '. Eles precisam ficar na mesma pasta desta página.';
 })();
+
+
+/* ============================================================
+   SALVAR E REABRIR
+   ------------------------------------------------------------
+   Guardamos a ficha, nunca o PDF. As fotos ficam só pelo nome e
+   tamanho — ao reabrir, a pessoa aponta a pasta e o sistema casa
+   os arquivos sozinho.
+   ============================================================ */
+
+let trabalhoAberto = null;   // id da linha quando veio do servidor
+let reposicao = null;        // { porAmbiente: Map, faltando: [] }
+
+const gaveta = el('gaveta');
+const listaTrabalhos = el('lista-trabalhos');
+const campoBusca = el('busca-trabalho');
+const avisoAberto = el('aviso-aberto');
+
+/* --- juntar o que está na tela --- */
+function fichaAtual() {
+  return {
+    tipo: 'apresentacao',
+    loja: selLoja.value,
+    cliente: el('cliente').value.trim(),
+    arquiteto: el('arquiteto').value.trim(),
+    dados: {
+      ambientes: ambientes.map((a) => ({
+        nome: a.nome,
+        valor: a.valor,
+        imagens: (a.imagens || []).map(DADOS.marcarFoto)
+      })),
+      anexarPv: !!(chkAnexar && chkAnexar.checked),
+      orcamento: orcamento
+        ? Object.assign({}, orcamento, { conferido: lerConferencia() })
+        : null
+    }
+  };
+}
+
+/* --- salvar --- */
+el('btn-salvar').addEventListener('click', async () => {
+  const ficha = fichaAtual();
+
+  if (!ficha.cliente) {
+    erro('Escreva o nome do cliente antes de salvar.');
+    return;
+  }
+
+  const botao = el('btn-salvar');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  try {
+    trabalhoAberto = await DADOS.salvar(ficha, trabalhoAberto);
+    mostrarAberto(ficha.cliente, 'salvo agora');
+    botao.textContent = 'Salvo';
+    setTimeout(() => { botao.textContent = 'Salvar'; }, 1800);
+  } catch (e) {
+    console.error(e);
+    erro(e.message);
+    botao.textContent = 'Salvar';
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+function mostrarAberto(cliente, quando) {
+  avisoAberto.classList.remove('oculto');
+  avisoAberto.innerHTML =
+    '<span>Editando <strong>' + escaparHtml(cliente) + '</strong> · ' + quando + '</span>' +
+    '<button type="button" id="soltar-trabalho">começar um novo</button>';
+
+  el('soltar-trabalho').addEventListener('click', () => {
+    trabalhoAberto = null;
+    reposicao = null;
+    avisoAberto.classList.add('oculto');
+    avisoAberto.innerHTML = '';
+    desenharAmbientes();
+  });
+}
+
+/* --- gaveta --- */
+el('btn-abrir').addEventListener('click', () => {
+  gaveta.classList.remove('oculto');
+  carregarLista();
+});
+
+el('fechar-gaveta').addEventListener('click', () => gaveta.classList.add('oculto'));
+
+gaveta.addEventListener('click', (ev) => {
+  if (ev.target === gaveta) gaveta.classList.add('oculto');
+});
+
+let buscaDemora = null;
+campoBusca.addEventListener('input', () => {
+  clearTimeout(buscaDemora);
+  buscaDemora = setTimeout(carregarLista, 280);
+});
+
+async function carregarLista() {
+  listaTrabalhos.innerHTML = '<p class="msg">Carregando...</p>';
+
+  try {
+    const linhas = await DADOS.listar('apresentacao', campoBusca.value);
+
+    if (!linhas.length) {
+      listaTrabalhos.innerHTML =
+        '<p class="msg">' +
+        (campoBusca.value.trim()
+          ? 'Nenhuma apresentação com esse cliente.'
+          : 'Você ainda não salvou nenhuma apresentação.') +
+        '</p>';
+      return;
+    }
+
+    listaTrabalhos.innerHTML = '';
+
+    linhas.forEach((l) => {
+      const cartao = document.createElement('div');
+      cartao.className = 'trabalho';
+      cartao.innerHTML =
+        '<div class="nome">' + escaparHtml(l.cliente) + '</div>' +
+        '<div class="sub">' + (l.loja || '').toUpperCase() +
+        ' · ' + DADOS.quando(l.atualizado_em) + '</div>' +
+        '<div class="acoes">' +
+        '<button type="button" class="abrir">abrir</button>' +
+        '<button type="button" class="apagar">apagar</button>' +
+        '</div>';
+
+      cartao.querySelector('.abrir').addEventListener('click', () => abrirTrabalho(l.id));
+
+      cartao.querySelector('.apagar').addEventListener('click', async () => {
+        if (!confirm('Apagar a apresentação de ' + l.cliente + '?')) return;
+        try { await DADOS.apagar(l.id); carregarLista(); }
+        catch (e) { erro(e.message); }
+      });
+
+      listaTrabalhos.appendChild(cartao);
+    });
+
+  } catch (e) {
+    console.error(e);
+    listaTrabalhos.innerHTML = '<p class="msg erro">' + escaparHtml(e.message) + '</p>';
+  }
+}
+
+/* --- reabrir --- */
+async function abrirTrabalho(id) {
+  try {
+    const t = await DADOS.abrir(id);
+    const d = t.dados || {};
+
+    selLoja.value = t.loja || selLoja.value;
+    el('cliente').value = t.cliente || '';
+    el('arquiteto').value = t.arquiteto || '';
+
+    ambientes = (d.ambientes || []).map((a) => ({
+      id: proximoId++,
+      nome: a.nome || '',
+      valor: a.valor || '',
+      imagens: [],                 // entram na reposição
+      marcas: a.imagens || []      // nome e tamanho do que havia
+    }));
+
+    if (!ambientes.length) {
+      ambientes.push({ id: proximoId++, nome: '', valor: '', imagens: [] });
+    }
+
+    reposicao = { porAmbiente: new Map(), faltando: [] };
+    desenharAmbientes();
+    montarReposicao();
+
+    /* O orçamento volta já conferido */
+    if (d.orcamento) {
+      orcamento = d.orcamento;
+      if (d.orcamento.conferido) {
+        orcamento.ambientes = d.orcamento.conferido.ambientes || orcamento.ambientes;
+        orcamento.cliente = d.orcamento.conferido.cliente || orcamento.cliente;
+        orcamento.data = d.orcamento.conferido.data || orcamento.data;
+      }
+      chkPv.checked = true;
+      areaPv.classList.remove('oculto');
+      el('pv-nome').textContent = 'Orçamento salvo com este trabalho';
+      montarConferencia();
+      if (chkAnexar) chkAnexar.checked = !!d.anexarPv;
+    }
+
+    trabalhoAberto = t.id;
+    mostrarAberto(t.cliente, 'salvo ' + DADOS.quando(t.atualizado_em));
+    gaveta.classList.add('oculto');
+
+  } catch (e) {
+    console.error(e);
+    erro(e.message);
+  }
+}
+
+/* --- repor as fotos pela pasta --- */
+function montarReposicao() {
+  const antigo = el('area-repor');
+  if (antigo) antigo.remove();
+
+  const esperadas = ambientes.reduce(
+    (n, a) => n + ((a.marcas && a.marcas.length) || 0), 0);
+  if (!esperadas) return;
+
+  const caixa = document.createElement('div');
+  caixa.className = 'repor';
+  caixa.id = 'area-repor';
+  caixa.innerHTML =
+    '<strong>Faltam as fotos</strong>' +
+    'As fotos não ficam guardadas no servidor. Aponte a pasta do projeto ' +
+    'e eu recoloco as ' + esperadas + ' na ordem certa.' +
+    '<div class="botoes">' +
+      '<label>Escolher a pasta<input type="file" id="repor-pasta" webkitdirectory directory multiple></label>' +
+      '<label>Ou escolher os arquivos<input type="file" id="repor-arquivos" accept="image/*" multiple></label>' +
+    '</div>' +
+    '<div class="faltando" id="repor-resultado"></div>';
+
+  listaAmb.parentNode.insertBefore(caixa, listaAmb.nextSibling);
+
+  ['repor-pasta', 'repor-arquivos'].forEach((id) => {
+    el(id).addEventListener('change', (ev) => casarFotos(ev.target.files));
+  });
+}
+
+function casarFotos(arquivos) {
+  const indice = DADOS.indexar(Array.from(arquivos || []));
+  let achadas = 0;
+  const faltando = [];
+
+  ambientes.forEach((a) => {
+    if (!a.marcas || !a.marcas.length) return;
+
+    const encontradas = [];
+    a.marcas.forEach((m) => {
+      const f = indice.achar(m);
+      if (f) { encontradas.push(f); achadas++; }
+      else faltando.push((a.nome || 'ambiente sem nome') + ': ' + m.nome);
+    });
+
+    a.imagens = encontradas;
+  });
+
+  desenharAmbientes();
+
+  const resultado = el('repor-resultado');
+  if (!resultado) return;
+
+  if (!faltando.length) {
+    const caixa = el('area-repor');
+    if (caixa) {
+      caixa.innerHTML = '<strong>Fotos recolocadas</strong>' +
+        achadas + (achadas === 1 ? ' foto voltou' : ' fotos voltaram') +
+        ' para os ambientes.';
+    }
+    return;
+  }
+
+  resultado.innerHTML =
+    '<strong style="color:#8a4b12">Não achei ' + faltando.length +
+    (faltando.length === 1 ? ' arquivo' : ' arquivos') + ':</strong>' +
+    faltando.slice(0, 8).map(escaparHtml).join('<br>') +
+    (faltando.length > 8 ? '<br>e mais ' + (faltando.length - 8) + '.' : '') +
+    '<br><br>Escolha outra pasta, ou acrescente essas fotos na mão no ambiente.';
+}
+
 </script>
 
 </body>

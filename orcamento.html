@@ -338,6 +338,96 @@
   }
 
   .oculto { display: none !important; }
+
+  /* --- trabalhos salvos --- */
+  .barra-salvar {
+    display: flex; gap: 8px; margin-bottom: 18px;
+  }
+  .barra-salvar button {
+    flex: 1; padding: 11px 12px;
+    border: 1px solid var(--line-2); border-radius: 9px;
+    background: var(--card); color: var(--ink-2);
+    font-size: 13px; font-weight: 600; font-family: inherit;
+    cursor: pointer;
+  }
+  .barra-salvar button:hover { border-color: var(--accent); color: var(--ink); }
+  .barra-salvar button:disabled { opacity: .45; cursor: default; }
+  .barra-salvar .ativo { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .aberto {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: -8px 0 16px; padding: 9px 11px;
+    background: #eef3ee; border: 1px solid #cfe0d2; border-radius: 8px;
+    font-size: 12px; color: #2c5137;
+  }
+  .aberto button {
+    margin-left: auto; background: none; border: 0; padding: 0;
+    font-size: 12px; font-family: inherit; color: #2c5137;
+    text-decoration: underline; cursor: pointer;
+  }
+
+  .gaveta {
+    position: fixed; inset: 0; z-index: 400;
+    background: rgba(20,22,24,.42);
+    display: flex; justify-content: flex-end;
+  }
+  .gaveta.oculto { display: none; }
+  .gaveta-painel {
+    width: 100%; max-width: 440px; height: 100%;
+    background: var(--bg); overflow-y: auto;
+    padding: 22px 20px 40px;
+    box-shadow: -8px 0 32px rgba(0,0,0,.14);
+  }
+  .gaveta-topo {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .gaveta-topo h2 { font-size: 16px; margin: 0; }
+  .gaveta-topo button {
+    background: none; border: 0; font-size: 22px; line-height: 1;
+    color: var(--muted); cursor: pointer; padding: 0 4px;
+  }
+  .gaveta input.busca {
+    width: 100%; box-sizing: border-box; margin-bottom: 14px;
+    padding: 11px 12px; font-size: 14px; font-family: inherit;
+    border: 1px solid var(--line-2); border-radius: 9px; background: #fff;
+  }
+
+  .trabalho {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 13px 14px; margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .trabalho:hover { border-color: var(--line-2); }
+  .trabalho .nome { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .trabalho .sub  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .trabalho .acoes { margin-top: 9px; display: flex; gap: 12px; }
+  .trabalho .acoes button {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font-size: 12px; font-family: inherit; color: var(--muted);
+    text-decoration: underline;
+  }
+  .trabalho .acoes button:hover { color: var(--ink); }
+  .trabalho .acoes .apagar:hover { color: #b3261e; }
+
+  .repor {
+    margin: 12px 0 0; padding: 12px 13px;
+    border: 1px dashed var(--line-2); border-radius: 9px;
+    background: var(--card); font-size: 12px; color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .repor strong { display: block; color: var(--ink); font-size: 13px; margin-bottom: 3px; }
+  .repor .botoes { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .repor label {
+    position: relative; overflow: hidden;
+    display: inline-block; padding: 8px 12px;
+    border: 1px solid var(--line-2); border-radius: 7px;
+    background: var(--bg); font-size: 12px; font-weight: 600;
+    color: var(--ink-2); cursor: pointer;
+  }
+  .repor label:hover { border-color: var(--accent); color: var(--ink); }
+  .repor label input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .repor .faltando { margin-top: 9px; color: #8a4b12; }
 </style>
 <!-- A página nasce escondida e só aparece quando o auth.js confirma
      a sessão. Se o auth.js não carregar, nada aparece. -->
@@ -360,6 +450,13 @@
     </svg>
     Central de Peças
   </a>
+
+  <div class="barra-salvar">
+    <button type="button" id="btn-salvar">Salvar</button>
+    <button type="button" id="btn-abrir">Meus trabalhos</button>
+  </div>
+
+  <div class="aberto oculto" id="aviso-aberto"></div>
 
   <div id="aviso-arquivos" class="aviso-config oculto"></div>
 
@@ -393,12 +490,26 @@
   <button class="botao" id="gerar">Gerar orçamento</button>
   <div id="saida"></div>
 
+
+  <div class="gaveta oculto" id="gaveta">
+    <div class="gaveta-painel">
+      <div class="gaveta-topo">
+        <h2>Meus trabalhos</h2>
+        <button type="button" id="fechar-gaveta" title="Fechar">&times;</button>
+      </div>
+      <input class="busca" id="busca-trabalho" type="search"
+             placeholder="Procurar pelo nome do cliente">
+      <div id="lista-trabalhos"></div>
+    </div>
+  </div>
+
   <p class="rodape">Lumina · Uso interno</p>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
+<script src="dados.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1878,6 +1989,176 @@ function salvar(abrir) {
     '<strong>Falta subir ' + (faltando.length === 1 ? 'um arquivo' : 'alguns arquivos') +
     ':</strong> ' + faltando.join(', ') + '. Eles precisam estar na mesma pasta desta página.';
 })();
+
+
+
+/* ============================================================
+   SALVAR E REABRIR
+   ============================================================ */
+
+let trabalhoAberto = null;
+
+const gaveta = el('gaveta');
+const listaTrabalhos = el('lista-trabalhos');
+const campoBusca = el('busca-trabalho');
+const avisoAberto = el('aviso-aberto');
+
+function fichaAtual() {
+  const conferido = orcamento ? lerConferencia() : null;
+
+  return {
+    tipo: 'orcamento',
+    loja: selLoja.value,
+    cliente: conferido ? conferido.cliente : '',
+    arquiteto: el('arquiteto').value.trim(),
+    dados: {
+      orcamento: orcamento
+        ? Object.assign({}, orcamento, { conferido: conferido })
+        : null
+    }
+  };
+}
+
+el('btn-salvar').addEventListener('click', async () => {
+  if (!orcamento) {
+    erro('Leia um orçamento antes de salvar.');
+    return;
+  }
+
+  const ficha = fichaAtual();
+  if (!ficha.cliente.trim()) {
+    erro('Falta o nome do cliente na conferência.');
+    return;
+  }
+
+  const botao = el('btn-salvar');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  try {
+    trabalhoAberto = await DADOS.salvar(ficha, trabalhoAberto);
+    mostrarAberto(ficha.cliente, 'salvo agora');
+    botao.textContent = 'Salvo';
+    setTimeout(() => { botao.textContent = 'Salvar'; }, 1800);
+  } catch (e) {
+    console.error(e);
+    erro(e.message);
+    botao.textContent = 'Salvar';
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+function mostrarAberto(cliente, quando) {
+  avisoAberto.classList.remove('oculto');
+  avisoAberto.innerHTML =
+    '<span>Editando <strong>' + escaparHtml(cliente) + '</strong> · ' + quando + '</span>' +
+    '<button type="button" id="soltar-trabalho">começar um novo</button>';
+
+  el('soltar-trabalho').addEventListener('click', () => {
+    trabalhoAberto = null;
+    avisoAberto.classList.add('oculto');
+    avisoAberto.innerHTML = '';
+  });
+}
+
+el('btn-abrir').addEventListener('click', () => {
+  gaveta.classList.remove('oculto');
+  carregarLista();
+});
+
+el('fechar-gaveta').addEventListener('click', () => gaveta.classList.add('oculto'));
+
+gaveta.addEventListener('click', (ev) => {
+  if (ev.target === gaveta) gaveta.classList.add('oculto');
+});
+
+let buscaDemora = null;
+campoBusca.addEventListener('input', () => {
+  clearTimeout(buscaDemora);
+  buscaDemora = setTimeout(carregarLista, 280);
+});
+
+async function carregarLista() {
+  listaTrabalhos.innerHTML = '<p class="msg">Carregando...</p>';
+
+  try {
+    const linhas = await DADOS.listar('orcamento', campoBusca.value);
+
+    if (!linhas.length) {
+      listaTrabalhos.innerHTML =
+        '<p class="msg">' +
+        (campoBusca.value.trim()
+          ? 'Nenhum orçamento com esse cliente.'
+          : 'Você ainda não salvou nenhum orçamento.') +
+        '</p>';
+      return;
+    }
+
+    listaTrabalhos.innerHTML = '';
+
+    linhas.forEach((l) => {
+      const cartao = document.createElement('div');
+      cartao.className = 'trabalho';
+      cartao.innerHTML =
+        '<div class="nome">' + escaparHtml(l.cliente) + '</div>' +
+        '<div class="sub">' + (l.loja || '').toUpperCase() +
+        ' · ' + DADOS.quando(l.atualizado_em) + '</div>' +
+        '<div class="acoes">' +
+        '<button type="button" class="abrir">abrir</button>' +
+        '<button type="button" class="apagar">apagar</button>' +
+        '</div>';
+
+      cartao.querySelector('.abrir').addEventListener('click', () => abrirTrabalho(l.id));
+
+      cartao.querySelector('.apagar').addEventListener('click', async () => {
+        if (!confirm('Apagar o orçamento de ' + l.cliente + '?')) return;
+        try { await DADOS.apagar(l.id); carregarLista(); }
+        catch (e) { erro(e.message); }
+      });
+
+      listaTrabalhos.appendChild(cartao);
+    });
+
+  } catch (e) {
+    console.error(e);
+    listaTrabalhos.innerHTML = '<p class="msg erro">' + escaparHtml(e.message) + '</p>';
+  }
+}
+
+async function abrirTrabalho(id) {
+  try {
+    const t = await DADOS.abrir(id);
+    const d = t.dados || {};
+
+    if (!d.orcamento) {
+      erro('Esse trabalho foi salvo sem orçamento.');
+      return;
+    }
+
+    selLoja.value = t.loja || selLoja.value;
+    el('arquiteto').value = t.arquiteto || '';
+
+    orcamento = d.orcamento;
+    if (d.orcamento.conferido) {
+      orcamento.ambientes = d.orcamento.conferido.ambientes || orcamento.ambientes;
+      orcamento.cliente = d.orcamento.conferido.cliente || orcamento.cliente;
+      orcamento.data = d.orcamento.conferido.data || orcamento.data;
+    }
+
+    arquivoPv = null;
+    el('pv-nome').textContent = 'Orçamento salvo com este trabalho';
+    montarConferencia();
+
+    trabalhoAberto = t.id;
+    mostrarAberto(t.cliente, 'salvo ' + DADOS.quando(t.atualizado_em));
+    gaveta.classList.add('oculto');
+
+  } catch (e) {
+    console.error(e);
+    erro(e.message);
+  }
+}
 
 </script>
 
