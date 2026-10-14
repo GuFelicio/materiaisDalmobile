@@ -1033,7 +1033,23 @@ buscaLinks.addEventListener('input', montarAtalhos);
    usam a mesma função. Mudar o jeito de desenhar uma muda a outra,
    que é o que a gente quer. */
 function montarBiblioteca() { montarGrupos(BIBLIOTECA, acervo, busca, 'material'); }
-function montarAtalhos()    { montarGrupos(LINKS, atalhos, buscaLinks, 'link'); }
+
+function montarAtalhos() {
+  montarGrupos(LINKS, atalhos, buscaLinks, 'link');
+
+  /* O gerente pode olhar a outra loja — mas aí os links de
+     gerência somem, e sem este recado ele acha que perdeu o
+     acesso. Era a armadilha: silêncio parece defeito. */
+  if (EU.gerente && !EU.admin && EU.loja && EU.loja !== selLoja.value) {
+    const nota = document.createElement('p');
+    nota.className = 'aviso-aba';
+    nota.style.textAlign = 'left';
+    nota.textContent =
+      'Os links de gerência são os da sua loja (' + nomeDaLoja(EU.loja) +
+      '). Volte o seletor lá em cima para vê-los.';
+    atalhos.appendChild(nota);
+  }
+}
 
 /* Quem está usando a página. Nasce todo falso e só é preenchido
    quando o banco responde — declarado aqui porque as listas são
@@ -1784,6 +1800,19 @@ async function descobrirQuemSou() {
      primeira linha mostra data-cargo="gerente". */
   document.documentElement.dataset.cargo =
     EU.admin ? 'admin' : EU.gerente ? 'gerente' : 'consultor';
+
+  /* Quem tem loja no perfil e nunca escolheu uma no seletor abre
+     direto na dele. Sem isso, o gerente de Caraguá caía em SJC na
+     primeira visita e não via nada da gerência — que é o defeito
+     que você viu. A escolha manual continua mandando: isto só
+     entra quando não existe nenhuma guardada no navegador. */
+  let escolheu = false;
+  try { escolheu = !!localStorage.getItem('dalmobile:loja'); } catch (e) {}
+
+  if (!escolheu && EU.loja && LOJAS.some((l) => l.id === EU.loja)) {
+    selLoja.value = EU.loja;
+    montarBiblioteca();
+  }
 
   /* Até aqui os itens de gerência estavam escondidos de todo
      mundo. Agora que se sabe quem é, desenha de novo. */
