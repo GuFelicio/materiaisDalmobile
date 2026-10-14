@@ -250,9 +250,30 @@
     letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
   }
 
-  /* ---------- Biblioteca ---------- */
+  /* ---------- Abas ---------- */
 
-  .biblioteca { margin-top: 38px; }
+  .abas {
+    display: flex; gap: 2px; margin-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .abas button {
+    flex: 1; min-width: 0; padding: 11px 4px 10px;
+    background: none; border: 0; border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-family: inherit; font-size: 11px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); cursor: pointer;
+    transition: color .12s;
+  }
+
+  .abas button:hover { color: var(--ink-2); }
+
+  .abas button[aria-selected="true"] {
+    color: var(--ink); border-bottom-color: var(--ink);
+  }
+
+  /* ---------- Biblioteca e listas de links ---------- */
 
   .busca-envolve { position: relative; margin-bottom: 18px; }
 
@@ -261,14 +282,14 @@
     transform: translateY(-50%); pointer-events: none;
   }
 
-  #busca {
+  .busca-envolve input {
     width: 100%; padding: 11px 13px 11px 38px;
     border: 1px solid var(--line); border-radius: 9px;
     font-size: 15px; font-family: inherit;
     color: var(--ink); background: var(--card);
   }
 
-  #busca:focus {
+  .busca-envolve input:focus {
     outline: none; border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(20,22,24,.07);
   }
@@ -324,6 +345,10 @@
     padding: 22px 16px; text-align: center;
     font-size: 13px; color: var(--muted);
   }
+
+  .aviso-aba {
+    margin: 14px 0 0; font-size: 12px; color: var(--muted); text-align: center;
+  }
 </style>
 <!-- A página nasce escondida e só aparece quando o auth.js confirma
      a sessão. Se o auth.js não carregar, nada aparece. -->
@@ -347,12 +372,19 @@
   </div>
 
   <section id="hub">
-    <h2 class="seccao-titulo">O que você precisa gerar?</h2>
-    <div class="grade" id="grade"></div>
 
-    <div class="biblioteca">
-      <h2 class="seccao-titulo">Biblioteca de materiais</h2>
+    <nav class="abas" id="abas" role="tablist">
+      <button type="button" role="tab" data-aba="gerar"     aria-selected="true">Gerar</button>
+      <button type="button" role="tab" data-aba="materiais" aria-selected="false">Materiais</button>
+      <button type="button" role="tab" data-aba="links"     aria-selected="false">Links</button>
+      <button type="button" role="tab" data-aba="contas"    aria-selected="false" class="oculto">Contas</button>
+    </nav>
 
+    <div class="painel-aba" data-painel="gerar">
+      <div class="grade" id="grade"></div>
+    </div>
+
+    <div class="painel-aba oculto" data-painel="materiais">
       <div class="busca-envolve">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
           <circle cx="6.5" cy="6.5" r="4.5" stroke="#8a9094" stroke-width="1.5"/>
@@ -360,9 +392,39 @@
         </svg>
         <input id="busca" type="search" placeholder="Buscar material..." autocomplete="off">
       </div>
-
       <div id="acervo"></div>
     </div>
+
+    <div class="painel-aba oculto" data-painel="links">
+      <div class="busca-envolve">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+          <circle cx="6.5" cy="6.5" r="4.5" stroke="#8a9094" stroke-width="1.5"/>
+          <path d="M10 10l3 3" stroke="#8a9094" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <input id="busca-links" type="search" placeholder="Buscar link..." autocomplete="off">
+      </div>
+      <div id="atalhos"></div>
+    </div>
+
+    <div class="painel-aba oculto" data-painel="contas">
+      <div class="lista">
+        <a class="link-item" href="usuarios.html">
+          <span class="marcador">CONTAS</span>
+          <span class="conteudo">
+            <span class="titulo">Contas de acesso</span><br>
+            <span class="sub">Criar conta, definir senha e bloquear quem saiu da loja.</span>
+          </span>
+          <span class="externo">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path d="M5.5 2.5L10 7l-4.5 4.5" stroke="currentColor" stroke-width="1.7"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </a>
+      </div>
+      <p class="aviso-aba">Esta aba aparece só para quem é administrador.</p>
+    </div>
+
   </section>
 
   <section id="gerador" class="oculto">
@@ -625,7 +687,7 @@ const BIBLIOTECA = [
       { nome: 'Apresentação Clientes', descricao: 'Apresentação para clientes finais.',
         url: 'https://docs.google.com/presentation/d/1PuTSYx9Cppav-oxWyV0ZeeKR7cD9EUty/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
       { nome: 'Apresentação Arquitetos', descricao: 'Apresentação para arquitetos e designers.',
-        url: 'https://docs.google.com/presentation/d/1tiisjXgxjbPDemCt1t3hRtxlbuojQtUY?rtpof=true&usp=drive_fs', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
+        url: 'https://docs.google.com/presentation/d/1bUeeFLVEqcS9M0vDMLy2HqsxBbSUBLOQ/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
     ]
   },
 
@@ -633,14 +695,107 @@ const BIBLIOTECA = [
     grupo: 'Marca',
     itens: [
       { nome: 'Logos Dalmóbile SJC', descricao: 'PNG, SVG e versões monocromáticas',
-        url: 'https://drive.google.com/open?id=16QJlW34b9kPl47M7AxYqTpumMCP6ZrQE&usp=drive_fs', tipo: 'PASTA', lojas: ['sjc'] },
+        url: '', tipo: 'PASTA', lojas: ['sjc'] },
       { nome: 'Logos Dalmóbile Caraguá', descricao: 'PNG, SVG e versões monocromáticas',
-        url: 'https://drive.google.com/open?id=1OJwXeozI0Dq_jSfCG-kJdZOxvK_PKLeW&usp=drive_fs', tipo: 'PASTA', lojas: ['cgt'] },
+        url: '', tipo: 'PASTA', lojas: ['cgt'] },
       { nome: 'Logo para grupos WhatsApp', descricao: 'Imagem a ser usada para criação de grupos do WhatsApp',
-        url: 'https://drive.google.com/open?id=15BSCDXM9exNADgrRK0R5ZBQ-ohQ3Ay0t&usp=drive_fs', tipo: 'PASTA', lojas: ['sjc', 'cgt'] }
+        url: '', tipo: 'PDF', lojas: ['sjc', 'cgt'] }
     ]
   },
-  
+
+
+];
+
+
+/* ============================================================
+   LINKS — a aba de atalhos do dia a dia
+   ------------------------------------------------------------
+   Mesmo formato da BIBLIOTECA acima, e o mesmo cuidado: item sem
+   url aparece marcado como "Em breve", sem link. Então pode
+   deixar a linha pronta aqui e colar o endereço depois.
+
+     nome      → como aparece na lista
+     descricao → uma linha curta (opcional)
+     url       → o endereço. Deixe '' para ficar "em breve"
+     tipo      → o selo da esquerda. Curto: SISTEMA, SITE, INSTA,
+                 ZAP, PLANILHA, PASTA, LINK
+     lojas     → ['sjc'], ['cgt'] ou ['sjc','cgt'] para as duas
+
+   Para criar um grupo novo, copie um bloco inteiro { grupo, itens }
+   e mude o nome. A ordem aqui é a ordem na tela.
+   ============================================================ */
+
+const LINKS = [
+
+  {
+    grupo: 'Sistemas',
+    itens: [
+      { nome: 'Sistema de orçamento', descricao: 'Onde o OR e o PV são gerados.',
+        url: '', tipo: 'SISTEMA', lojas: ['sjc', 'cgt'] },
+      { nome: 'Portal da fábrica', descricao: 'Pedidos, produção e assistência.',
+        url: '', tipo: 'SISTEMA', lojas: ['sjc', 'cgt'] }
+    ]
+  },
+
+  {
+    grupo: 'Atendimento',
+    itens: [
+      { nome: 'WhatsApp da loja', descricao: '(12) 99604-9888',
+        url: 'https://wa.me/5512996049888', tipo: 'ZAP', lojas: ['sjc'] },
+      { nome: 'WhatsApp da loja', descricao: '(12) 99602-1234',
+        url: 'https://wa.me/5512996021234', tipo: 'ZAP', lojas: ['cgt'] }
+    ]
+  },
+
+  {
+    grupo: 'Sites e redes',
+    itens: [
+      /* O www não é enfeite: no DNS da Locaweb só o www está
+         apontado para a Cloudflare, então o endereço sem ele pode
+         não abrir. Link daqui sempre com www. */
+      { nome: 'Site da loja', descricao: 'dalmobilesjc.com.br',
+        url: 'https://www.dalmobilesjc.com.br', tipo: 'SITE', lojas: ['sjc'] },
+      { nome: 'Site da loja', descricao: 'dalmobilecaraguatatuba.com.br',
+        url: 'https://www.dalmobilecaraguatatuba.com.br', tipo: 'SITE', lojas: ['cgt'] },
+      { nome: 'Instagram', descricao: '',
+        url: '', tipo: 'INSTA', lojas: ['sjc'] },
+      { nome: 'Instagram', descricao: '',
+        url: '', tipo: 'INSTA', lojas: ['cgt'] },
+      { nome: 'Google da loja', descricao: 'Ficha e avaliações no Google Maps.',
+        url: '', tipo: 'LINK', lojas: ['sjc'] },
+      { nome: 'Google da loja', descricao: 'Ficha e avaliações no Google Maps.',
+        url: '', tipo: 'LINK', lojas: ['cgt'] }
+    ]
+  },
+
+  {
+    grupo: 'Organização',
+    itens: [
+      { nome: 'Indicação de projetos para foto', descricao: 'Planilha onde o gerente indica os projetos.',
+        url: '', tipo: 'PLANILHA', lojas: ['sjc'] },
+      { nome: 'Indicação de projetos para foto', descricao: 'Planilha onde o gerente indica os projetos.',
+        url: '', tipo: 'PLANILHA', lojas: ['cgt'] },
+      { nome: 'Pasta Planilhas', descricao: 'Planilhas de acompanhamento, no Drive.',
+        url: '', tipo: 'PASTA', lojas: ['sjc', 'cgt'] }
+    ]
+  },
+
+  /* --- Grupos em branco, para você preencher --- */
+
+  {
+    grupo: 'Equipe',
+    itens: [
+      // { nome: 'Grupo da equipe no WhatsApp', descricao: '',
+      //   url: '', tipo: 'ZAP', lojas: ['sjc'] },
+    ]
+  },
+
+  {
+    grupo: 'Outros',
+    itens: [
+      // { nome: '', descricao: '', url: '', tipo: 'LINK', lojas: ['sjc','cgt'] },
+    ]
+  }
 
 ];
 
@@ -708,7 +863,47 @@ selLoja.addEventListener('change', () => {
   try { localStorage.setItem('dalmobile:loja', selLoja.value); } catch (e) {}
   resultado.innerHTML = '';
   montarBiblioteca();
+  montarAtalhos();
 });
+
+/* ============================================================
+   ABAS
+   ------------------------------------------------------------
+   O seletor de loja fica acima delas de propósito: ele vale para
+   as três ao mesmo tempo, então trocar de aba nunca perde a loja
+   escolhida. A aba aberta é lembrada, como a loja.
+   ============================================================ */
+
+const abas = el('abas');
+
+function trocarAba(nome) {
+  abas.querySelectorAll('button[data-aba]').forEach((b) => {
+    b.setAttribute('aria-selected', String(b.dataset.aba === nome));
+  });
+
+  document.querySelectorAll('.painel-aba').forEach((p) => {
+    p.classList.toggle('oculto', p.dataset.painel !== nome);
+  });
+
+  try { localStorage.setItem('dalmobile:aba', nome); } catch (e) {}
+}
+
+abas.addEventListener('click', (ev) => {
+  const botao = ev.target.closest('button[data-aba]');
+  if (botao) trocarAba(botao.dataset.aba);
+});
+
+function abaSalva() {
+  try { return localStorage.getItem('dalmobile:aba'); } catch (e) { return null; }
+}
+
+/* Volta para a aba de antes, desde que ela exista e esteja à
+   mostra — "contas" fica escondida até o perfil confirmar. */
+function abaInicial() {
+  const nome = abaSalva();
+  const botao = nome ? abas.querySelector('button[data-aba="' + nome + '"]') : null;
+  return (botao && !botao.classList.contains('oculto')) ? nome : 'gerar';
+}
 
 /* ============================================================
    MENU
@@ -759,21 +954,30 @@ function montarHub() {
    BIBLIOTECA
    ============================================================ */
 
-const acervo = el('acervo');
-const busca  = el('busca');
+const acervo     = el('acervo');
+const atalhos    = el('atalhos');
+const busca      = el('busca');
+const buscaLinks = el('busca-links');
 
 busca.addEventListener('input', montarBiblioteca);
+buscaLinks.addEventListener('input', montarAtalhos);
 
-function montarBiblioteca() {
+/* As duas listas — materiais e links — têm a mesma forma, então
+   usam a mesma função. Mudar o jeito de desenhar uma muda a outra,
+   que é o que a gente quer. */
+function montarBiblioteca() { montarGrupos(BIBLIOTECA, acervo, busca, 'material'); }
+function montarAtalhos()    { montarGrupos(LINKS, atalhos, buscaLinks, 'link'); }
+
+function montarGrupos(fonte, alvo, campoBusca, oque) {
   const loja = selLoja.value;
-  const termo = busca.value.trim().toLowerCase();
+  const termo = campoBusca.value.trim().toLowerCase();
 
-  acervo.innerHTML = '';
+  alvo.innerHTML = '';
   let encontrou = false;
 
-  BIBLIOTECA.forEach((grupo) => {
+  fonte.forEach((grupo) => {
 
-    const itens = grupo.itens.filter((item) => {
+    const itens = (grupo.itens || []).filter((item) => {
       if (!item.lojas.includes(loja)) return false;
       if (!termo) return true;
       return (item.nome + ' ' + (item.descricao || '') + ' ' + grupo.grupo)
@@ -796,16 +1000,16 @@ function montarBiblioteca() {
     itens.forEach((item) => lista.appendChild(montarLink(item)));
 
     bloco.appendChild(lista);
-    acervo.appendChild(bloco);
+    alvo.appendChild(bloco);
   });
 
   if (!encontrou) {
     const vazio = document.createElement('p');
     vazio.className = 'vazio-busca';
     vazio.textContent = termo
-      ? 'Nenhum material encontrado para "' + busca.value.trim() + '".'
-      : 'Nenhum material cadastrado para esta loja ainda.';
-    acervo.appendChild(vazio);
+      ? 'Nenhum ' + oque + ' encontrado para "' + campoBusca.value.trim() + '".'
+      : 'Nenhum ' + oque + ' cadastrado para esta loja ainda.';
+    alvo.appendChild(vazio);
   }
 }
 
@@ -1398,7 +1602,43 @@ window.addEventListener('hashchange', rotear);
 
 montarHub();
 montarBiblioteca();
+montarAtalhos();
+trocarAba(abaInicial());
 rotear();
+
+/* ============================================================
+   ABA DE CONTAS
+   ------------------------------------------------------------
+   Esconder a aba é só educação com quem não é admin: a tela de
+   contas e a função no servidor conferem de novo, no banco. Quem
+   souber o endereço dela não entra por isso.
+   ============================================================ */
+
+(async function abaDeContas() {
+  /* O auth.js resolve a sessão de forma assíncrona. */
+  for (let i = 0; i < 60 && !(window.dalmobileAuth && window.dalmobileAuth.usuario); i++) {
+    await new Promise((r) => setTimeout(r, 150));
+  }
+
+  const auth = window.dalmobileAuth;
+  if (!auth || !auth.usuario) return;
+
+  try {
+    const { data, error } = await auth.cliente
+      .from('perfis').select('admin').eq('id', auth.usuario.id).single();
+
+    if (error || !data || data.admin !== true) return;
+
+    abas.querySelector('button[data-aba="contas"]').classList.remove('oculto');
+
+    /* Se era a aba aberta na última visita, ela só pôde ser
+       descartada por ainda estar escondida — agora dá. */
+    if (abaSalva() === 'contas' && !location.hash) trocarAba('contas');
+
+  } catch (e) {
+    /* Sem perfil ou sem tabela ainda: segue sem a aba. */
+  }
+})();
 </script>
 
 </body>
