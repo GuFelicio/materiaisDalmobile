@@ -349,6 +349,66 @@
   .aviso-aba {
     margin: 14px 0 0; font-size: 12px; color: var(--muted); text-align: center;
   }
+
+  /* ---------- Cargos ---------- */
+
+  .pessoa {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+  }
+
+  .pessoa .cabeca { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .pessoa .nome { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .pessoa .sub {
+    margin: 3px 0 0; font-size: 12px; color: var(--muted);
+    line-height: 1.45; word-break: break-word;
+  }
+
+  .pessoa .acoes {
+    display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--line);
+  }
+
+  .pessoa .acoes button {
+    padding: 6px 10px; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: 12px; font-weight: 600; font-family: inherit;
+    color: var(--ink-2); cursor: pointer;
+  }
+  .pessoa .acoes button:hover:not(:disabled) { border-color: var(--line-2); color: var(--ink); }
+  .pessoa .acoes button:disabled { opacity: .4; cursor: default; }
+
+  .pessoa .acoes select {
+    width: auto; padding: 6px 28px 6px 10px; font-size: 12px;
+    font-weight: 600; border-radius: 7px; border: 1px solid var(--line);
+    background-color: var(--bg); background-position: right 9px center;
+    color: var(--ink-2);
+  }
+
+  .selo {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+    border: 1px solid var(--line-2); color: var(--muted); white-space: nowrap;
+  }
+  .selo.admin    { background: #eef3ee; border-color: #cfe0d2; color: #2c5137; }
+  .selo.gerente  { background: #eef1f5; border-color: #ccd6e0; color: #2c4151; }
+  .selo.alerta   { background: #fdf1e7; border-color: #f0cfae; color: #8a4b12; }
+  .selo.eu       { background: var(--bg); color: var(--ink-2); }
+
+  .cartao-aviso {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 18px;
+  }
+  .cartao-aviso h3 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+  .cartao-aviso p  { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+  .cartao-aviso p:last-child { margin-bottom: 0; }
+  .cartao-aviso code {
+    font-size: 12px; background: var(--bg); padding: 1px 5px;
+    border-radius: 4px; word-break: break-all;
+  }
+  .cartao-aviso.atencao { background: #fdf1e7; border-color: #f0cfae; }
+  .cartao-aviso.atencao h3 { color: #8a4b12; }
 </style>
 <!-- A página nasce escondida e só aparece quando o auth.js confirma
      a sessão. Se o auth.js não carregar, nada aparece. -->
@@ -407,22 +467,31 @@
     </div>
 
     <div class="painel-aba oculto" data-painel="contas">
-      <div class="lista">
-        <a class="link-item" href="usuarios.html">
-          <span class="marcador">CONTAS</span>
-          <span class="conteudo">
-            <span class="titulo">Contas de acesso</span><br>
-            <span class="sub">Criar conta, definir senha e bloquear quem saiu da loja.</span>
-          </span>
-          <span class="externo">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-              <path d="M5.5 2.5L10 7l-4.5 4.5" stroke="currentColor" stroke-width="1.7"
-                    stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-        </a>
+      <div id="contas-recado"></div>
+
+      <div id="contas-area" class="oculto">
+        <h3 class="seccao-titulo">Cargos</h3>
+        <div id="contas-lista"></div>
+
+        <h3 class="seccao-titulo" style="margin-top:26px">Criar e trocar senha</h3>
+        <div class="lista">
+          <a class="link-item" href="usuarios.html">
+            <span class="marcador">CONTAS</span>
+            <span class="conteudo">
+              <span class="titulo">Contas de acesso</span><br>
+              <span class="sub">Criar conta, definir senha e bloquear quem saiu da loja.</span>
+            </span>
+            <span class="externo">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path d="M5.5 2.5L10 7l-4.5 4.5" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </a>
+        </div>
+
+        <p class="aviso-aba">Esta aba aparece só para quem é administrador.</p>
       </div>
-      <p class="aviso-aba">Esta aba aparece só para quem é administrador.</p>
     </div>
 
   </section>
@@ -768,15 +837,17 @@ const LINKS = [
     ]
   },
 
+  /* cargo: 'gerencia' esconde o item de quem é só consultor.
+     Pode marcar assim qualquer item, de qualquer grupo. */
   {
     grupo: 'Organização',
     itens: [
       { nome: 'Indicação de projetos para foto', descricao: 'Planilha onde o gerente indica os projetos.',
-        url: '', tipo: 'PLANILHA', lojas: ['sjc'] },
+        url: '', tipo: 'PLANILHA', lojas: ['sjc'], cargo: 'gerencia' },
       { nome: 'Indicação de projetos para foto', descricao: 'Planilha onde o gerente indica os projetos.',
-        url: '', tipo: 'PLANILHA', lojas: ['cgt'] },
+        url: '', tipo: 'PLANILHA', lojas: ['cgt'], cargo: 'gerencia' },
       { nome: 'Pasta Planilhas', descricao: 'Planilhas de acompanhamento, no Drive.',
-        url: '', tipo: 'PASTA', lojas: ['sjc', 'cgt'] }
+        url: '', tipo: 'PASTA', lojas: ['sjc', 'cgt'], cargo: 'gerencia' }
     ]
   },
 
@@ -968,6 +1039,34 @@ buscaLinks.addEventListener('input', montarAtalhos);
 function montarBiblioteca() { montarGrupos(BIBLIOTECA, acervo, busca, 'material'); }
 function montarAtalhos()    { montarGrupos(LINKS, atalhos, buscaLinks, 'link'); }
 
+/* Quem está usando a página. Nasce todo falso e só é preenchido
+   quando o banco responde — declarado aqui porque as listas são
+   desenhadas antes disso, e elas precisam dele existindo. */
+const EU = {
+  pronto: false, id: null, email: '', nome: '',
+  loja: '', admin: false, gerente: false, motivo: ''
+};
+
+/**
+ * Item marcado com cargo: 'gerencia' some da tela do consultor.
+ *
+ * Enquanto o perfil não chegou do banco, EU vem todo falso e o
+ * item fica escondido. É de propósito: se a leitura falhar, some
+ * — nunca o contrário.
+ *
+ * E isto aqui é cerca, não cofre: quem abrir o código-fonte da
+ * página vê os endereços. A proteção de verdade está em quem o
+ * Drive deixa abrir o arquivo.
+ */
+function podeVerItem(item, loja) {
+  if (item.cargo !== 'gerencia') return true;
+  if (EU.admin) return true;
+
+  /* O gerente vê os da loja dele, e só enquanto estiver olhando
+     a loja dele — trocar o seletor para a outra não revela nada. */
+  return EU.gerente && !!EU.loja && EU.loja === loja;
+}
+
 function montarGrupos(fonte, alvo, campoBusca, oque) {
   const loja = selLoja.value;
   const termo = campoBusca.value.trim().toLowerCase();
@@ -979,6 +1078,7 @@ function montarGrupos(fonte, alvo, campoBusca, oque) {
 
     const itens = (grupo.itens || []).filter((item) => {
       if (!item.lojas.includes(loja)) return false;
+      if (!podeVerItem(item, loja)) return false;
       if (!termo) return true;
       return (item.nome + ' ' + (item.descricao || '') + ' ' + grupo.grupo)
         .toLowerCase().includes(termo);
@@ -1607,38 +1707,311 @@ trocarAba(abaInicial());
 rotear();
 
 /* ============================================================
-   ABA DE CONTAS
+   CARGOS
    ------------------------------------------------------------
-   Esconder a aba é só educação com quem não é admin: a tela de
-   contas e a função no servidor conferem de novo, no banco. Quem
-   souber o endereço dela não entra por isso.
+   Esconder a aba é educação com quem não é admin, não proteção:
+   quem decide o que cada um alcança é o banco, nas regras do
+   supabase-cargos.sql. Mesmo abrindo esta aba na marra, sem
+   cargo no banco não vem dado nenhum.
    ============================================================ */
 
-(async function abaDeContas() {
-  /* O auth.js resolve a sessão de forma assíncrona. */
+const botaoContas = abas.querySelector('button[data-aba="contas"]');
+const contasRecado = el('contas-recado');
+const contasArea   = el('contas-area');
+const contasLista  = el('contas-lista');
+
+async function esperarSessao() {
   for (let i = 0; i < 60 && !(window.dalmobileAuth && window.dalmobileAuth.usuario); i++) {
     await new Promise((r) => setTimeout(r, 150));
   }
+  const a = window.dalmobileAuth;
+  return (a && a.usuario) ? a : null;
+}
+
+/* Lê o próprio perfil e guarda em EU. Quando não dá, guarda o
+   MOTIVO — era isso que faltava: antes a aba sumia calada e não
+   havia como saber se era cargo, perfil faltando ou o banco. */
+async function descobrirQuemSou() {
+  const auth = await esperarSessao();
+
+  if (!auth) {
+    EU.motivo = 'Você não está logado nesta aba.';
+    return;
+  }
+
+  EU.id = auth.usuario.id;
+  EU.email = auth.usuario.email || '';
+
+  /* Sem .single(): com ele, linha inexistente vira "erro", e some
+     a diferença entre "não é admin" e "não tem perfil". */
+  let { data, error } = await auth.cliente
+    .from('perfis').select('id, nome, loja, admin, gerente').eq('id', EU.id).limit(1);
+
+  /* Antes de rodar o supabase-cargos.sql a coluna gerente não
+     existe. A página não pode morrer por causa disso. */
+  if (error && /gerente/i.test(error.message || '')) {
+    EU.motivo = 'Falta rodar o supabase-cargos.sql: a coluna "gerente" ainda não existe.';
+    const r2 = await auth.cliente
+      .from('perfis').select('id, nome, loja, admin').eq('id', EU.id).limit(1);
+    data = r2.data; error = r2.error;
+  }
+
+  if (error) {
+    EU.motivo = EU.motivo || ('O banco recusou a leitura do seu perfil: ' + error.message);
+    return;
+  }
+
+  if (!data || !data.length) {
+    EU.motivo = 'Você entrou, mas não há linha sua na tabela perfis.';
+    return;
+  }
+
+  const p = data[0];
+  EU.nome    = p.nome || '';
+  EU.loja    = p.loja || '';
+  EU.admin   = p.admin === true;
+  EU.gerente = p.gerente === true;
+  EU.pronto  = true;
+
+  if (!EU.motivo) {
+    EU.motivo = EU.admin ? ''
+      : (EU.gerente ? 'Seu perfil está como gerente, não administrador.'
+                    : 'Seu perfil está como consultor.');
+  }
+}
+
+(async function iniciarCargos() {
+  await descobrirQuemSou();
+
+  /* Deixa o cargo escrito na tag <html>. Serve para conferir o
+     que a página entendeu sem abrir o console: no inspetor, a
+     primeira linha mostra data-cargo="gerente". */
+  document.documentElement.dataset.cargo =
+    EU.admin ? 'admin' : EU.gerente ? 'gerente' : 'consultor';
+
+  /* Até aqui os itens de gerência estavam escondidos de todo
+     mundo. Agora que se sabe quem é, desenha de novo. */
+  montarAtalhos();
+
+  if (EU.admin) {
+    botaoContas.classList.remove('oculto');
+    if (abaSalva() === 'contas' && !location.hash) trocarAba('contas');
+  }
+
+  /* Porta de serviço: materiais.luminamkt.co/#contas abre a aba e
+     diz por que ela não aparecia. Quem não é admin só lê o motivo
+     — o dado continua trancado no banco. */
+  if (location.hash === '#contas') {
+    botaoContas.classList.remove('oculto');
+    trocarAba('contas');
+  }
+
+  if (EU.admin) carregarCargos();
+  else explicarPorQueNao();
+})();
+
+function explicarPorQueNao() {
+  const caixa = document.createElement('div');
+  caixa.className = 'cartao-aviso atencao';
+
+  const h = document.createElement('h3');
+  h.textContent = 'Esta aba é só do administrador';
+
+  const porque = document.createElement('p');
+  porque.textContent = EU.motivo || 'Não consegui descobrir o motivo.';
+
+  const quem = document.createElement('p');
+  quem.textContent = 'Você está entrando como ' + (EU.email || 'ninguém') + '.';
+
+  const comoArrumar = document.createElement('p');
+  comoArrumar.innerHTML =
+    'Para resolver, rode no SQL Editor do Supabase: ' +
+    '<code>update public.perfis set admin = true where email = \'' +
+    (EU.email || 'seu@email').replace(/'/g, '') + '\';</code>';
+
+  caixa.append(h, porque, quem, comoArrumar);
+  contasRecado.innerHTML = '';
+  contasRecado.appendChild(caixa);
+}
+
+async function carregarCargos() {
+  contasArea.classList.remove('oculto');
+  contasRecado.innerHTML = '';
+  contasLista.innerHTML = '<p class="vazio-busca">Carregando...</p>';
 
   const auth = window.dalmobileAuth;
-  if (!auth || !auth.usuario) return;
 
-  try {
-    const { data, error } = await auth.cliente
-      .from('perfis').select('admin').eq('id', auth.usuario.id).single();
+  const { data, error } = await auth.cliente
+    .from('perfis').select('id, email, nome, loja, admin, gerente').order('email');
 
-    if (error || !data || data.admin !== true) return;
-
-    abas.querySelector('button[data-aba="contas"]').classList.remove('oculto');
-
-    /* Se era a aba aberta na última visita, ela só pôde ser
-       descartada por ainda estar escondida — agora dá. */
-    if (abaSalva() === 'contas' && !location.hash) trocarAba('contas');
-
-  } catch (e) {
-    /* Sem perfil ou sem tabela ainda: segue sem a aba. */
+  if (error) {
+    contasLista.innerHTML = '';
+    const aviso = document.createElement('div');
+    aviso.className = 'cartao-aviso atencao';
+    aviso.innerHTML = '<h3>Não consegui ler a lista</h3>';
+    const p = document.createElement('p');
+    p.textContent = /gerente/i.test(error.message || '')
+      ? 'Falta rodar o supabase-cargos.sql no SQL Editor — a coluna "gerente" ainda não existe.'
+      : error.message;
+    aviso.appendChild(p);
+    contasLista.appendChild(aviso);
+    return;
   }
-})();
+
+  const gente = data || [];
+  contasLista.innerHTML = '';
+
+  /* Gerente sem loja não enxerga ninguém. Vale avisar antes que
+     ele reclame que "não apareceu nada". */
+  const mancos = gente.filter((p) => p.gerente && !p.loja);
+  if (mancos.length) {
+    const aviso = document.createElement('div');
+    aviso.className = 'cartao-aviso atencao';
+    aviso.innerHTML = '<h3>Gerente sem loja não vê nada</h3>';
+    const p = document.createElement('p');
+    p.textContent =
+      mancos.map((x) => x.nome || x.email).join(', ') +
+      (mancos.length === 1 ? ' está' : ' estão') +
+      ' como gerência, mas sem loja definida — e a gerência é sempre de uma loja. ' +
+      'Escolha a loja no cartão abaixo.';
+    aviso.appendChild(p);
+    contasLista.appendChild(aviso);
+  }
+
+  gente.forEach((p) => contasLista.appendChild(cartaoPessoa(p)));
+}
+
+function cartaoPessoa(p) {
+  const souEu = p.id === EU.id;
+
+  const cartao = document.createElement('div');
+  cartao.className = 'pessoa';
+
+  const cabeca = document.createElement('div');
+  cabeca.className = 'cabeca';
+
+  const nome = document.createElement('span');
+  nome.className = 'nome';
+  nome.textContent = p.nome || p.email || 'sem nome';
+  cabeca.appendChild(nome);
+
+  if (p.admin)   cabeca.appendChild(selo('admin', 'administrador'));
+  else if (p.gerente) cabeca.appendChild(selo('gerente', 'gerente'));
+  if (p.gerente && !p.loja && !p.admin) cabeca.appendChild(selo('alerta', 'sem loja'));
+  if (souEu)     cabeca.appendChild(selo('eu', 'você'));
+
+  const sub = document.createElement('p');
+  sub.className = 'sub';
+  sub.textContent = [
+    p.email,
+    p.loja ? nomeDaLoja(p.loja) : 'sem loja',
+    (!p.admin && !p.gerente) ? 'consultor' : null
+  ].filter(Boolean).join(' · ');
+
+  const acoes = document.createElement('div');
+  acoes.className = 'acoes';
+
+  /* --- loja --- */
+  const sel = document.createElement('select');
+  const vazio = document.createElement('option');
+  vazio.value = '';
+  vazio.textContent = '— sem loja —';
+  sel.appendChild(vazio);
+
+  LOJAS.forEach((l) => {
+    const o = document.createElement('option');
+    o.value = l.id;
+    o.textContent = l.nome;
+    sel.appendChild(o);
+  });
+  sel.value = p.loja || '';
+
+  sel.addEventListener('change', () => {
+    gravar(sel, p.id, { loja: sel.value || null });
+  });
+  acoes.appendChild(sel);
+
+  /* --- gerência --- */
+  acoes.appendChild(botaoCargo(
+    p.gerente ? 'tirar gerência' : 'tornar gerente',
+    p.admin,
+    async (b) => {
+      if (!p.gerente && !p.loja && !confirm(
+        (p.nome || p.email) + ' está sem loja.\n\n' +
+        'Gerente sem loja não enxerga trabalho de ninguém. Quer marcar ' +
+        'como gerência mesmo assim e escolher a loja depois?'
+      )) return;
+
+      await gravar(b, p.id, { gerente: !p.gerente });
+    }
+  ));
+
+  /* --- administração --- */
+  acoes.appendChild(botaoCargo(
+    p.admin ? 'tirar admin' : 'tornar admin',
+    souEu && p.admin,
+    async (b) => {
+      if (!p.admin && !confirm(
+        'Tornar ' + (p.nome || p.email) + ' administrador?\n\n' +
+        'Passa a ver e editar o trabalho das duas lojas, e a dar cargo ' +
+        'para os outros — inclusive tirar o seu.'
+      )) return;
+
+      await gravar(b, p.id, { admin: !p.admin });
+    }
+  ));
+
+  cartao.append(cabeca, sub, acoes);
+  return cartao;
+}
+
+function selo(classe, texto) {
+  const s = document.createElement('span');
+  s.className = 'selo ' + classe;
+  s.textContent = texto;
+  return s;
+}
+
+function botaoCargo(texto, desligado, aoClicar) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = texto;
+
+  if (desligado) { b.disabled = true; return b; }
+
+  b.addEventListener('click', () => aoClicar(b));
+  return b;
+}
+
+/* Grava e recarrega a lista. Quem barra de verdade é o banco: se
+   o gatilho recusar, a mensagem dele aparece aqui. */
+async function gravar(controle, id, campos) {
+  const antes = controle.disabled;
+  controle.disabled = true;
+
+  const { error } = await window.dalmobileAuth.cliente
+    .from('perfis').update(campos).eq('id', id);
+
+  if (error) {
+    alert(/administrador muda/i.test(error.message || '')
+      ? 'O banco recusou: cargo e loja só o administrador muda. ' +
+        'Se você É administrador, recarregue a página e tente de novo.'
+      : 'Não consegui gravar: ' + error.message);
+    controle.disabled = antes;
+    return;
+  }
+
+  /* Mudou o próprio cargo? Então o que esta página pode fazer
+     mudou junto — mais seguro recomeçar do zero. */
+  if (id === EU.id) { location.reload(); return; }
+
+  await carregarCargos();
+}
+
+function nomeDaLoja(id) {
+  const l = LOJAS.find((x) => x.id === id);
+  return l ? l.nome : id;
+}
 </script>
 
 </body>
