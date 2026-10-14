@@ -760,9 +760,31 @@ selLoja.addEventListener('change', () => {
 
 const TEXTO_PV = 'Serve o PV do sistema novo e o OR do antigo.';
 
+function temDescricao() {
+  const campos = painelOrc.querySelectorAll('.orc-desc');
+  for (const c of campos) if (c.value.trim()) return true;
+  return false;
+}
+
 inputPv.addEventListener('change', async () => {
-  arquivoPv = inputPv.files && inputPv.files[0] ? inputPv.files[0] : null;
+  const escolhido = inputPv.files && inputPv.files[0] ? inputPv.files[0] : null;
+
+  if (escolhido && orcamento && temDescricao()) {
+    const segue = confirm(
+      'Este trabalho já tem um orçamento com descrições escritas.\n\n' +
+      'Ler outro PDF vai substituir tudo, inclusive as descrições.\n\n' +
+      'Quer continuar?'
+    );
+    if (!segue) { inputPv.value = ''; return; }
+  }
+
+  arquivoPv = escolhido;
   el('pv-nome').textContent = arquivoPv ? arquivoPv.name : TEXTO_PV;
+
+  if (!arquivoPv && orcamento) {
+    el('pv-nome').textContent = 'Orçamento salvo com este trabalho';
+    return;
+  }
 
   orcamento = null;
   painelOrc.innerHTML = '';
@@ -808,7 +830,9 @@ btnGerar.addEventListener('click', gerar);
 
 async function gerar() {
 
-  if (!arquivoPv || !orcamento) {
+  /* Reaberto de um trabalho salvo, o orçamento já veio junto — o
+     PDF só é exigido quando não há orçamento nenhum carregado. */
+  if (!orcamento) {
     erro('Escolha o PDF do orçamento primeiro.');
     return;
   }

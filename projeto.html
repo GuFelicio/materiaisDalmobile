@@ -1038,6 +1038,14 @@ desenharAmbientes();
 
 const TEXTO_PV = 'Exportado do sistema, com os ambientes e valores.';
 
+/* Alguma descrição escrita na conferência? Serve para não apagar
+   trabalho manual sem avisar. */
+function temDescricao() {
+  const campos = painelOrc.querySelectorAll('.orc-desc');
+  for (const c of campos) if (c.value.trim()) return true;
+  return false;
+}
+
 chkPv.addEventListener('change', () => {
   areaPv.classList.toggle('oculto', !chkPv.checked);
   if (!chkPv.checked) {
@@ -1052,8 +1060,28 @@ chkPv.addEventListener('change', () => {
 });
 
 inputPv.addEventListener('change', async () => {
-  arquivoPv = inputPv.files && inputPv.files[0] ? inputPv.files[0] : null;
+  const escolhido = inputPv.files && inputPv.files[0] ? inputPv.files[0] : null;
+
+  /* Ler um PDF novo refaz a conferência do zero. Se já existe um
+     orçamento carregado (reaberto ou lido antes), as descrições
+     escritas à mão se perdem — então pergunta primeiro. */
+  if (escolhido && orcamento && temDescricao()) {
+    const segue = confirm(
+      'Este trabalho já tem um orçamento com descrições escritas.\n\n' +
+      'Ler outro PDF vai substituir tudo, inclusive as descrições.\n\n' +
+      'Quer continuar?'
+    );
+    if (!segue) { inputPv.value = ''; return; }
+  }
+
+  arquivoPv = escolhido;
   el('pv-nome').textContent = arquivoPv ? arquivoPv.name : TEXTO_PV;
+
+  if (!arquivoPv && orcamento) {
+    /* Cancelou a troca: mantém o que já estava carregado */
+    el('pv-nome').textContent = 'Orçamento salvo com este trabalho';
+    return;
+  }
 
   orcamento = null;
   painelOrc.innerHTML = '';
@@ -1562,7 +1590,10 @@ async function gerar() {
   comImagem.forEach((a, i) => {
     if (!a.nome.trim()) faltando.push('nome do ambiente ' + (i + 1));
   });
-  if (chkPv.checked && !arquivoPv) faltando.push('o PDF do PV');
+  /* Um trabalho reaberto já traz o orçamento conferido junto; nesse
+     caso o PDF não é pedido de novo. Só falta quando a pessoa marcou
+     a opção e não escolheu arquivo nem tem orçamento carregado. */
+  if (chkPv.checked && !arquivoPv && !orcamento) faltando.push('o PDF do PV');
 
   if (faltando.length) {
     erro('Falta preencher: ' + faltando.join(', ') + '.');
