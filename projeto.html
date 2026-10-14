@@ -474,8 +474,14 @@
     </div>
 
     <div class="campo">
-      <label for="arquiteto">Projeto por</label>
-      <input id="arquiteto" type="text" placeholder="Ex.: Camila Prado" autocomplete="off">
+      <label for="arquiteto">Arquiteto</label>
+      <input id="arquiteto" type="text" placeholder="Ex.: Camila Prado (opcional)" autocomplete="off">
+    </div>
+
+    <div class="campo">
+      <label for="consultor">Consultor</label>
+      <input id="consultor" type="text" placeholder="Seu nome, como vai aparecer na capa" autocomplete="off">
+      <p class="nota">Fica guardado neste navegador — você escreve uma vez só.</p>
     </div>
   </div>
 
@@ -609,9 +615,19 @@ const CONFIG = {
     cliente: {
       xDireita: 0.9563, y: 0.3612, tamanho: 0.04444, negrito: false
     },
-    arquiteto: {
-      xDireita: 0.9563, y: 0.2985, tamanho: 0.02963, negrito: false,
-      prefixo: 'Projeto por: '
+
+    /* Linhas de crédito abaixo do nome do cliente, nesta ordem.
+       Linha sem conteúdo é pulada e as de baixo sobem, então uma
+       apresentação sem arquiteto não deixa buraco na capa. */
+    creditos: {
+      xDireita: 0.9563,
+      y: 0.2985,            // altura da primeira linha
+      entrelinha: 0.0400,
+      tamanho: 0.02963,
+      linhas: [
+        { campo: 'arquiteto', prefixo: 'Arquiteto: ' },
+        { campo: 'consultor', prefixo: 'Consultor: ' }
+      ]
     }
   },
 
@@ -835,6 +851,27 @@ try {
 selLoja.addEventListener('change', () => {
   try { localStorage.setItem('dalmobile:loja', selLoja.value); } catch (e) {}
 });
+
+/* ============================================================
+   CONSULTOR
+   ------------------------------------------------------------
+   O nome fica guardado no navegador, igual à loja: a pessoa
+   escreve uma vez e não pensa mais nisso.
+   ============================================================ */
+
+const campoConsultor = el('consultor');
+
+try {
+  const salvo = localStorage.getItem('dalmobile:consultor');
+  if (salvo) campoConsultor.value = salvo;
+} catch (e) {}
+
+campoConsultor.addEventListener('change', () => {
+  try {
+    localStorage.setItem('dalmobile:consultor', campoConsultor.value.trim());
+  } catch (e) {}
+});
+
 
 /* ============================================================
    AMBIENTES
@@ -1581,6 +1618,7 @@ async function gerar() {
 
   const cliente = el('cliente').value.trim();
   const arquiteto = el('arquiteto').value.trim();
+  const consultor = el('consultor').value.trim();
 
   const faltando = [];
   if (!cliente) faltando.push('Nome do cliente');
@@ -1658,14 +1696,7 @@ async function gerar() {
 
     escreverDireita(pCapa, cliente, CONFIG.CAPA.cliente, pagina);
 
-    if (arquiteto) {
-      escreverDireita(
-        pCapa,
-        (CONFIG.CAPA.arquiteto.prefixo || '') + arquiteto,
-        CONFIG.CAPA.arquiteto,
-        pagina
-      );
-    }
+    escreverCreditos(pCapa, { arquiteto: arquiteto, consultor: consultor }, pagina);
 
     /* --- 2. Páginas institucionais --- */
     const institucionais = await doc.copyPages(bases, P.institucionais);
@@ -1802,6 +1833,36 @@ function escreverDireita(p, texto, pos, pg) {
     color: hexParaRgb(pos.cor || CONFIG.COR_TEXTO)
   });
 }
+
+/**
+ * Créditos da capa: arquiteto e consultor, um abaixo do outro.
+ * Quem estiver em branco não ocupa linha.
+ */
+function escreverCreditos(p, pessoas, pg) {
+  const C = CONFIG.CAPA.creditos;
+  const tamanho = pg.ALTURA * C.tamanho;
+  const passo = pg.ALTURA * C.entrelinha;
+  let y = pg.ALTURA * C.y;
+
+  C.linhas.forEach((linha) => {
+    const valor = String(pessoas[linha.campo] || '').trim();
+    if (!valor) return;
+
+    const texto = (linha.prefixo || '') + valor;
+
+    p.drawText(texto, {
+      x: pg.LARGURA * C.xDireita -
+         pg.fontes.media.widthOfTextAtSize(texto, tamanho),
+      y: y,
+      size: tamanho,
+      font: pg.fontes.media,
+      color: hexParaRgb(CONFIG.COR_TEXTO)
+    });
+
+    y -= passo;
+  });
+}
+
 
 /**
  * Texto com espaçamento entre letras — o pdf-lib não tem essa
@@ -2567,6 +2628,7 @@ function fichaAtual() {
     cliente: el('cliente').value.trim(),
     arquiteto: el('arquiteto').value.trim(),
     dados: {
+      consultor: el('consultor').value.trim(),
       ambientes: ambientes.map((a) => ({
         nome: a.nome,
         valor: a.valor,
@@ -2696,6 +2758,7 @@ async function abrirTrabalho(id) {
     selLoja.value = t.loja || selLoja.value;
     el('cliente').value = t.cliente || '';
     el('arquiteto').value = t.arquiteto || '';
+    if (d.consultor) el('consultor').value = d.consultor;
 
     ambientes = (d.ambientes || []).map((a) => ({
       id: proximoId++,

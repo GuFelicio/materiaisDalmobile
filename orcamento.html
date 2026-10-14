@@ -469,10 +469,17 @@
     </div>
 
     <div class="campo">
-      <label for="arquiteto">Projeto por</label>
+      <label for="arquiteto">Arquiteto</label>
       <input id="arquiteto" type="text" placeholder="Ex.: Camila Prado (opcional)" autocomplete="off">
-      <p class="nota">O nome do cliente vem do próprio orçamento, na conferência abaixo.</p>
     </div>
+
+    <div class="campo">
+      <label for="consultor">Consultor</label>
+      <input id="consultor" type="text" placeholder="Seu nome, como vai aparecer na capa" autocomplete="off">
+      <p class="nota">Fica guardado neste navegador — você escreve uma vez só.</p>
+    </div>
+
+    <p class="nota">O nome do cliente vem do próprio orçamento, na conferência abaixo.</p>
   </div>
 
   <div class="painel">
@@ -568,9 +575,19 @@ const CONFIG = {
     cliente: {
       xDireita: 0.9563, y: 0.3612, tamanho: 0.04444, negrito: false
     },
-    arquiteto: {
-      xDireita: 0.9563, y: 0.2985, tamanho: 0.02963, negrito: false,
-      prefixo: 'Projeto por: '
+
+    /* Linhas de crédito abaixo do nome do cliente, nesta ordem.
+       Linha sem conteúdo é pulada e as de baixo sobem, então uma
+       apresentação sem arquiteto não deixa buraco na capa. */
+    creditos: {
+      xDireita: 0.9563,
+      y: 0.2985,            // altura da primeira linha
+      entrelinha: 0.0400,
+      tamanho: 0.02963,
+      linhas: [
+        { campo: 'arquiteto', prefixo: 'Arquiteto: ' },
+        { campo: 'consultor', prefixo: 'Consultor: ' }
+      ]
     }
   },
   AMBIENTE: {
@@ -753,6 +770,27 @@ selLoja.addEventListener('change', () => {
   try { localStorage.setItem('dalmobile:loja', selLoja.value); } catch (e) {}
 });
 
+/* ============================================================
+   CONSULTOR
+   ------------------------------------------------------------
+   O nome fica guardado no navegador, igual à loja: a pessoa
+   escreve uma vez e não pensa mais nisso.
+   ============================================================ */
+
+const campoConsultor = el('consultor');
+
+try {
+  const salvo = localStorage.getItem('dalmobile:consultor');
+  if (salvo) campoConsultor.value = salvo;
+} catch (e) {}
+
+campoConsultor.addEventListener('change', () => {
+  try {
+    localStorage.setItem('dalmobile:consultor', campoConsultor.value.trim());
+  } catch (e) {}
+});
+
+
 
 /* ============================================================
    ARQUIVO DO ORÇAMENTO
@@ -849,6 +887,7 @@ async function gerar() {
   }
 
   const arquiteto = el('arquiteto').value.trim();
+  const consultor = el('consultor').value.trim();
 
   btnGerar.disabled = true;
   progresso('Carregando os arquivos base...', 5);
@@ -885,14 +924,7 @@ async function gerar() {
 
     escreverDireita(pCapa, conferido.cliente, CONFIG.CAPA.cliente, pagina);
 
-    if (arquiteto) {
-      escreverDireita(
-        pCapa,
-        (CONFIG.CAPA.arquiteto.prefixo || '') + arquiteto,
-        CONFIG.CAPA.arquiteto,
-        pagina
-      );
-    }
+    escreverCreditos(pCapa, { arquiteto: arquiteto, consultor: consultor }, pagina);
 
     /* --- 2. Institucionais da fábrica --- */
     progresso('Incluindo as páginas da fábrica...', 40);
@@ -1387,6 +1419,36 @@ function escreverDireita(p, texto, pos, pg) {
     color: hexParaRgb(pos.cor || CONFIG.COR_TEXTO)
   });
 }
+
+/**
+ * Créditos da capa: arquiteto e consultor, um abaixo do outro.
+ * Quem estiver em branco não ocupa linha.
+ */
+function escreverCreditos(p, pessoas, pg) {
+  const C = CONFIG.CAPA.creditos;
+  const tamanho = pg.ALTURA * C.tamanho;
+  const passo = pg.ALTURA * C.entrelinha;
+  let y = pg.ALTURA * C.y;
+
+  C.linhas.forEach((linha) => {
+    const valor = String(pessoas[linha.campo] || '').trim();
+    if (!valor) return;
+
+    const texto = (linha.prefixo || '') + valor;
+
+    p.drawText(texto, {
+      x: pg.LARGURA * C.xDireita -
+         pg.fontes.media.widthOfTextAtSize(texto, tamanho),
+      y: y,
+      size: tamanho,
+      font: pg.fontes.media,
+      color: hexParaRgb(CONFIG.COR_TEXTO)
+    });
+
+    y -= passo;
+  });
+}
+
 
 function escreverCapaAmbiente(p, amb, pg) {
   const C = CONFIG.AMBIENTE;
@@ -2036,6 +2098,7 @@ function fichaAtual() {
     cliente: conferido ? conferido.cliente : '',
     arquiteto: el('arquiteto').value.trim(),
     dados: {
+      consultor: el('consultor').value.trim(),
       orcamento: orcamento
         ? Object.assign({}, orcamento, { conferido: conferido })
         : null
@@ -2162,6 +2225,7 @@ async function abrirTrabalho(id) {
 
     selLoja.value = t.loja || selLoja.value;
     el('arquiteto').value = t.arquiteto || '';
+    if (d.consultor) el('consultor').value = d.consultor;
 
     orcamento = d.orcamento;
     if (d.orcamento.conferido) {
