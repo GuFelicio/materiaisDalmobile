@@ -368,22 +368,194 @@ const AUTH = {
         text-decoration: underline; cursor: pointer;
       }
       #auth-sair button:hover { color: #141618; }
+      #auth-sair .separador { opacity: .5; }
+
+      /* --- troca de senha, para quem já está dentro --- */
+      #auth-troca {
+        position: fixed; inset: 0; z-index: 9998;
+        background: rgba(20,22,24,.42);
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px;
+        font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      #auth-troca.oculto { display: none; }
+      #auth-troca .cartao {
+        width: 100%; max-width: 340px; background: #fff;
+        border-radius: 14px; padding: 24px 22px;
+      }
+      #auth-troca h3 {
+        font-size: 17px; font-weight: 700; color: #141618;
+        margin: 0 0 4px; letter-spacing: -0.01em;
+      }
+      #auth-troca p.ajuda {
+        font-size: 12px; line-height: 1.5; color: #8a9094; margin: 0 0 18px;
+      }
+      #auth-troca label {
+        display: block; font-size: 12px; font-weight: 600;
+        color: #4a5054; margin: 0 0 5px;
+      }
+      #auth-troca input {
+        width: 100%; box-sizing: border-box; margin-bottom: 12px;
+        padding: 11px 12px; font-size: 15px; font-family: inherit;
+        border: 1px solid #c9cbc8; border-radius: 9px; color: #141618;
+        background: #fff;
+      }
+      #auth-troca input:focus { outline: none; border-color: #141618; }
+      #auth-troca .acoes { display: flex; gap: 8px; margin-top: 4px; }
+      #auth-troca .acoes button {
+        flex: 1; padding: 12px; border-radius: 9px; border: 0;
+        font-size: 14px; font-weight: 600; font-family: inherit;
+        cursor: pointer; text-decoration: none;
+      }
+      #auth-troca .salvar { background: #141618; color: #fff; }
+      #auth-troca .cancelar {
+        background: none; color: #4a5054; border: 1px solid #c9cbc8;
+      }
+      #auth-troca .acoes button:disabled { opacity: .45; cursor: default; }
+      #auth-troca .recado {
+        margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: #4a5054;
+      }
+      #auth-troca .recado.erro { color: #b3261e; }
+      #auth-troca .recado.ok   { color: #1c6b3f; }
     `;
     document.head.appendChild(estilo);
 
     const barra = document.createElement('div');
     barra.id = 'auth-sair';
     barra.innerHTML =
-      '<span>' + (usuario.email || '') + '</span><button type="button">sair</button>';
+      '<span>' + (usuario.email || '') + '</span>' +
+      '<button type="button" class="trocar">trocar minha senha</button>' +
+      '<span class="separador">·</span>' +
+      '<button type="button" class="sair">sair</button>';
 
-    barra.querySelector('button').addEventListener('click', async () => {
+    barra.querySelector('.sair').addEventListener('click', async () => {
       await cliente.auth.signOut();
       location.reload();
     });
 
+    barra.querySelector('.trocar').addEventListener('click', abrirTroca);
+
     const rodape = document.querySelector('.rodape');
     if (rodape && rodape.parentNode) rodape.parentNode.insertBefore(barra, rodape);
     else document.body.appendChild(barra);
+  }
+
+
+  /* ------------------------------------------------------------
+     Trocar a senha estando dentro
+     ------------------------------------------------------------
+     Não envia e-mail nenhum: quem já entrou com a senha atual já
+     provou quem é. Serve para quem quer uma senha mais fácil de
+     lembrar, e para quem recebeu uma senha pronta e quer a sua.
+     ------------------------------------------------------------ */
+
+  function abrirTroca() {
+    if (document.getElementById('auth-troca')) {
+      document.getElementById('auth-troca').classList.remove('oculto');
+      return;
+    }
+
+    const tela = document.createElement('div');
+    tela.id = 'auth-troca';
+    tela.innerHTML = `
+      <div class="cartao">
+        <h3>Trocar minha senha</h3>
+        <p class="ajuda">A nova senha passa a valer na hora, em todos os aparelhos.</p>
+
+        <label for="troca-nova">Senha nova</label>
+        <input id="troca-nova" type="password" autocomplete="new-password"
+               placeholder="pelo menos 8 caracteres">
+
+        <label for="troca-repete">Repita a senha</label>
+        <input id="troca-repete" type="password" autocomplete="new-password"
+               placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;">
+
+        <div class="acoes">
+          <button type="button" class="cancelar">Cancelar</button>
+          <button type="button" class="salvar">Salvar</button>
+        </div>
+
+        <p class="recado" id="troca-recado"></p>
+      </div>`;
+
+    document.body.appendChild(tela);
+
+    const nova = document.getElementById('troca-nova');
+    const repete = document.getElementById('troca-repete');
+    const recado = document.getElementById('troca-recado');
+    const salvar = tela.querySelector('.salvar');
+    const cancelar = tela.querySelector('.cancelar');
+
+    const dizer = (texto, classe) => {
+      recado.textContent = texto;
+      recado.className = 'recado' + (classe ? ' ' + classe : '');
+    };
+
+    const fechar = () => {
+      nova.value = ''; repete.value = ''; dizer('');
+      tela.classList.add('oculto');
+    };
+
+    cancelar.addEventListener('click', fechar);
+    tela.addEventListener('click', (ev) => { if (ev.target === tela) fechar(); });
+
+    salvar.addEventListener('click', async () => {
+      if (nova.value.length < 8) {
+        dizer('A senha precisa ter pelo menos 8 caracteres.', 'erro');
+        nova.focus();
+        return;
+      }
+      if (nova.value !== repete.value) {
+        dizer('As duas senhas não são iguais.', 'erro');
+        repete.focus();
+        return;
+      }
+
+      salvar.disabled = true;
+      cancelar.disabled = true;
+      dizer('Salvando...');
+
+      const { error } = await cliente.auth.updateUser({ password: nova.value });
+
+      salvar.disabled = false;
+      cancelar.disabled = false;
+
+      if (error) {
+        dizer(traduzirTroca(error), 'erro');
+        return;
+      }
+
+      dizer('Senha trocada. Pode usar a nova da próxima vez.', 'ok');
+      nova.value = ''; repete.value = '';
+      setTimeout(fechar, 2200);
+    });
+
+    [nova, repete].forEach((campo) => {
+      campo.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') salvar.click();
+      });
+    });
+
+    nova.focus();
+  }
+
+  function traduzirTroca(error) {
+    const m = String((error && error.message) || error);
+
+    if (/reauthentication|nonce/i.test(m)) {
+      return 'Por segurança, o Supabase está pedindo que você entre de novo ' +
+             'antes de trocar a senha. Saia, entre outra vez e repita.';
+    }
+    if (/should be different|same.*password/i.test(m)) {
+      return 'Essa é a senha que você já usa. Escolha outra.';
+    }
+    if (/weak|password.*short|at least/i.test(m)) {
+      return 'Essa senha é curta ou fraca demais. Tente uma mais longa.';
+    }
+    if (/session|JWT|not authenticated/i.test(m)) {
+      return 'Sua sessão expirou. Recarregue a página, entre de novo e repita.';
+    }
+    return m;
   }
 
 })();
