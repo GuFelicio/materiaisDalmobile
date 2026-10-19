@@ -51,6 +51,20 @@ const PDF102 = (function () {
   const CORPO = 9;
   const ENTRELINHA = 1.32;
 
+  /* A marca de cada unidade. Os arquivos ficam em imgs/, com os
+     nomes que já estavam lá — se um dia forem renomeados, é aqui
+     que se corrige, e em nenhum outro lugar.
+
+     Encaixe pela ALTURA: as duas artes têm proporção diferente
+     ("São José dos Campos" é mais curto que "Caraguatatuba"), e
+     fixar a largura deixaria uma maior que a outra na página. */
+  const LOJAS = {
+    sjc: { nome: 'São José dos Campos', logo: 'imgs/dalmoSJC_preto_1.png' },
+    cgt: { nome: 'Caraguatatuba',       logo: 'imgs/logoDalmo_caraguaPreto.png' }
+  };
+
+  const ALTURA_LOGO = 26;
+
   /* --------------------------------------------------------
      Entrada
      -------------------------------------------------------- */
@@ -69,9 +83,10 @@ const PDF102 = (function () {
     pdf.setProducer('Dalmóbile · Central de Peças');
 
     const fontes = await carregarFontes(pdf);
+    const logo = await carregarLogo(pdf, doc.loja);
 
     const estado = {
-      pdf, rgb, fontes,
+      pdf, rgb, fontes, logo,
       pagina: null,
       y: 0,
       numero: 0,
@@ -134,6 +149,24 @@ const PDF102 = (function () {
     }
   }
 
+  /* Sem logo o documento ainda vale; sem documento, não. Então
+     falha de imagem é anotada no console e seguimos — nunca
+     impede o consultor de imprimir na frente do cliente. */
+  async function carregarLogo(pdf, loja) {
+    const conf = LOJAS[loja];
+    if (!conf) return null;
+
+    try {
+      const png = await pdf.embedPng(await baixar(conf.logo));
+      const escala = ALTURA_LOGO / png.height;
+
+      return { png, largura: png.width * escala, altura: ALTURA_LOGO };
+    } catch (e) {
+      console.warn('Logo de ' + loja + ' não carregou (' + conf.logo + ').', e);
+      return null;
+    }
+  }
+
   async function baixar(caminho) {
     const r = await fetch(caminho, { cache: 'force-cache' });
     if (!r.ok) throw new Error('não achei ' + caminho);
@@ -165,6 +198,15 @@ const PDF102 = (function () {
      -------------------------------------------------------- */
 
   function cabecalho(e, doc) {
+    if (e.logo) {
+      e.y -= e.logo.altura;
+      e.pagina.drawImage(e.logo.png, {
+        x: MARGEM.esq, y: e.y,
+        width: e.logo.largura, height: e.logo.altura
+      });
+      e.y -= 26;
+    }
+
     texto(e, 'CONFIGURAÇÃO DOS ITENS EXTRAS', 15, 'negrito', COR.tinta, { espacamento: 0.4 });
     e.y -= 8;
 
@@ -556,7 +598,12 @@ const PDF102 = (function () {
     const total = e.paginas.length;
 
     e.paginas.forEach((pagina, i) => {
-      const esquerda = 'Documento 102 · Dalmóbile · ' +
+      /* A loja volta no rodapé porque o logo só existe na página 1.
+         Da segunda em diante, é esta linha que diz de onde veio. */
+      const loja = LOJAS[doc.loja];
+
+      const esquerda = 'Documento 102 · Dalmóbile' +
+        (loja ? ' ' + loja.nome : '') + ' · ' +
         (doc.cliente || '') + (doc.contrato ? ' · ' + doc.contrato : '');
 
       pagina.drawText(cortar(esquerda, e.fontes.media, 7, UTIL - 60), {
