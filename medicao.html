@@ -169,9 +169,28 @@
            background: var(--erro-bg); border: 1px solid var(--erro-line);
            border-radius: 8px; padding: 9px 11px; line-height: 1.4; }
 
-  /* ---------- fotos ---------- */
+  /* ---------- fotos ----------
+     O anexo fica SEMPRE visível, em todos os nove itens.
+     Na primeira versão ele só aparecia depois de marcar "não
+     apto" — e aí ninguém achava. Função que existe e não se
+     vê é função que não existe. O que continua escondido são
+     os campos de texto, que é o que realmente pesaria na
+     rolagem se os nove abrissem de uma vez. */
 
-  .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 10px; }
+  .anexos { margin-top: 12px; }
+
+  .anexar { display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+            border: 1.5px solid var(--line-2); border-radius: 10px;
+            padding: 11px 15px; min-height: 46px; background: #fff;
+            font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .anexar span { font-size: 17px; line-height: 1; }
+
+  /* Item reprovado e ainda sem foto: o botão cobra. É o registro
+     fotográfico que sustenta o termo que o cliente vai assinar. */
+  .item.nao-apto .anexar.vazio { border-color: var(--erro); color: var(--erro); background: var(--erro-bg); }
+
+  .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .fotos:not(:empty) { margin-top: 10px; }
   .foto { position: relative; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); background: #ebebe8; }
   .foto img { display: block; width: 100%; height: 104px; object-fit: cover; }
   .foto input { width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0;
@@ -180,11 +199,6 @@
                  border-radius: 50%; border: 0; background: rgba(20,22,24,.78); color: #fff;
                  font-size: 17px; line-height: 1; cursor: pointer; }
 
-  .add-foto { display: flex; flex-direction: column; align-items: center; justify-content: center;
-              gap: 5px; height: 104px; border: 1.5px dashed var(--line-2); border-radius: 9px;
-              background: #fff; font-family: inherit; font-size: 12px; font-weight: 600;
-              color: var(--ink-2); cursor: pointer; }
-  .add-foto span { font-size: 19px; line-height: 1; }
 
   /* ---------- ambientes ---------- */
 
@@ -712,15 +726,19 @@
         '<button type="button" class="nao" data-v="nao-apto">Não apto</button>' +
         '<button type="button" class="na"  data-v="nao-se-aplica">Não se aplica</button>' +
       '</div>' +
+      '<div class="anexos">' +
+        '<label class="anexar"><span>+</span> Foto' +
+          '<input type="file" accept="image/*" capture="environment" hidden multiple>' +
+        '</label>' +
+        '<div class="fotos"></div>' +
+      '</div>' +
       '<div class="detalhe" hidden>' +
-        '<p class="exige oculto">Item reprovado. Escreva o que está errado e fotografe — ' +
-          'é esse registro que sustenta o termo que o cliente vai assinar.</p>' +
+        '<p class="exige oculto">Item reprovado. Escreva o que está errado — ' +
+          'junto com a foto, é esse registro que sustenta o termo que o cliente vai assinar.</p>' +
         '<div class="campo"><label class="rot">Parecer do técnico</label>' +
           '<textarea class="p" placeholder="O que você encontrou"></textarea></div>' +
-        '<div class="campo" style="margin-bottom:6px"><label class="rot">Motivo</label>' +
+        '<div class="campo" style="margin-bottom:0"><label class="rot">Motivo</label>' +
           '<textarea class="m" placeholder="Por que isso impede ou atrapalha a medição"></textarea></div>' +
-        '<label class="rot">Fotos</label>' +
-        '<div class="fotos"></div>' +
       '</div>';
 
     const porque = d.querySelector('.porque');
@@ -731,6 +749,7 @@
     const parecer = d.querySelector('textarea.p');
     const motivo = d.querySelector('textarea.m');
     const fotos = d.querySelector('.fotos');
+    const anexar = d.querySelector('.anexar');
 
     parecer.value = resposta.parecer || '';
     motivo.value = resposta.motivo || '';
@@ -752,22 +771,29 @@
         });
 
         d.className = 'item' + (resposta.situacao ? ' ' + resposta.situacao : '');
-        abrirDetalhe();
+        pintar();
         guardar();
         pintarEstado();
       };
     });
 
-    function abrirDetalhe() {
+    /* O anexo de foto não entra nesta conta: ele fica sempre
+       visível. Aqui só se decide o que fazer com os campos de
+       texto e com a cobrança do item reprovado. */
+    function pintar() {
       const reprovado = resposta.situacao === 'nao-apto';
-      const temConteudo = resposta.parecer || resposta.motivo || (resposta.fotos || []).length;
 
-      detalhe.hidden = !(reprovado || temConteudo);
+      detalhe.hidden = !(reprovado || resposta.parecer || resposta.motivo);
       exige.classList.toggle('oculto', !reprovado);
+      anexar.classList.toggle('vazio', !(resposta.fotos || []).length);
     }
 
-    desenharFotos(fotos, resposta, abrirDetalhe);
-    abrirDetalhe();
+    anexar.querySelector('input').onchange = function () {
+      receberFotos(this, resposta, fotos, pintar);
+    };
+
+    desenharFotos(fotos, resposta, pintar);
+    pintar();
 
     return d;
   }
@@ -810,35 +836,32 @@
 
       caixa.appendChild(d);
     });
+  }
 
-    const add = document.createElement('label');
-    add.className = 'add-foto';
-    add.innerHTML = '<span>+</span>foto' +
-      '<input type="file" accept="image/*" capture="environment" hidden multiple>';
+  /* O campo de arquivo com capture="environment" abre a câmera
+     traseira direto no celular; no computador abre o seletor de
+     arquivos. Um controle só, nos dois lugares. */
+  async function receberFotos(entrada, resposta, caixa, aoMudar) {
+    const arquivos = Array.prototype.slice.call(entrada.files || []);
+    entrada.value = '';
+    if (!arquivos.length) return;
 
-    add.querySelector('input').onchange = async function () {
-      const arquivos = Array.prototype.slice.call(this.files || []);
-      this.value = '';
-
-      for (const arquivo of arquivos) {
-        try {
-          const blob = await comprimir(arquivo);
-          const id = novoId('foto');
-          await Armazem.salvarFoto({ id: id, blob: blob });
-          resposta.fotos = resposta.fotos || [];
-          resposta.fotos.push({ id: id, legenda: '' });
-        } catch (erro) {
-          console.error(erro);
-          avisar('Não consegui usar uma das fotos.');
-        }
+    for (const arquivo of arquivos) {
+      try {
+        const blob = await comprimir(arquivo);
+        const id = novoId('foto');
+        await Armazem.salvarFoto({ id: id, blob: blob });
+        resposta.fotos = resposta.fotos || [];
+        resposta.fotos.push({ id: id, legenda: '' });
+      } catch (erro) {
+        console.error(erro);
+        avisar('Não consegui usar uma das fotos.');
       }
+    }
 
-      await guardar();
-      desenharFotos(caixa, resposta, aoMudar);
-      if (aoMudar) aoMudar();
-    };
-
-    caixa.appendChild(add);
+    await guardar();
+    desenharFotos(caixa, resposta, aoMudar);
+    if (aoMudar) aoMudar();
   }
 
   /* ---------- parecer final ---------- */
