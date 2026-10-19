@@ -632,6 +632,14 @@ const CONFIG = {
 
   COR_TEXTO: '#595959',
 
+  /* Fundo das páginas de foto.
+     Render que não é 16:9 não preenche a página inteira, e o que
+     sobra fica com esta cor. É o mesmo creme da arte base, então
+     a foto parece apoiada no slide em vez de recortada dentro
+     dele. Branco puro abriria um buraco claro demais no meio do
+     material. */
+  COR_FUNDO_FOTO: '#F6F4F0',
+
   /* Textos variáveis da capa */
   CAPA: {
     cliente: {
@@ -1743,14 +1751,20 @@ async function gerar() {
         const imagem = await doc.embedJpg(await reduzirImagem(arquivo));
 
         const pFoto = doc.addPage([LARGURA, ALTURA]);
-        desenharPreenchendo(pFoto, imagem, LARGURA, ALTURA);
+        const quadro = desenharEncaixando(pFoto, imagem, LARGURA, ALTURA);
 
         if (marca) {
           const l = LARGURA * CONFIG.MARCA.largura;
           const a = l * (marca.height / marca.width);
+
+          /* Ancorada no canto da FOTO, não no da página. O zero
+             em MARCA.direita/base existe para a etiqueta encostar
+             na borda da imagem — era o mesmo canto enquanto a
+             foto cobria a página inteira; agora que ela pode não
+             cobrir, é preciso dizer qual canto é. */
           pFoto.drawImage(marca, {
-            x: LARGURA - l - LARGURA * CONFIG.MARCA.direita,
-            y: ALTURA * CONFIG.MARCA.base,
+            x: quadro.x + quadro.largura - l - LARGURA * CONFIG.MARCA.direita,
+            y: quadro.y + ALTURA * CONFIG.MARCA.base,
             width: l,
             height: a
           });
@@ -2355,18 +2369,43 @@ function quebrarLinhas(texto, fonte, tamanho, larguraMax) {
   return linhas;
 }
 
-/** Desenha a imagem preenchendo a página, cortando o excedente */
-function desenharPreenchendo(p, imagem, LARGURA, ALTURA) {
-  const escala = Math.max(LARGURA / imagem.width, ALTURA / imagem.height);
+/**
+ * Desenha a imagem INTEIRA, centralizada na página.
+ *
+ * Antes isto usava Math.max — "preencher": ampliava a foto até
+ * cobrir a página e descartava o que passava da borda. Como a
+ * página é 16:9 exato, todo render 4:3, 3:2 ou quadrado perdia
+ * as laterais, e o fotógrafo nunca via o que sumiu.
+ *
+ * Math.min encaixa: nada é cortado, e o que sobra fica com o
+ * creme da marca. Duas observações que valem guardar:
+ *
+ *   Render que JÁ é 16:9 não muda em nada — quando a proporção
+ *   bate, encaixar e preencher dão o mesmo resultado. A troca só
+ *   altera as fotos que antes estavam sendo mutiladas.
+ *
+ *   E encaixar sai mais NÍTIDO. Ampliar um render menor que a
+ *   página para cobri-la espalha menos pixels pela mesma área;
+ *   encaixando, cada pixel do arquivo é aproveitado.
+ *
+ * Devolve o retângulo ocupado pela foto, porque a marca d'água
+ * se ancora na borda DELA, não na da página.
+ */
+function desenharEncaixando(p, imagem, LARGURA, ALTURA) {
+  p.drawRectangle({
+    x: 0, y: 0, width: LARGURA, height: ALTURA,
+    color: hexParaRgb(CONFIG.COR_FUNDO_FOTO)
+  });
+
+  const escala = Math.min(LARGURA / imagem.width, ALTURA / imagem.height);
   const l = imagem.width * escala;
   const a = imagem.height * escala;
+  const x = (LARGURA - l) / 2;
+  const y = (ALTURA - a) / 2;
 
-  p.drawImage(imagem, {
-    x: (LARGURA - l) / 2,
-    y: (ALTURA - a) / 2,
-    width: l,
-    height: a
-  });
+  p.drawImage(imagem, { x: x, y: y, width: l, height: a });
+
+  return { x: x, y: y, largura: l, altura: a };
 }
 
 
