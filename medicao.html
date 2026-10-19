@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f2f2f0">
+<title>Termo de medição · Dalmóbile</title>
+
+<!-- ============================================================
+     DOCUMENTO 101 — tela do medidor
+     ------------------------------------------------------------
+     Esta tela é usada EM CAMPO: apartamento em obra, poeira,
+     celular na mão, cliente esperando. Três consequências que
+     mandam em todo o resto deste arquivo:
+
+     1. NADA AQUI DEPENDE DE INTERNET.
+        O rascunho mora no próprio aparelho (IndexedDB) e o PDF
+        é montado dentro do navegador. O servidor é destino de
+        sincronia, nunca pré-requisito. Se a rede voltar, sobe;
+        se não voltar, o medidor ainda sai da obra com o PDF.
+
+     2. O DEDO É GROSSO E O TEMPO É CURTO.
+        Apto / Não apto / Não se aplica são botões grandes. Os
+        campos de texto só aparecem quando há o que escrever —
+        nove itens com dois campos cada, todos abertos, é um
+        formulário que ninguém preenche até o fim.
+
+     3. O QUE NÃO FOI RESPONDIDO APARECE.
+        Item em branco sai no PDF como "NÃO RESPONDIDO", em
+        âmbar. Documento de medição que esconde lacuna é pior
+        que documento nenhum.
+     ============================================================ -->
+
+<style>
+  :root {
+    --bg: #f2f2f0; --card: #fff; --ink: #141618; --ink-2: #4a5054;
+    --muted: #8a9094; --line: #e0e1df; --line-2: #c9cbc8; --accent: #141618;
+    --ok: #1c6b3f; --ok-bg: #eef3ee; --ok-line: #cfe0d2;
+    --aviso: #8a4b12; --aviso-bg: #fdf1e7; --aviso-line: #f0cfae;
+    --erro: #b3261e; --erro-bg: #fdeceb; --erro-line: #f3c9c6;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-size: 16px; line-height: 1.5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 16px 120px; }
+
+  /* ---------- topo ---------- */
+
+  .topo { position: relative; padding: 24px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+  .assinatura { margin: 3px 0 0; font-size: 10px; font-weight: 600; letter-spacing: .18em;
+                text-transform: uppercase; color: var(--muted); }
+
+  .voltar { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0;
+            padding: 13px 0; margin: 0 0 6px; font-family: inherit; font-size: 14.5px;
+            font-weight: 600; color: var(--ink-2); cursor: pointer; text-decoration: none; }
+
+  /* ---------- faixa de conexão ---------- */
+
+  .rede { display: none; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 16px;
+          border-radius: 10px; font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  .rede.off { display: flex; background: var(--aviso-bg); border: 1px solid var(--aviso-line); color: var(--aviso); }
+  .rede.pendente { display: flex; background: var(--ok-bg); border: 1px solid var(--ok-line); color: var(--ok); }
+  .rede b { display: block; font-weight: 400; color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
+
+  /* ---------- blocos ---------- */
+
+  .painel { background: var(--card); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 18px; margin-bottom: 18px; }
+  .painel > h2 { margin: 0 0 3px; font-size: 17px; font-weight: 700; letter-spacing: -0.015em; }
+  .painel > h2 + p { margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2); }
+
+  .secao { margin: 30px 0 14px; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+           text-transform: uppercase; color: var(--muted); }
+
+  /* ---------- campos ---------- */
+
+  label.rot { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em;
+              text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+  input[type=text], textarea, select {
+    width: 100%; font-family: inherit; font-size: 16px; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-2); border-radius: 10px;
+    padding: 12px 13px; line-height: 1.45;
+  }
+  textarea { resize: vertical; min-height: 76px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+  .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .campo { margin-bottom: 14px; }
+  @media (max-width: 430px) { .dupla { grid-template-columns: 1fr; } }
+
+  /* ---------- botões ---------- */
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+         font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+         border-radius: 10px; padding: 13px 18px; border: 1px solid var(--ink);
+         background: var(--ink); color: #fff; min-height: 46px; }
+  .btn.vazio { background: #fff; color: var(--ink); }
+  .btn.largo { width: 100%; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.some { border: 0; background: none; color: var(--ink-2); padding: 10px 2px; min-height: 0; font-size: 14px; }
+
+  /* ---------- lista de medições ---------- */
+
+  .ficha { display: block; width: 100%; text-align: left; background: var(--card);
+           border: 1px solid var(--line); border-radius: var(--radius);
+           padding: 15px 16px; margin-bottom: 10px; cursor: pointer; font-family: inherit; }
+  .ficha h3 { margin: 0 0 3px; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .ficha p { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .ficha .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+         text-transform: uppercase; padding: 4px 8px; border-radius: 6px;
+         background: #f2f2f0; color: var(--ink-2); border: 1px solid var(--line); }
+  .tag.ok     { background: var(--ok-bg);    color: var(--ok);    border-color: var(--ok-line); }
+  .tag.aviso  { background: var(--aviso-bg); color: var(--aviso); border-color: var(--aviso-line); }
+  .tag.erro   { background: var(--erro-bg);  color: var(--erro);  border-color: var(--erro-line); }
+
+  .vazio-msg { text-align: center; padding: 30px 16px; color: var(--ink-2); font-size: 14.5px; }
+
+  /* ---------- itens do checklist ---------- */
+
+  .item { background: var(--card); border: 1px solid var(--line);
+          border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .item.apto      { border-color: var(--ok-line); }
+  .item.nao-apto  { border-color: var(--erro-line); }
+
+  .item > header { display: flex; gap: 10px; align-items: baseline; margin-bottom: 4px; }
+  .item .letra { font-size: 15px; font-weight: 700; color: var(--muted); min-width: 16px; }
+  .item h3 { margin: 0; font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; flex: 1; }
+
+  .porque { background: none; border: 0; padding: 4px 0 0; margin: 0 0 10px 26px;
+            font-family: inherit; font-size: 12.5px; font-weight: 600;
+            color: var(--ink-2); cursor: pointer; text-decoration: underline; }
+  .porque + .explica { display: none; }
+  .porque.aberto + .explica { display: block; }
+  .explica { margin: 0 0 12px 26px; font-size: 13px; line-height: 1.5; color: var(--ink-2);
+             padding-left: 11px; border-left: 2px solid var(--line); }
+
+  /* Três botões grandes. Em telas estreitas viram uma coluna,
+     porque "NÃO APTO PARA MEDIÇÃO" espremido em 1/3 de 360px
+     quebra em três linhas e vira alvo pequeno. */
+  .escolha { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  @media (max-width: 460px) { .escolha { grid-template-columns: 1fr; } }
+
+  .escolha button {
+    font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    border-radius: 10px; padding: 14px 8px; min-height: 52px; line-height: 1.25;
+    border: 1.5px solid var(--line-2); background: #fff; color: var(--ink-2);
+  }
+  .escolha button[aria-pressed=true].sim  { background: var(--ok-bg);    border-color: var(--ok);    color: var(--ok); }
+  .escolha button[aria-pressed=true].nao  { background: var(--erro-bg);  border-color: var(--erro);  color: var(--erro); }
+  .escolha button[aria-pressed=true].na   { background: #ebebe8;         border-color: var(--line-2); color: var(--ink-2); }
+
+  .detalhe { margin-top: 14px; }
+  .detalhe[hidden] { display: none; }
+
+  .exige { margin: 0 0 12px; font-size: 12.5px; font-weight: 600; color: var(--erro);
+           background: var(--erro-bg); border: 1px solid var(--erro-line);
+           border-radius: 8px; padding: 9px 11px; line-height: 1.4; }
+
+  /* ---------- fotos ---------- */
+
+  .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 10px; }
+  .foto { position: relative; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); background: #ebebe8; }
+  .foto img { display: block; width: 100%; height: 104px; object-fit: cover; }
+  .foto input { width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0;
+                font-size: 12.5px; padding: 10px 8px; background: #fff; }
+  .foto .tirar { position: absolute; top: 5px; right: 5px; width: 34px; height: 34px;
+                 border-radius: 50%; border: 0; background: rgba(20,22,24,.78); color: #fff;
+                 font-size: 17px; line-height: 1; cursor: pointer; }
+
+  .add-foto { display: flex; flex-direction: column; align-items: center; justify-content: center;
+              gap: 5px; height: 104px; border: 1.5px dashed var(--line-2); border-radius: 9px;
+              background: #fff; font-family: inherit; font-size: 12px; font-weight: 600;
+              color: var(--ink-2); cursor: pointer; }
+  .add-foto span { font-size: 19px; line-height: 1; }
+
+  /* ---------- ambientes ---------- */
+
+  .amb { border: 1px solid var(--line); border-radius: 11px; padding: 13px; margin-bottom: 10px; background: #fff; }
+  .amb-topo { display: flex; gap: 9px; align-items: center; margin-bottom: 11px; }
+  .amb-topo input { flex: 1; }
+  /* 44px é o piso: abaixo disso o dedo erra. Vale dobrado aqui,
+     que é uma tela usada em pé, dentro de obra, muitas vezes com
+     a mão suja. */
+  .amb-topo button { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 9px;
+                     border: 1px solid var(--line-2); background: #fff; color: var(--ink-2);
+                     font-size: 19px; cursor: pointer; }
+  .amb .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 430px) { .amb .mini { grid-template-columns: 1fr; } }
+  .amb .mini label.rot { margin-bottom: 4px; }
+  .amb select { padding: 12px 11px; font-size: 15px; min-height: 46px; }
+
+  /* ---------- barra fixa ---------- */
+
+  .barra { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(242,242,240,.96);
+           backdrop-filter: blur(8px); border-top: 1px solid var(--line);
+           padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); z-index: 40; }
+  .barra .dentro { max-width: 620px; margin: 0 auto; display: flex; gap: 9px; align-items: center; }
+  .barra .estado { flex: 1; font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+  .barra .btn { flex: 0 0 auto; }
+
+  .oculto { display: none !important; }
+
+  .nota { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; margin: 10px 0 0; }
+</style>
+
+<style id="trava-entrada">html { visibility: hidden; }</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header class="topo">
+    <h1 class="marca">Dalmóbile <span>· Central de Peças</span></h1>
+    <p class="assinatura">Termo de medição · Doc 101</p>
+  </header>
+
+  <div class="rede" id="rede"></div>
+
+  <!-- ---------- lista ---------- -->
+  <section id="tela-lista">
+    <a class="voltar" href="index.html">← Voltar para a Central</a>
+
+    <div class="painel">
+      <h2>Medições</h2>
+      <p>Tudo que você preencher fica salvo neste aparelho, com ou sem internet.</p>
+      <button class="btn largo" id="nova">+ Nova medição</button>
+    </div>
+
+    <div id="lista"></div>
+  </section>
+
+  <!-- ---------- ficha ---------- -->
+  <section id="tela-ficha" class="oculto">
+    <button class="voltar" id="voltar-lista">← Medições</button>
+
+    <div class="painel">
+      <h2>Dados da visita</h2>
+
+      <div class="campo">
+        <label class="rot" for="f-cliente">Cliente</label>
+        <input type="text" id="f-cliente" autocomplete="off" placeholder="Nome do cliente">
+      </div>
+
+      <div class="dupla">
+        <div class="campo">
+          <label class="rot" for="f-contrato">Nº do contrato</label>
+          <input type="text" id="f-contrato" autocomplete="off" placeholder="OR-D...">
+        </div>
+        <div class="campo">
+          <label class="rot" for="f-loja">Loja</label>
+          <select id="f-loja">
+            <option value="sjc">São José dos Campos</option>
+            <option value="cgt">Caraguatatuba</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label class="rot" for="f-tecnico">Técnico responsável</label>
+        <input type="text" id="f-tecnico" autocomplete="off" placeholder="Seu nome">
+      </div>
+
+      <div class="campo" style="margin-bottom:0">
+        <label class="rot" for="f-tipo">Contrato</label>
+        <select id="f-tipo">
+          <option value="total">Total</option>
+          <option value="parcial">Parcial — só alguns ambientes</option>
+        </select>
+      </div>
+    </div>
+
+    <h2 class="secao">Ambientes a serem liberados</h2>
+    <div id="ambientes"></div>
+    <button class="btn vazio largo" id="add-ambiente">+ Ambiente</button>
+
+    <div class="campo" style="margin-top:18px">
+      <label class="rot" for="f-obs">Observações</label>
+      <textarea id="f-obs" placeholder="Opcional"></textarea>
+    </div>
+
+    <h2 class="secao">Checklist para liberação</h2>
+    <div id="checklist"></div>
+
+    <div class="campo">
+      <label class="rot" for="f-outros">Outros</label>
+      <textarea id="f-outros" placeholder="Qualquer coisa fora dos nove itens"></textarea>
+    </div>
+
+    <h2 class="secao">Parecer final</h2>
+    <div class="painel">
+      <div class="escolha" id="parecer-final" style="grid-template-columns:1fr 1fr">
+        <button type="button" class="sim" data-v="aptos"     aria-pressed="false">Ambientes aptos</button>
+        <button type="button" class="nao" data-v="nao-aptos" aria-pressed="false">Ambientes não aptos</button>
+      </div>
+
+      <div class="campo" id="campo-nao-aptos" hidden style="margin:14px 0 0">
+        <label class="rot" for="f-nao-aptos">Ambientes não aptos (medição parcial)</label>
+        <textarea id="f-nao-aptos" placeholder="Relacione os ambientes"></textarea>
+      </div>
+
+      <p class="nota" id="nota-termo"></p>
+    </div>
+
+    <button class="btn vazio largo" id="apagar" style="margin-top:6px;border-color:var(--erro-line);color:var(--erro)">
+      Apagar esta medição
+    </button>
+  </section>
+
+</div>
+
+<div class="barra oculto" id="barra">
+  <div class="dentro">
+    <div class="estado" id="estado"></div>
+    <button class="btn" id="gerar">Gerar PDF</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
+<script src="auth.js"></script>
+<script src="pdf-101.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     1. Armazém local — IndexedDB
+     ------------------------------------------------------------
+     Por que IndexedDB e não localStorage: as fotos. localStorage
+     guarda texto, tem teto de uns 5 MB e obrigaria a converter
+     cada foto em base64, que incha o arquivo em 33%. Três fotos
+     de obra já estouram. IndexedDB guarda Blob do jeito que saiu
+     da câmera e tem folga de centenas de MB.
+     ============================================================ */
+
+  const Armazem = (function () {
+    const NOME = 'dalmobile-medicao';
+    const VERSAO = 1;
+    let bd = null;
+
+    function abrir() {
+      if (bd) return Promise.resolve(bd);
+
+      return new Promise(function (ok, falha) {
+        const p = indexedDB.open(NOME, VERSAO);
+
+        p.onupgradeneeded = function () {
+          const b = p.result;
+          if (!b.objectStoreNames.contains('medicoes')) b.createObjectStore('medicoes', { keyPath: 'id' });
+          if (!b.objectStoreNames.contains('fotos'))    b.createObjectStore('fotos',    { keyPath: 'id' });
+        };
+
+        p.onsuccess = function () { bd = p.result; ok(bd); };
+        p.onerror   = function () { falha(p.error); };
+      });
+    }
+
+    function transacao(loja, modo, acao) {
+      return abrir().then(function (b) {
+        return new Promise(function (ok, falha) {
+          const t = b.transaction(loja, modo);
+          const pedido = acao(t.objectStore(loja));
+          t.oncomplete = function () { ok(pedido ? pedido.result : undefined); };
+          t.onerror    = function () { falha(t.error); };
+        });
+      });
+    }
+
+    return {
+      salvar:      function (m)  { return transacao('medicoes', 'readwrite', function (s) { return s.put(m); }); },
+      ler:         function (id) { return transacao('medicoes', 'readonly',  function (s) { return s.get(id); }); },
+      todas:       function ()   { return transacao('medicoes', 'readonly',  function (s) { return s.getAll(); }); },
+      apagar:      function (id) { return transacao('medicoes', 'readwrite', function (s) { return s.delete(id); }); },
+      salvarFoto:  function (f)  { return transacao('fotos',    'readwrite', function (s) { return s.put(f); }); },
+      lerFoto:     function (id) { return transacao('fotos',    'readonly',  function (s) { return s.get(id); }); },
+      apagarFoto:  function (id) { return transacao('fotos',    'readwrite', function (s) { return s.delete(id); }); }
+    };
+  })();
+
+
+  /* ============================================================
+     2. Fotos — comprimir antes de guardar
+     ------------------------------------------------------------
+     Um celular atual entrega 4 a 12 MB por foto. Dez dessas no
+     PDF dão um arquivo que não passa no WhatsApp e um rascunho
+     que não cabe no aparelho. 1400px no lado maior, JPEG 72%,
+     resolve em ~200 KB e ainda mostra com sobra a tomada fora
+     de lugar, que é o que o documento precisa provar.
+     ============================================================ */
+
+  const LADO_MAIOR = 1400;
+  const QUALIDADE = 0.72;
+
+  function comprimir(arquivo) {
+    return new Promise(function (ok, falha) {
+      const url = URL.createObjectURL(arquivo);
+      const img = new Image();
+
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+
+        const escala = Math.min(1, LADO_MAIOR / Math.max(img.width, img.height));
+        const l = Math.round(img.width * escala);
+        const a = Math.round(img.height * escala);
+
+        const tela = document.createElement('canvas');
+        tela.width = l; tela.height = a;
+        tela.getContext('2d').drawImage(img, 0, 0, l, a);
+
+        tela.toBlob(function (blob) {
+          if (blob) ok(blob); else falha(new Error('não consegui converter a foto'));
+        }, 'image/jpeg', QUALIDADE);
+      };
+
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        falha(new Error('não consegui abrir a foto'));
+      };
+
+      img.src = url;
+    });
+  }
+
+
+  /* ============================================================
+     3. Estado
+     ============================================================ */
+
+  const ITENS = window.PDF101 ? PDF101.ITENS : [];
+
+  let atual = null;          // a medição aberta
+  let salvando = null;       // debounce
+  const previas = {};        // id da foto -> objectURL, para não vazar memória
+
+  function agora() { return new Date().toISOString(); }
+
+  function novoId(prefixo) {
+    const r = (crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : String(Date.now()) + '-' + Math.random().toString(16).slice(2);
+    return prefixo + '-' + r;
+  }
+
+  function el(id) { return document.getElementById(id); }
+
+  function medicaoNova() {
+    const eu = window.dalmobileAuth && window.dalmobileAuth.usuario;
+
+    return {
+      id: novoId('med'),
+      remoto: null,
+      enviado: false,
+      autor: eu ? eu.id : null,
+      cliente: '', contrato: '',
+      loja: (window.EU && window.EU.loja) || 'sjc',
+      criado_em: agora(),
+      atualizado_em: agora(),
+      dados: {
+        tipoContrato: 'total',
+        ambientes: [{ nome: '', checklist: '', projetoDefinido: null }],
+        observacao: '',
+        itens: {},
+        outros: '',
+        parecerFinal: '',
+        ambientesNaoAptos: '',
+        tecnico: (eu && eu.user_metadata && eu.user_metadata.nome) || ''
+      }
+    };
+  }
+
+
+  /* ============================================================
+     4. Conexão
+     ------------------------------------------------------------
+     A tela nunca mente sobre isso. O medidor precisa saber, na
+     obra, se o que ele preencheu já saiu do aparelho — porque
+     se não saiu e o celular cair na massa, acabou.
+     ============================================================ */
+
+  function temServidor() {
+    if (!navigator.onLine) return null;
+    if (window.dalmobileAuth && window.dalmobileAuth.offline) return null;
+    const a = window.dalmobileAuth;
+    return (a && a.cliente) ? a.cliente : null;
+  }
+
+  async function pintarRede() {
+    const faixa = el('rede');
+    const pendentes = (await Armazem.todas()).filter(function (m) { return !m.enviado; }).length;
+
+    faixa.className = 'rede';
+    faixa.innerHTML = '';
+
+    if (!navigator.onLine) {
+      faixa.classList.add('off');
+      faixa.innerHTML = 'Sem internet — tudo continua funcionando.' +
+        '<b>O que você preencher fica salvo aqui e sobe sozinho quando o sinal voltar. ' +
+        'O PDF você gera mesmo offline.</b>';
+      return;
+    }
+
+    if (pendentes) {
+      faixa.classList.add('pendente');
+      faixa.innerHTML = pendentes + (pendentes > 1 ? ' medições ainda não subiram.' : ' medição ainda não subiu.') +
+        '<b>Elas sobem sozinhas; se demorar, é só abrir a medição que ela tenta de novo.</b>';
+    }
+  }
+
+  window.addEventListener('online',  function () { pintarRede(); sincronizarTudo(); });
+  window.addEventListener('offline', pintarRede);
+
+
+  /* ============================================================
+     5. Lista
+     ============================================================ */
+
+  async function mostrarLista() {
+    el('tela-ficha').classList.add('oculto');
+    el('tela-lista').classList.remove('oculto');
+    el('barra').classList.add('oculto');
+    atual = null;
+    limparPrevias();
+
+    await pintarRede();
+
+    const todas = (await Armazem.todas()).sort(function (a, b) {
+      return String(b.atualizado_em).localeCompare(String(a.atualizado_em));
+    });
+
+    const caixa = el('lista');
+
+    if (!todas.length) {
+      caixa.innerHTML = '<p class="vazio-msg">Nenhuma medição ainda.<br>' +
+        'Toque em <b>Nova medição</b> antes de sair para a obra — ' +
+        'assim a tela já fica guardada no aparelho.</p>';
+      return;
+    }
+
+    caixa.innerHTML = '';
+
+    todas.forEach(function (m) {
+      const b = document.createElement('button');
+      b.className = 'ficha';
+      b.onclick = function () { abrirFicha(m.id); };
+
+      const resumo = contar(m);
+
+      b.innerHTML =
+        '<h3>' + escapar(m.cliente || 'Sem nome') + '</h3>' +
+        '<p>' + escapar(m.contrato || 'sem contrato') + ' · ' +
+                (m.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos') + ' · ' +
+                dataCurta(m.atualizado_em) + '</p>' +
+        '<div class="tags">' +
+          (m.enviado ? '<span class="tag ok">no sistema</span>'
+                     : '<span class="tag aviso">só neste aparelho</span>') +
+          (resumo.faltam ? '<span class="tag">' + resumo.faltam + ' sem resposta</span>' : '') +
+          (resumo.reprovados ? '<span class="tag erro">' + resumo.reprovados + ' não apto</span>' : '') +
+          (!resumo.faltam && !resumo.reprovados ? '<span class="tag ok">checklist completo</span>' : '') +
+        '</div>';
+
+      caixa.appendChild(b);
+    });
+  }
+
+  function contar(m) {
+    const itens = (m.dados && m.dados.itens) || {};
+    let faltam = 0, reprovados = 0;
+
+    ITENS.forEach(function (i) {
+      const s = (itens[i.letra] || {}).situacao;
+      if (!s) faltam++;
+      else if (s === 'nao-apto') reprovados++;
+    });
+
+    return { faltam: faltam, reprovados: reprovados };
+  }
+
+
+  /* ============================================================
+     6. Ficha
+     ============================================================ */
+
+  async function abrirFicha(id) {
+    const m = await Armazem.ler(id);
+    if (!m) return mostrarLista();
+
+    atual = m;
+    limparPrevias();
+
+    el('tela-lista').classList.add('oculto');
+    el('tela-ficha').classList.remove('oculto');
+    el('barra').classList.remove('oculto');
+    window.scrollTo(0, 0);
+
+    el('f-cliente').value   = m.cliente || '';
+    el('f-contrato').value  = m.contrato || '';
+    el('f-loja').value      = m.loja || 'sjc';
+    el('f-tecnico').value   = m.dados.tecnico || '';
+    el('f-tipo').value      = m.dados.tipoContrato || 'total';
+    el('f-obs').value       = m.dados.observacao || '';
+    el('f-outros').value    = m.dados.outros || '';
+    el('f-nao-aptos').value = m.dados.ambientesNaoAptos || '';
+
+    desenharAmbientes();
+    desenharChecklist();
+    pintarParecerFinal();
+    pintarEstado();
+
+    sincronizar(m);
+  }
+
+  /* ---------- ambientes ---------- */
+
+  function desenharAmbientes() {
+    const caixa = el('ambientes');
+    caixa.innerHTML = '';
+
+    (atual.dados.ambientes || []).forEach(function (amb, i) {
+      const d = document.createElement('div');
+      d.className = 'amb';
+
+      d.innerHTML =
+        '<div class="amb-topo">' +
+          '<input type="text" placeholder="Ex.: Cozinha" value="' + escapar(amb.nome || '') + '">' +
+          '<button type="button" title="Remover">×</button>' +
+        '</div>' +
+        '<div class="mini">' +
+          '<div>' +
+            '<label class="rot">Checklist</label>' +
+            '<select>' +
+              '<option value="">Não informado</option>' +
+              '<option value="anexo">Em anexo</option>' +
+              '<option value="nao-se-aplica">Não se aplica</option>' +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="rot">Projeto definido?</label>' +
+            '<select>' +
+              '<option value="">Não informado</option>' +
+              '<option value="sim">Sim — cores e modelos</option>' +
+              '<option value="nao">Não</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>';
+
+      const nome = d.querySelector('input');
+      const selects = d.querySelectorAll('select');
+
+      selects[0].value = amb.checklist || '';
+      selects[1].value = amb.projetoDefinido === true ? 'sim'
+                       : amb.projetoDefinido === false ? 'nao' : '';
+
+      nome.oninput = function () { atual.dados.ambientes[i].nome = nome.value; guardar(); };
+      selects[0].onchange = function () { atual.dados.ambientes[i].checklist = selects[0].value; guardar(); };
+      selects[1].onchange = function () {
+        const v = selects[1].value;
+        atual.dados.ambientes[i].projetoDefinido = v === 'sim' ? true : v === 'nao' ? false : null;
+        guardar();
+      };
+
+      d.querySelector('button').onclick = function () {
+        atual.dados.ambientes.splice(i, 1);
+        if (!atual.dados.ambientes.length) {
+          atual.dados.ambientes.push({ nome: '', checklist: '', projetoDefinido: null });
+        }
+        guardar();
+        desenharAmbientes();
+      };
+
+      caixa.appendChild(d);
+    });
+  }
+
+  /* ---------- checklist ---------- */
+
+  function desenharChecklist() {
+    const caixa = el('checklist');
+    caixa.innerHTML = '';
+
+    ITENS.forEach(function (item) {
+      caixa.appendChild(montarItem(item));
+    });
+  }
+
+  function montarItem(item) {
+    const resposta = atual.dados.itens[item.letra] ||
+                     (atual.dados.itens[item.letra] = { situacao: '', parecer: '', motivo: '', fotos: [] });
+
+    const d = document.createElement('div');
+    d.className = 'item' + (resposta.situacao ? ' ' + resposta.situacao : '');
+
+    d.innerHTML =
+      '<header><span class="letra">' + item.letra + ')</span><h3>' + escapar(item.titulo) + '</h3></header>' +
+      '<button type="button" class="porque">por que isso importa</button>' +
+      '<p class="explica">' + escapar(item.texto) + '</p>' +
+      '<div class="escolha">' +
+        '<button type="button" class="sim" data-v="apto">Apto</button>' +
+        '<button type="button" class="nao" data-v="nao-apto">Não apto</button>' +
+        '<button type="button" class="na"  data-v="nao-se-aplica">Não se aplica</button>' +
+      '</div>' +
+      '<div class="detalhe" hidden>' +
+        '<p class="exige oculto">Item reprovado. Escreva o que está errado e fotografe — ' +
+          'é esse registro que sustenta o termo que o cliente vai assinar.</p>' +
+        '<div class="campo"><label class="rot">Parecer do técnico</label>' +
+          '<textarea class="p" placeholder="O que você encontrou"></textarea></div>' +
+        '<div class="campo" style="margin-bottom:6px"><label class="rot">Motivo</label>' +
+          '<textarea class="m" placeholder="Por que isso impede ou atrapalha a medição"></textarea></div>' +
+        '<label class="rot">Fotos</label>' +
+        '<div class="fotos"></div>' +
+      '</div>';
+
+    const porque = d.querySelector('.porque');
+    porque.onclick = function () { porque.classList.toggle('aberto'); };
+
+    const detalhe = d.querySelector('.detalhe');
+    const exige = d.querySelector('.exige');
+    const parecer = d.querySelector('textarea.p');
+    const motivo = d.querySelector('textarea.m');
+    const fotos = d.querySelector('.fotos');
+
+    parecer.value = resposta.parecer || '';
+    motivo.value = resposta.motivo || '';
+
+    parecer.oninput = function () { resposta.parecer = parecer.value; guardar(); };
+    motivo.oninput  = function () { resposta.motivo  = motivo.value;  guardar(); };
+
+    d.querySelectorAll('.escolha button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(resposta.situacao === b.dataset.v));
+
+      b.onclick = function () {
+        /* Tocar de novo no que já estava marcado desmarca. Sem
+           isso, um toque errado em "Apto" não tem volta — e um
+           apto que ninguém quis dizer é pior que um vazio. */
+        resposta.situacao = (resposta.situacao === b.dataset.v) ? '' : b.dataset.v;
+
+        d.querySelectorAll('.escolha button').forEach(function (o) {
+          o.setAttribute('aria-pressed', String(resposta.situacao === o.dataset.v));
+        });
+
+        d.className = 'item' + (resposta.situacao ? ' ' + resposta.situacao : '');
+        abrirDetalhe();
+        guardar();
+        pintarEstado();
+      };
+    });
+
+    function abrirDetalhe() {
+      const reprovado = resposta.situacao === 'nao-apto';
+      const temConteudo = resposta.parecer || resposta.motivo || (resposta.fotos || []).length;
+
+      detalhe.hidden = !(reprovado || temConteudo);
+      exige.classList.toggle('oculto', !reprovado);
+    }
+
+    desenharFotos(fotos, resposta, abrirDetalhe);
+    abrirDetalhe();
+
+    return d;
+  }
+
+  /* ---------- fotos do item ---------- */
+
+  function desenharFotos(caixa, resposta, aoMudar) {
+    caixa.innerHTML = '';
+
+    (resposta.fotos || []).forEach(function (f, i) {
+      const d = document.createElement('div');
+      d.className = 'foto';
+      d.innerHTML =
+        '<img alt="">' +
+        '<button type="button" class="tirar" title="Remover">×</button>' +
+        '<input type="text" placeholder="Legenda" value="' + escapar(f.legenda || '') + '">';
+
+      const img = d.querySelector('img');
+
+      Armazem.lerFoto(f.id).then(function (reg) {
+        if (!reg) return;
+        if (previas[f.id]) URL.revokeObjectURL(previas[f.id]);
+        previas[f.id] = URL.createObjectURL(reg.blob);
+        img.src = previas[f.id];
+      });
+
+      d.querySelector('input').oninput = function () {
+        resposta.fotos[i].legenda = this.value;
+        guardar();
+      };
+
+      d.querySelector('.tirar').onclick = function () {
+        Armazem.apagarFoto(f.id);
+        if (previas[f.id]) { URL.revokeObjectURL(previas[f.id]); delete previas[f.id]; }
+        resposta.fotos.splice(i, 1);
+        guardar();
+        desenharFotos(caixa, resposta, aoMudar);
+        if (aoMudar) aoMudar();
+      };
+
+      caixa.appendChild(d);
+    });
+
+    const add = document.createElement('label');
+    add.className = 'add-foto';
+    add.innerHTML = '<span>+</span>foto' +
+      '<input type="file" accept="image/*" capture="environment" hidden multiple>';
+
+    add.querySelector('input').onchange = async function () {
+      const arquivos = Array.prototype.slice.call(this.files || []);
+      this.value = '';
+
+      for (const arquivo of arquivos) {
+        try {
+          const blob = await comprimir(arquivo);
+          const id = novoId('foto');
+          await Armazem.salvarFoto({ id: id, blob: blob });
+          resposta.fotos = resposta.fotos || [];
+          resposta.fotos.push({ id: id, legenda: '' });
+        } catch (erro) {
+          console.error(erro);
+          avisar('Não consegui usar uma das fotos.');
+        }
+      }
+
+      await guardar();
+      desenharFotos(caixa, resposta, aoMudar);
+      if (aoMudar) aoMudar();
+    };
+
+    caixa.appendChild(add);
+  }
+
+  /* ---------- parecer final ---------- */
+
+  function pintarParecerFinal() {
+    const botoes = el('parecer-final').querySelectorAll('button');
+
+    botoes.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(atual.dados.parecerFinal === b.dataset.v));
+
+      b.onclick = function () {
+        atual.dados.parecerFinal = (atual.dados.parecerFinal === b.dataset.v) ? '' : b.dataset.v;
+        pintarParecerFinal();
+        guardar();
+        pintarEstado();
+      };
+    });
+
+    el('campo-nao-aptos').hidden = atual.dados.parecerFinal !== 'nao-aptos';
+    pintarNotaDoTermo();
+  }
+
+  /* O medidor precisa saber, ANTES de gerar, se o PDF vai sair
+     com termo de responsabilidade — porque se sair, ele tem que
+     colher a assinatura do cliente antes de ir embora. */
+  function pintarNotaDoTermo() {
+    const r = contar(atual);
+    const vai = r.reprovados > 0 || atual.dados.parecerFinal === 'nao-aptos';
+
+    el('nota-termo').innerHTML = vai
+      ? '<b>O PDF vai sair com o termo de responsabilidade do cliente.</b> ' +
+        'Colha a assinatura antes de sair da obra.'
+      : 'Sem itens reprovados, o PDF sai sem termo de responsabilidade.';
+  }
+
+
+  /* ============================================================
+     7. Salvar
+     ============================================================ */
+
+  function colher() {
+    if (!atual) return;
+    atual.cliente  = el('f-cliente').value.trim();
+    atual.contrato = el('f-contrato').value.trim();
+    atual.loja     = el('f-loja').value;
+
+    atual.dados.tecnico           = el('f-tecnico').value.trim();
+    atual.dados.tipoContrato      = el('f-tipo').value;
+    atual.dados.observacao        = el('f-obs').value;
+    atual.dados.outros            = el('f-outros').value;
+    atual.dados.ambientesNaoAptos = el('f-nao-aptos').value;
+  }
+
+  async function guardar() {
+    if (!atual) return;
+    colher();
+    atual.atualizado_em = agora();
+    atual.enviado = false;
+    await Armazem.salvar(atual);
+    pintarEstado();
+    pintarNotaDoTermo();
+
+    clearTimeout(salvando);
+    salvando = setTimeout(function () { sincronizar(atual); }, 4000);
+  }
+
+  ['f-cliente','f-contrato','f-tecnico','f-obs','f-outros','f-nao-aptos'].forEach(function (id) {
+    el(id).addEventListener('input', guardar);
+  });
+  ['f-loja','f-tipo'].forEach(function (id) {
+    el(id).addEventListener('change', guardar);
+  });
+
+  function pintarEstado() {
+    if (!atual) return;
+    const r = contar(atual);
+
+    el('estado').innerHTML = r.faltam
+      ? '<b>' + r.faltam + '</b> ite' + (r.faltam > 1 ? 'ns' : 'm') + ' sem resposta'
+      : (atual.enviado ? 'Salvo e no sistema' : 'Salvo neste aparelho');
+  }
+
+
+  /* ============================================================
+     8. Sincronia
+     ------------------------------------------------------------
+     Melhor esforço, sempre. Falhou? O rascunho local continua
+     sendo a verdade e tenta de novo depois. Em nenhum caminho
+     desta tela o medidor fica impedido de trabalhar porque o
+     servidor não respondeu.
+     ============================================================ */
+
+  async function sincronizar(m) {
+    if (!m || m.enviado) return;
+
+    const sb = temServidor();
+    if (!sb) return;
+
+    /* As fotos ficam no aparelho nesta versão: elas vão para o
+       PDF, que é o documento de valor. Subir imagem pede o
+       Storage do Supabase e uma política própria — fica para
+       quando a assinatura entrar. */
+    const linha = {
+      tipo: 'medicao',
+      cliente: m.cliente || '',
+      contrato: m.contrato || '',
+      loja: m.loja,
+      dados: m.dados,
+      status: 'preenchido',
+      preenchido_em: m.atualizado_em
+    };
+
+    try {
+      let r;
+
+      if (m.remoto) {
+        r = await sb.from('formularios').update(linha).eq('id', m.remoto).select('id').single();
+      } else {
+        r = await sb.from('formularios').insert(linha).select('id').single();
+      }
+
+      if (r.error) throw r.error;
+
+      m.remoto = r.data.id;
+      m.enviado = true;
+      await Armazem.salvar(m);
+
+      pintarEstado();
+      pintarRede();
+
+    } catch (erro) {
+      console.warn('Não subiu agora; fica para a próxima.', erro);
+    }
+  }
+
+  async function sincronizarTudo() {
+    const todas = await Armazem.todas();
+    for (const m of todas) {
+      if (!m.enviado) await sincronizar(m);
+    }
+    pintarRede();
+    if (!el('tela-lista').classList.contains('oculto')) mostrarLista();
+  }
+
+
+  /* ============================================================
+     9. PDF
+     ============================================================ */
+
+  el('gerar').onclick = async function () {
+    if (!atual) return;
+
+    const botao = this;
+    botao.disabled = true;
+    botao.textContent = 'Gerando…';
+
+    try {
+      colher();
+
+      /* Carrega as fotos do aparelho e passa como bytes. */
+      const fotos = {};
+      for (const item of ITENS) {
+        const r = atual.dados.itens[item.letra];
+        for (const f of ((r && r.fotos) || [])) {
+          const reg = await Armazem.lerFoto(f.id);
+          if (reg) fotos[f.id] = new Uint8Array(await reg.blob.arrayBuffer());
+        }
+      }
+
+      const bytes = await PDF101.montar({
+        cliente: atual.cliente,
+        contrato: atual.contrato,
+        loja: atual.loja,
+        dados: atual.dados,
+        preenchido_em: atual.atualizado_em,
+        fotos: fotos
+      });
+
+      const nome = PDF101.nomeDoArquivo(atual);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+
+      await entregar(blob, nome);
+
+    } catch (erro) {
+      console.error(erro);
+      avisar('Não consegui gerar o PDF. ' + (erro.message || ''));
+    } finally {
+      botao.disabled = false;
+      botao.textContent = 'Gerar PDF';
+    }
+  };
+
+  /* No celular, o caminho natural é o menu de compartilhar: de
+     lá o medidor manda direto no WhatsApp do cliente, sem passar
+     por pasta de downloads. No computador, baixa. */
+  async function entregar(blob, nome) {
+    const arquivo = new File([blob], nome, { type: 'application/pdf' });
+
+    if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+      try {
+        await navigator.share({ files: [arquivo], title: nome });
+        return;
+      } catch (erro) {
+        if (erro && erro.name === 'AbortError') return;   // o medidor desistiu
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+
+
+  /* ============================================================
+     10. Botões gerais
+     ============================================================ */
+
+  el('nova').onclick = async function () {
+    const m = medicaoNova();
+    await Armazem.salvar(m);
+    abrirFicha(m.id);
+  };
+
+  el('voltar-lista').onclick = async function () {
+    await guardar();
+    mostrarLista();
+  };
+
+  el('add-ambiente').onclick = function () {
+    atual.dados.ambientes.push({ nome: '', checklist: '', projetoDefinido: null });
+    guardar();
+    desenharAmbientes();
+  };
+
+  el('apagar').onclick = async function () {
+    if (!atual) return;
+
+    const aviso = atual.enviado
+      ? 'Apagar esta medição deste aparelho? Ela já subiu para o sistema e continua lá.'
+      : 'Apagar esta medição? Ela ainda NÃO subiu para o sistema — isso não tem volta.';
+
+    if (!confirm(aviso)) return;
+
+    for (const item of ITENS) {
+      const r = atual.dados.itens[item.letra];
+      for (const f of ((r && r.fotos) || [])) await Armazem.apagarFoto(f.id);
+    }
+
+    await Armazem.apagar(atual.id);
+    mostrarLista();
+  };
+
+
+  /* ============================================================
+     11. Miudezas
+     ============================================================ */
+
+  function escapar(t) {
+    return String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function dataCurta(iso) {
+    const d = new Date(iso);
+    return isNaN(d) ? '—' : d.toLocaleDateString('pt-BR');
+  }
+
+  function avisar(texto) { alert(texto); }
+
+  function limparPrevias() {
+    Object.keys(previas).forEach(function (id) {
+      URL.revokeObjectURL(previas[id]);
+      delete previas[id];
+    });
+  }
+
+  /* Guarda antes de a aba sumir — no celular, trocar de app ou
+     atender uma ligação é o jeito mais comum de "fechar" a
+     página, e nenhum desses dispara o unload. */
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden' && atual) guardar();
+  });
+
+
+  /* ============================================================
+     12. Partida
+     ============================================================ */
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function (e) {
+      console.warn('Service worker não registrou; a tela não vai abrir offline.', e);
+    });
+  }
+
+  if (!window.PDF101) {
+    avisar('O gerador de PDF não carregou. Abra a tela uma vez com internet.');
+  }
+
+  mostrarLista();
+  sincronizarTudo();
+
+})();
+</script>
+</body>
+</html>

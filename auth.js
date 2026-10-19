@@ -74,7 +74,7 @@ const AUTH = {
     }
   });
 
-  window.dalmobileAuth = { cliente: cliente, usuario: null };
+  window.dalmobileAuth = { cliente: cliente, usuario: null, offline: false };
 
   iniciar();
 
@@ -90,6 +90,39 @@ const AUTH = {
 
     if (sessao) return liberar(sessao);
 
+    /* Sem sessao viva, antes de pedir login: isto é falta de
+       senha ou falta de sinal?
+
+       O getSession() lê do próprio aparelho, mas quando o token
+       de acesso vence (cerca de uma hora) ele tenta renovar na
+       rede. Sem rede, a renovação falha e ele devolve nada —
+       e o medidor, que entrou na loja de manhã, cai na tela de
+       login dentro do apartamento em obra, sem como sair dela.
+
+       Então: offline e com sessão guardada neste aparelho, a
+       página abre. Não é brecha: a sessão só está aí porque
+       alguém entrou neste celular, e nada do servidor fica
+       acessível offline de qualquer forma — quando a rede
+       voltar, o RLS continua mandando em cada leitura e cada
+       gravação, como sempre.
+
+       A marca offline = true diz às telas para não tentarem
+       gravar no servidor enquanto isso. */
+    const guardada = sessaoGuardada();
+
+    if (!navigator.onLine && guardada) {
+      window.dalmobileAuth.offline = true;
+
+      window.addEventListener('online', function () {
+        cliente.auth.getSession().then(function (r) {
+          const viva = r.data ? r.data.session : null;
+          if (viva) window.dalmobileAuth.offline = false;
+        });
+      }, { once: true });
+
+      return liberar(guardada);
+    }
+
     montarEntrada();
     destravar();   // mostra a página só com a tela de entrada por cima
 
@@ -98,6 +131,26 @@ const AUTH = {
         liberar(nova);
       }
     });
+  }
+
+  /* A sessão que o próprio supabase-js guardou neste aparelho.
+     A chave muda com o projeto (sb-<id>-auth-token), por isso a
+     busca pelo formato em vez de um nome fixo. */
+  function sessaoGuardada() {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const chave = localStorage.key(i);
+        if (!/^sb-.+-auth-token$/.test(chave)) continue;
+
+        const bruto = JSON.parse(localStorage.getItem(chave));
+        const s = bruto && (bruto.currentSession || bruto);
+
+        if (s && s.user) return s;
+      }
+    } catch (e) {
+      console.warn('Não consegui ler a sessão guardada.', e);
+    }
+    return null;
   }
 
   function liberar(sessao) {
