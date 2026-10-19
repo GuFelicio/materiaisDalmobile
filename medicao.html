@@ -338,7 +338,8 @@
 <div class="barra oculto" id="barra">
   <div class="dentro">
     <div class="estado" id="estado"></div>
-    <button class="btn" id="gerar">Gerar PDF</button>
+    <button class="btn vazio" id="enviar" hidden>Enviar</button>
+    <button class="btn" id="salvar">Salvar PDF</button>
   </div>
 </div>
 
@@ -1011,15 +1012,19 @@
      9. PDF
      ============================================================ */
 
-  el('gerar').onclick = async function () {
-    if (!atual) return;
+  /* Duas ações, porque são dois desejos diferentes e só o
+     medidor sabe qual é o dele naquele momento:
 
-    const botao = this;
-    botao.disabled = true;
-    botao.textContent = 'Gerando…';
+       Baixar  → o arquivo cai na pasta de downloads / em Arquivos
+       Enviar  → abre o menu do sistema (WhatsApp, Drive, e-mail)
 
-    try {
-      colher();
+     A primeira versão chamava o menu de compartilhar sozinha,
+     antes de baixar. No celular acerta; no computador vira um
+     menu que ninguém pediu. Adivinhar saiu pior que perguntar
+     com dois botões. */
+
+  async function montarPdf() {
+    colher();
 
       /* Carrega as fotos do aparelho e passa como bytes. */
       const fotos = {};
@@ -1040,43 +1045,125 @@
         fotos: fotos
       });
 
-      const nome = PDF101.nomeDoArquivo(atual);
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+    return {
+      nome: PDF101.nomeDoArquivo(atual),
+      blob: new Blob([bytes], { type: 'application/pdf' })
+    };
+  }
 
-      await entregar(blob, nome);
+  /* Envolve as duas ações: trava o botão, avisa o erro, destrava
+     de novo aconteça o que acontecer. */
+  function comPdf(botao, rotulo, acao) {
+    return async function () {
+      if (!atual) return;
 
-    } catch (erro) {
-      console.error(erro);
-      avisar('Não consegui gerar o PDF. ' + (erro.message || ''));
-    } finally {
-      botao.disabled = false;
-      botao.textContent = 'Gerar PDF';
-    }
-  };
+      botao.disabled = true;
+      botao.textContent = 'Gerando…';
 
-  /* No celular, o caminho natural é o menu de compartilhar: de
-     lá o medidor manda direto no WhatsApp do cliente, sem passar
-     por pasta de downloads. No computador, baixa. */
-  async function entregar(blob, nome) {
-    const arquivo = new File([blob], nome, { type: 'application/pdf' });
-
-    if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
       try {
-        await navigator.share({ files: [arquivo], title: nome });
-        return;
+        const pdf = await montarPdf();
+        await acao(pdf);
       } catch (erro) {
-        if (erro && erro.name === 'AbortError') return;   // o medidor desistiu
+        console.error(erro);
+        avisar('Não consegui gerar o PDF. ' + (erro.message || ''));
+      } finally {
+        botao.disabled = false;
+        botao.textContent = rotulo;
+      }
+    };
+  }
+
+  /* SALVAR — a pessoa escolhe onde.
+     ------------------------------------------------------------
+     Onde o navegador souber (Chrome e Edge no computador), abre
+     o diálogo de salvar de verdade: o medidor escolhe a pasta.
+     Se ele usa o Google Drive para computador, a pasta do Drive
+     aparece ali como qualquer outra — é assim que o PDF vai
+     parar no Drive sem precisar de API, credencial no servidor
+     nem permissão que expira.
+
+     Onde não souber (Safari, Firefox, celular), baixa do jeito
+     comum. Nunca fica sem saída.
+
+     A ORDEM AQUI NÃO É ARBITRÁRIA: o diálogo é pedido ANTES de
+     montar o PDF. Ele só abre enquanto o toque do medidor ainda
+     "vale" para o navegador, e isso dura poucos segundos — se a
+     gente gerasse primeiro, um documento com muitas fotos
+     estouraria esse prazo e o diálogo seria recusado. */
+
+  el('salvar').onclick = async function () {
+    if (!atual) return;
+
+    const botao = this;
+    colher();
+
+    let destino = null;
+
+    if (window.showSaveFilePicker) {
+      try {
+        destino = await window.showSaveFilePicker({
+          suggestedName: PDF101.nomeDoArquivo(atual),
+          types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }]
+        });
+      } catch (erro) {
+        /* Fechou o diálogo sem escolher: não gera nada. */
+        if (erro && erro.name === 'AbortError') return;
+        destino = null;   // navegador recusou; segue no download
       }
     }
 
-    const url = URL.createObjectURL(blob);
+    botao.disabled = true;
+    botao.textContent = 'Gerando…';
+
+    try {
+      const pdf = await montarPdf();
+
+      if (destino) {
+        const escrita = await destino.createWritable();
+        await escrita.write(pdf.blob);
+        await escrita.close();
+      } else {
+        baixarComum(pdf);
+      }
+
+    } catch (erro) {
+      console.error(erro);
+      avisar('Não consegui salvar o PDF. ' + (erro.message || ''));
+    } finally {
+      botao.disabled = false;
+      botao.textContent = 'Salvar PDF';
+    }
+  };
+
+  function baixarComum(pdf) {
+    const url = URL.createObjectURL(pdf.blob);
     const a = document.createElement('a');
-    a.href = url; a.download = nome;
+    a.href = url;
+    a.download = pdf.nome;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
   }
+
+  el('enviar').onclick = comPdf(el('enviar'), 'Enviar', async function (pdf) {
+    const arquivo = new File([pdf.blob], pdf.nome, { type: 'application/pdf' });
+
+    try {
+      await navigator.share({ files: [arquivo], title: pdf.nome });
+    } catch (erro) {
+      /* Fechar o menu sem escolher nada não é erro. */
+      if (!erro || erro.name !== 'AbortError') throw erro;
+    }
+  });
+
+  /* "Enviar" só aparece onde o aparelho sabe mandar arquivo.
+     Botão que não faz nada é pior que botão que não existe. */
+  (function () {
+    const teste = new File([new Uint8Array([1])], 'x.pdf', { type: 'application/pdf' });
+    const podeMandar = !!(navigator.canShare && navigator.canShare({ files: [teste] }));
+    el('enviar').hidden = !podeMandar;
+  })();
 
 
   /* ============================================================
