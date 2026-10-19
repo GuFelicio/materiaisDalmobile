@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Documentos do cliente · Dalmóbile</title>
+<style>
+  :root {
+    --bg: #f2f2f0; --card: #fff; --ink: #141618; --ink-2: #4a5054;
+    --muted: #8a9094; --line: #e0e1df; --line-2: #c9cbc8; --accent: #141618;
+    --ok: #1c6b3f; --ok-bg: #eef3ee; --ok-line: #cfe0d2;
+    --aviso: #8a4b12; --aviso-bg: #fdf1e7; --aviso-line: #f0cfae;
+    --erro: #b3261e; --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); font-size: 16px; line-height: 1.5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px 56px; }
+
+  .topo { position: relative; padding: 28px 0 22px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .tracos { position: absolute; top: 26px; right: 0; display: flex; gap: 5px; opacity: .5; }
+  .tracos i { display: block; width: 1px; background: var(--line-2); }
+  .tracos i:nth-child(1) { height: 22px; } .tracos i:nth-child(2) { height: 38px; }
+  .tracos i:nth-child(3) { height: 14px; }
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+  .assinatura { margin: 3px 0 0; font-size: 10px; font-weight: 600; letter-spacing: .18em;
+                text-transform: uppercase; color: var(--muted); }
+
+  .voltar { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0;
+            padding: 0; margin-bottom: 16px; font-family: inherit; font-size: 13px;
+            font-weight: 600; color: var(--ink-2); cursor: pointer; text-decoration: none; }
+
+  .painel { background: var(--card); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 20px; margin-bottom: 26px; }
+  .painel > h2 { margin: 0 0 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+  .painel > p.desc { margin: 0 0 18px; font-size: 13px; color: var(--ink-2); }
+
+  .seccao-titulo { font-size: 11px; font-weight: 700; letter-spacing: .14em;
+                   text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+
+  .campo { margin-bottom: 15px; }
+  .campo > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .campo .nota { display: block; font-size: 12px; color: var(--muted); margin: -2px 0 6px; }
+
+  input[type="text"], select {
+    width: 100%; padding: 12px 13px; border: 1px solid var(--line); border-radius: 9px;
+    font-size: 16px; font-family: inherit; color: var(--ink); background: var(--card); appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath fill='none' stroke='%238a9094' stroke-width='1.6' d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; cursor: pointer;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(20,22,24,.07); }
+
+  .ambientes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .amb {
+    display: flex; align-items: center; gap: 9px; padding: 11px 12px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-weight: 600; cursor: pointer; user-select: none;
+  }
+  .amb input { width: 17px; height: 17px; margin: 0; accent-color: var(--accent); }
+  .amb.marcado { background: var(--ok-bg); border-color: var(--ok-line); }
+
+  .botao { width: 100%; padding: 15px; border: 0; border-radius: 9px; background: var(--accent);
+           color: #fff; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 8px; }
+  .botao:disabled { opacity: .45; cursor: default; }
+
+  /* --- link pronto --- */
+  .entrega { margin-top: 18px; padding: 16px; background: var(--ok-bg);
+             border: 1px solid var(--ok-line); border-radius: 10px; }
+  .entrega h3 { margin: 0 0 10px; font-size: 14px; font-weight: 700; color: #2c5137; }
+  .entrega .recado { margin: 0; padding: 11px 12px; background: #fff; border: 1px solid var(--ok-line);
+                     border-radius: 8px; font-size: 13px; line-height: 1.5; color: var(--ink-2); white-space: pre-wrap; }
+  .entrega .acoes { display: flex; gap: 8px; margin-top: 12px; }
+  .entrega .acoes button { flex: 1; padding: 11px; border-radius: 9px; border: 0; background: #2c5137;
+                           color: #fff; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+  .entrega .acoes button.claro { background: none; color: #2c5137; border: 1px solid var(--ok-line); }
+
+  /* --- lista --- */
+  .doc { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+         padding: 14px 16px; margin-bottom: 10px; }
+  .doc .cabeca { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .doc .nome { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .doc .sub { margin: 3px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .doc .acoes { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px;
+                padding-top: 11px; border-top: 1px solid var(--line); }
+  .doc .acoes button { padding: 6px 10px; border-radius: 7px; border: 1px solid var(--line);
+                       background: var(--bg); font-size: 12px; font-weight: 600;
+                       font-family: inherit; color: var(--ink-2); cursor: pointer; }
+  .doc .acoes button:hover { border-color: var(--line-2); color: var(--ink); }
+  .doc .acoes button.perigo { color: var(--erro); }
+  .doc .gaveta { margin-top: 12px; padding: 13px; background: var(--bg);
+                 border: 1px solid var(--line); border-radius: 9px; }
+
+  .selo { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+          padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--muted); }
+  .selo.aberto     { background: var(--bg); }
+  .selo.esperando  { background: var(--aviso-bg); border-color: var(--aviso-line); color: var(--aviso); }
+  .selo.preenchido { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); }
+  .selo.assinado   { background: #141618; border-color: #141618; color: #fff; }
+
+  /* --- respostas --- */
+  .resp { font-size: 13px; }
+  .resp h4 { margin: 12px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .12em;
+             text-transform: uppercase; color: var(--muted); }
+  .resp h4:first-child { margin-top: 0; }
+  .resp table { width: 100%; border-collapse: collapse; }
+  .resp td { padding: 5px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  .resp td:first-child { font-weight: 600; width: 40%; }
+  .resp tr:first-child td { border-top: 0; }
+  .resp .nao { color: var(--muted); font-style: italic; }
+  .resp .falta { color: var(--aviso); }
+  .resp .link a { color: var(--ink); word-break: break-all; }
+  .resp .link .conferir { color: var(--aviso); }
+
+  .msg { font-size: 14px; color: var(--ink-2); margin: 0; }
+  .msg.erro { color: var(--erro); font-weight: 500; }
+  .msg.centro { text-align: center; padding: 18px 0; }
+
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(20,22,24,.15);
+             border-top-color: var(--accent); border-radius: 50%; animation: gira .7s linear infinite;
+             display: inline-block; vertical-align: -3px; margin-right: 8px; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  .oculto { display: none !important; }
+  .rodape { margin-top: 32px; text-align: center; font-size: 10px; letter-spacing: .18em;
+            text-transform: uppercase; color: var(--muted); }
+</style>
+<style id="trava-entrada">html { visibility: hidden; }</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topo">
+    <div class="tracos"><i></i><i></i><i></i></div>
+    <h1 class="marca">Documentos <span>· do cliente</span></h1>
+    <p class="assinatura">Central de Peças</p>
+  </header>
+
+  <a class="voltar" href="index.html">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Todos os materiais
+  </a>
+
+  <section class="painel">
+    <h2>Pedir os itens extras</h2>
+    <p class="desc">Gera um link para o cliente informar marca e medidas dos
+       aparelhos que convivem com os móveis. Ele preenche pelo celular, aos
+       poucos, e você acompanha aqui.</p>
+
+    <div class="campo">
+      <label for="n-cliente">Nome do cliente</label>
+      <input id="n-cliente" type="text" placeholder="Ex.: Marina e Rafael Toledo" autocomplete="off">
+    </div>
+
+    <div class="campo">
+      <label for="n-contrato">Número do contrato</label>
+      <span class="nota">Opcional, mas ajuda a achar depois.</span>
+      <input id="n-contrato" type="text" placeholder="Ex.: OR-DSJC-1253" autocomplete="off">
+    </div>
+
+    <div class="campo">
+      <label for="n-loja">Loja</label>
+      <select id="n-loja"></select>
+    </div>
+
+    <div class="campo">
+      <label>Ambientes do projeto</label>
+      <span class="nota">Marque só os que têm aparelho. O cliente vê apenas estes.</span>
+      <div class="ambientes" id="n-ambientes"></div>
+    </div>
+
+    <button class="botao" id="n-criar" type="button">Gerar o link</button>
+    <div id="n-recado"></div>
+  </section>
+
+  <section>
+    <h2 class="seccao-titulo">Acompanhamento</h2>
+    <div id="lista"></div>
+  </section>
+
+  <p class="rodape">Lumina · Uso interno</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script src="auth.js"></script>
+<script src="pdf-102.js"></script>
+<script>
+/* ============================================================
+   DOCUMENTOS DO CLIENTE — lado do consultor
+   ------------------------------------------------------------
+   Quem decide o que cada um enxerga é o banco, nas mesmas regras
+   dos trabalhos: o consultor vê os dele, o gerente vê os da loja,
+   o administrador vê tudo.
+
+   O token do link NÃO aparece na lista — ela lê de uma visão que
+   não tem essa coluna. Ele é buscado um a um, só quando você
+   clica em copiar.
+   ============================================================ */
+
+'use strict';
+
+const LOJAS = [
+  { id: 'sjc', nome: 'São José dos Campos' },
+  { id: 'cgt', nome: 'Caraguatatuba' }
+];
+
+/* O catálogo do Documento 102, em ordem. O cliente só vê os
+   ambientes que o consultor marcar. */
+const AMBIENTES = [
+  { nome: 'Cozinha',      itens: ['Fogão', 'Forno', 'Micro-ondas', 'Coifa',
+                                  'Lava-louças', 'Geladeira', 'Freezer', 'Adega'] },
+  { nome: 'Área gourmet', itens: ['Cooktop', 'Adega', 'Geladeira', 'Freezer',
+                                  'Cervejeira', 'Frigobar'] },
+  { nome: 'Sala',         itens: ['TV', 'Home theater', 'DVD / Video game'] },
+  { nome: 'Lavanderia',   itens: ['Tanque', 'Máquina de lavar', 'Máquina de secar'] },
+  { nome: 'Quarto',       itens: ['Cama', 'TV'] },
+  { nome: 'Home office',  itens: ['TV', 'Impressora'] }
+];
+
+const el = (id) => document.getElementById(id);
+
+let EU = { id: null, loja: '', admin: false };
+let documentos = [];
+
+/* ------------------------------------------------------------
+   Começo
+   ------------------------------------------------------------ */
+
+(async function iniciar() {
+  for (let i = 0; i < 60 && !(window.dalmobileAuth && window.dalmobileAuth.usuario); i++) {
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  if (!(window.dalmobileAuth && window.dalmobileAuth.usuario)) return;
+
+  EU.id = window.dalmobileAuth.usuario.id;
+
+  try {
+    const { data } = await cliente()
+      .from('perfis').select('loja, admin').eq('id', EU.id).limit(1);
+    if (data && data[0]) { EU.loja = data[0].loja || ''; EU.admin = data[0].admin === true; }
+  } catch (e) {}
+
+  montarFormulario();
+  carregar();
+})();
+
+/* Function declaration, não const: quando a sessão já está
+   pronta antes desta página rodar, o iniciar() não chega a
+   esperar nada e chama carregar() antes daqui. Com const, isso
+   estoura; declarada assim, ela existe desde o começo. */
+function cliente() { return window.dalmobileAuth.cliente; }
+
+function montarFormulario() {
+  const sel = el('n-loja');
+  LOJAS.forEach((l) => {
+    const o = document.createElement('option');
+    o.value = l.id; o.textContent = l.nome;
+    sel.appendChild(o);
+  });
+  sel.value = EU.loja || (localStorage.getItem('dalmobile:loja') || 'sjc');
+
+  const caixa = el('n-ambientes');
+  AMBIENTES.forEach((amb, i) => {
+    const rot = document.createElement('label');
+    rot.className = 'amb';
+
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.value = String(i);
+    /* Cozinha e lavanderia vêm marcadas: são as que quase sempre
+       têm aparelho, e o resto o consultor acrescenta. */
+    chk.checked = amb.nome === 'Cozinha' || amb.nome === 'Lavanderia';
+
+    const atualiza = () => rot.classList.toggle('marcado', chk.checked);
+    chk.addEventListener('change', atualiza);
+    atualiza();
+
+    rot.append(chk, document.createTextNode(amb.nome));
+    caixa.appendChild(rot);
+  });
+
+  el('n-criar').addEventListener('click', criar);
+  el('n-cliente').addEventListener('keydown', (e) => { if (e.key === 'Enter') criar(); });
+}
+
+/* ------------------------------------------------------------
+   Criar
+   ------------------------------------------------------------ */
+
+async function criar() {
+  const nome = el('n-cliente').value.trim();
+  const recado = el('n-recado');
+
+  if (!nome) { dizer(recado, 'Escreva o nome do cliente.', 'erro'); el('n-cliente').focus(); return; }
+
+  const marcados = Array.from(el('n-ambientes').querySelectorAll('input:checked'))
+    .map((c) => AMBIENTES[Number(c.value)]);
+
+  if (!marcados.length) { dizer(recado, 'Marque ao menos um ambiente.', 'erro'); return; }
+
+  const dados = {
+    semItensExtras: false,
+    observacao: '',
+    ambientes: marcados.map((a) => ({
+      nome: a.nome,
+      itens: a.itens.map((i) => ({
+        item: i, naoTenho: false, marca: '', largura: '', altura: '', prof: '', obs: ''
+      }))
+    }))
+  };
+
+  const botao = el('n-criar');
+  botao.disabled = true;
+  dizer(recado, 'Gerando...');
+
+  const { data, error } = await cliente().from('formularios').insert({
+    tipo: 'itens-extras',
+    loja: el('n-loja').value,
+    cliente: nome,
+    contrato: el('n-contrato').value.trim() || null,
+    dados: dados
+  }).select('id, token, cliente, contrato').single();
+
+  botao.disabled = false;
+
+  if (error) { dizer(recado, traduzir(error), 'erro'); return; }
+
+  recado.innerHTML = '';
+  recado.appendChild(cartaoLink(data));
+
+  el('n-cliente').value = '';
+  el('n-contrato').value = '';
+
+  carregar();
+}
+
+/* ------------------------------------------------------------
+   O recado pronto para o WhatsApp
+   ------------------------------------------------------------ */
+
+function cartaoLink(doc) {
+  const link = location.origin + '/itens-extras.html?t=' + doc.token;
+
+  const texto =
+    'Oi, ' + primeiroNome(doc.cliente) + '! Aqui é da Dalmóbile.\n\n' +
+    'Para o seu projeto encaixar certinho, precisamos das medidas dos ' +
+    'aparelhos que vão ficar junto dos móveis (geladeira, fogão, máquina de lavar).\n\n' +
+    'É rápido, dá para preencher pelo celular e salvar pela metade:\n' + link + '\n\n' +
+    'Qualquer dúvida é só me chamar por aqui.';
+
+  const caixa = document.createElement('div');
+  caixa.className = 'entrega';
+
+  const h = document.createElement('h3');
+  h.textContent = 'Link gerado';
+
+  const p = document.createElement('p');
+  p.className = 'recado';
+  p.textContent = texto;
+
+  const acoes = document.createElement('div');
+  acoes.className = 'acoes';
+
+  const bTexto = document.createElement('button');
+  bTexto.type = 'button';
+  bTexto.textContent = 'Copiar o recado';
+  bTexto.addEventListener('click', () => copiar(texto, bTexto, 'Copiar o recado'));
+
+  const bLink = document.createElement('button');
+  bLink.type = 'button';
+  bLink.className = 'claro';
+  bLink.textContent = 'Copiar só o link';
+  bLink.addEventListener('click', () => copiar(link, bLink, 'Copiar só o link'));
+
+  acoes.append(bTexto, bLink);
+  caixa.append(h, p, acoes);
+  return caixa;
+}
+
+async function copiar(texto, botao, original) {
+  let deu = false;
+  try { await navigator.clipboard.writeText(texto); deu = true; }
+  catch (e) {
+    try {
+      const a = document.createElement('textarea');
+      a.value = texto; a.style.position = 'fixed'; a.style.opacity = '0';
+      document.body.appendChild(a); a.select();
+      deu = document.execCommand('copy'); a.remove();
+    } catch (e2) {}
+  }
+  botao.textContent = deu ? 'Copiado' : 'Copie à mão acima';
+  setTimeout(() => { botao.textContent = original; }, 2000);
+}
+
+/* ------------------------------------------------------------
+   Lista
+   ------------------------------------------------------------ */
+
+async function carregar() {
+  const alvo = el('lista');
+  alvo.innerHTML = '<p class="msg centro"><span class="spinner"></span>Carregando...</p>';
+
+  /* Da visão, que não tem a coluna token. */
+  const { data, error } = await cliente()
+    .from('formularios_sem_token')
+    .select('id, tipo, loja, cliente, contrato, status, dados, autor, criado_em, atualizado_em, aberto_em, preenchido_em')
+    .eq('tipo', 'itens-extras')
+    .order('atualizado_em', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    alvo.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'msg erro';
+    p.textContent = traduzir(error);
+    alvo.appendChild(p);
+    return;
+  }
+
+  documentos = data || [];
+  alvo.innerHTML = '';
+
+  if (!documentos.length) {
+    const p = document.createElement('p');
+    p.className = 'msg centro';
+    p.textContent = 'Nenhum link gerado ainda.';
+    alvo.appendChild(p);
+    return;
+  }
+
+  documentos.forEach((d) => alvo.appendChild(cartaoDoc(d)));
+}
+
+function cartaoDoc(d) {
+  const cartao = document.createElement('div');
+  cartao.className = 'doc';
+
+  const cabeca = document.createElement('div');
+  cabeca.className = 'cabeca';
+
+  const nome = document.createElement('span');
+  nome.className = 'nome';
+  nome.textContent = d.cliente;
+  cabeca.append(nome, seloDe(d));
+
+  const sub = document.createElement('p');
+  sub.className = 'sub';
+  sub.textContent = [
+    d.contrato || null,
+    (LOJAS.find((l) => l.id === d.loja) || {}).nome,
+    resumoDeProgresso(d),
+    quando(d)
+  ].filter(Boolean).join(' · ');
+
+  const acoes = document.createElement('div');
+  acoes.className = 'acoes';
+  const gaveta = document.createElement('div');
+  gaveta.className = 'gaveta oculto';
+
+  acoes.appendChild(botao('copiar link', async (b) => {
+    b.disabled = true; b.textContent = 'buscando...';
+    const { data, error } = await cliente()
+      .from('formularios').select('token, cliente').eq('id', d.id).single();
+    b.disabled = false; b.textContent = 'copiar link';
+    if (error || !data) { alert('Não consegui pegar o link: ' + traduzir(error || {})); return; }
+
+    gaveta.innerHTML = '';
+    gaveta.appendChild(cartaoLink({ token: data.token, cliente: data.cliente }));
+    gaveta.classList.remove('oculto');
+  }));
+
+  acoes.appendChild(botao('ver respostas', () => {
+    if (!gaveta.classList.contains('oculto') && gaveta.dataset.tipo === 'resp') {
+      gaveta.classList.add('oculto'); gaveta.innerHTML = ''; return;
+    }
+    gaveta.innerHTML = '';
+    gaveta.dataset.tipo = 'resp';
+    gaveta.appendChild(verRespostas(d));
+    gaveta.classList.remove('oculto');
+  }));
+
+  acoes.appendChild(botao('baixar PDF', async (b) => {
+    const antes = b.textContent;
+    b.disabled = true;
+    b.textContent = 'montando...';
+
+    try {
+      const bytes = await PDF102.montar(d);
+      baixar(bytes, PDF102.nomeDoArquivo(d));
+    } catch (e) {
+      console.error(e);
+      alert('Não consegui montar o PDF: ' + (e.message || e) +
+            '\n\nConfira se Krub-Medium.ttf e Krub-Bold.ttf estão no servidor.');
+    } finally {
+      b.disabled = false;
+      b.textContent = antes;
+    }
+  }));
+
+  if (d.status !== 'assinado') {
+    acoes.appendChild(botao('cancelar link', async (b) => {
+      if (!confirm('Cancelar o link de ' + d.cliente + '?\n\n' +
+                   'O link para de funcionar na hora. O que ele já preencheu fica guardado.')) return;
+      b.disabled = true;
+      const { error } = await cliente()
+        .from('formularios').update({ status: 'cancelado' }).eq('id', d.id);
+      if (error) { alert(traduzir(error)); b.disabled = false; return; }
+      carregar();
+    }, true));
+  }
+
+  cartao.append(cabeca, sub, acoes, gaveta);
+  return cartao;
+}
+
+function seloDe(d) {
+  const s = document.createElement('span');
+
+  if (d.status === 'assinado')   { s.className = 'selo assinado';   s.textContent = 'assinado'; }
+  else if (d.status === 'preenchido') { s.className = 'selo preenchido'; s.textContent = 'preenchido'; }
+  else if (d.status === 'cancelado')  { s.className = 'selo';            s.textContent = 'cancelado'; }
+  else if (d.aberto_em)          { s.className = 'selo esperando';  s.textContent = 'abriu, não terminou'; }
+  else                           { s.className = 'selo aberto';     s.textContent = 'não abriu ainda'; }
+
+  return s;
+}
+
+function resumoDeProgresso(d) {
+  const dados = d.dados || {};
+  if (dados.semItensExtras) return 'sem itens extras';
+
+  let total = 0, ok = 0, links = 0;
+  (dados.ambientes || []).forEach((a) => (a.itens || []).forEach((i) => {
+    total++;
+    if (resolvido(i)) ok++;
+    if (porLink(i)) links++;
+  }));
+
+  if (!total) return null;
+
+  return ok + ' de ' + total + ' itens' +
+    (links ? ' · ' + links + (links === 1 ? ' por link' : ' por link') : '');
+}
+
+const temTodasAsMedidas = (i) =>
+  ['largura', 'altura', 'prof'].every((c) => String(i[c] || '').trim());
+
+/* Mesma regra da tela do cliente: link de loja fecha o item. O
+   trabalho de ler a ficha vira seu, e é melhor assim — medida de
+   cliente erra, e erro de medida só aparece na montagem. */
+function pareceLink(valor) {
+  const v = String(valor || '').trim();
+  if (!v || /\s/.test(v)) return false;
+  return /^https?:\/\//i.test(v) || /^[\w-]+(\.[\w-]+)+(\/|$)/.test(v);
+}
+
+const porLink   = (i) => !i.naoTenho && pareceLink(i.link);
+const resolvido = (i) => i.naoTenho || porLink(i) || temTodasAsMedidas(i);
+
+/* "magazineluiza.com.br/geladeira-brastemp/p/123" → o domínio,
+   que é o que cabe na linha e já diz de onde veio. */
+function dominio(url) {
+  const v = String(url || '').trim().replace(/^https?:\/\//i, '');
+  return v.split('/')[0].replace(/^www\./i, '') || v;
+}
+
+/* ------------------------------------------------------------
+   Respostas
+   ------------------------------------------------------------ */
+
+function verRespostas(d) {
+  const caixa = document.createElement('div');
+  caixa.className = 'resp';
+
+  const dados = d.dados || {};
+
+  if (dados.semItensExtras) {
+    const p = document.createElement('p');
+    p.className = 'msg';
+    p.textContent = 'O cliente declarou que não tem itens extras para informar.';
+    caixa.appendChild(p);
+    return caixa;
+  }
+
+  const ambientes = dados.ambientes || [];
+  if (!ambientes.length) {
+    const p = document.createElement('p');
+    p.className = 'msg';
+    p.textContent = 'Nada preenchido ainda.';
+    caixa.appendChild(p);
+    return caixa;
+  }
+
+  ambientes.forEach((a) => {
+    const h = document.createElement('h4');
+    h.textContent = a.nome;
+    caixa.appendChild(h);
+
+    const tabela = document.createElement('table');
+
+    (a.itens || []).forEach((i) => {
+      const tr = document.createElement('tr');
+
+      const td1 = document.createElement('td');
+      td1.textContent = i.item;
+
+      const td2 = document.createElement('td');
+
+      if (i.naoTenho) {
+        td2.className = 'nao';
+        td2.textContent = 'não tem';
+
+      } else if (porLink(i)) {
+        /* O item está resolvido, mas a conferência é sua. O link
+           fica clicável aqui para você abrir a ficha. */
+        td2.className = 'link';
+
+        const marca = document.createElement('span');
+        marca.textContent = i.marca ? i.marca + ' · ' : '';
+
+        const a = document.createElement('a');
+        a.href = /^https?:\/\//i.test(i.link) ? i.link : 'https://' + i.link;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = dominio(i.link);
+
+        const nota = document.createElement('span');
+        nota.className = 'conferir';
+        nota.textContent = temTodasAsMedidas(i)
+          ? ' · com medidas'
+          : ' · conferir medidas na ficha';
+
+        td2.append(marca, a, nota);
+
+      } else if (temTodasAsMedidas(i)) {
+        td2.textContent = [
+          i.marca || 'sem marca',
+          i.largura + ' × ' + i.altura + ' × ' + i.prof + ' cm',
+          i.obs || null
+        ].filter(Boolean).join(' · ');
+      } else {
+        const algo = [i.marca, i.largura, i.altura, i.prof].some((x) => String(x || '').trim());
+        td2.className = 'falta';
+        td2.textContent = algo ? 'incompleto: ' + resumoParcial(i) : 'não preencheu';
+      }
+
+      tr.append(td1, td2);
+      tabela.appendChild(tr);
+    });
+
+    caixa.appendChild(tabela);
+  });
+
+  if (dados.observacao) {
+    const h = document.createElement('h4');
+    h.textContent = 'Observação do cliente';
+    const p = document.createElement('p');
+    p.className = 'msg';
+    p.textContent = dados.observacao;
+    caixa.append(h, p);
+  }
+
+  return caixa;
+}
+
+function resumoParcial(i) {
+  const partes = [];
+  if (String(i.marca || '').trim()) partes.push(i.marca);
+  ['largura', 'altura', 'prof'].forEach((c) => {
+    if (String(i[c] || '').trim()) partes.push(c.charAt(0).toUpperCase() + ' ' + i[c]);
+  });
+  return partes.join(', ') || 'algo escrito';
+}
+
+/* ------------------------------------------------------------
+   Miudezas
+   ------------------------------------------------------------ */
+
+/* iPhone e iPad não fazem download forçado: abrem o arquivo, e
+   a pessoa salva pelo botão de compartilhar. */
+const EH_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function baixar(bytes, nome) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+
+  if (EH_IOS) {
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return;
+  }
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+function botao(texto, aoClicar, perigo) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  if (perigo) b.className = 'perigo';
+  b.textContent = texto;
+  b.addEventListener('click', () => aoClicar(b));
+  return b;
+}
+
+function quando(d) {
+  const iso = d.preenchido_em || d.aberto_em || d.criado_em;
+  if (!iso) return null;
+
+  const data = new Date(iso);
+  if (isNaN(data)) return null;
+
+  const dia = 86400000;
+  const so = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const diff = Math.round((so(new Date()) - so(data)) / dia);
+
+  const prefixo = d.preenchido_em ? 'preencheu ' : (d.aberto_em ? 'abriu ' : 'criado ');
+
+  if (diff <= 0) return prefixo + 'hoje';
+  if (diff === 1) return prefixo + 'ontem';
+  if (diff < 30) return prefixo + 'há ' + diff + ' dias';
+  return prefixo + 'em ' + data.toLocaleDateString('pt-BR');
+}
+
+function primeiroNome(nome) {
+  const limpo = String(nome || '').trim();
+  if (!limpo) return 'tudo bem';
+  const partes = limpo.split(/\s+/);
+  const e = partes.indexOf('e');
+  if (e > 0 && e < partes.length - 1) return partes.slice(0, e + 2).join(' ');
+  return partes[0];
+}
+
+function traduzir(error) {
+  const m = String((error && (error.message || error.hint)) || error);
+
+  if (/relation .*formularios.* does not exist|schema cache/i.test(m)) {
+    return 'A tabela de formulários ainda não existe. Rode o supabase-formularios.sql.';
+  }
+  if (/row-level security|violates row-level/i.test(m)) {
+    return 'Esse documento não é seu, então não dá para alterar.';
+  }
+  if (/JWT|not authenticated|session/i.test(m)) {
+    return 'Sua sessão expirou. Recarregue a página e entre de novo.';
+  }
+  if (/fetch|network/i.test(m)) {
+    return 'Sem conexão com o servidor. Verifique a internet.';
+  }
+  return m;
+}
+
+function dizer(alvo, texto, classe) {
+  alvo.innerHTML = '';
+  if (!texto) return;
+  const p = document.createElement('p');
+  p.className = 'msg' + (classe ? ' ' + classe : '');
+  p.style.marginTop = '14px';
+  p.textContent = texto;
+  alvo.appendChild(p);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Itens extras · Dalmóbile</title>
+<style>
+  :root {
+    --bg:      #f2f2f0;
+    --card:    #ffffff;
+    --ink:     #141618;
+    --ink-2:   #4a5054;
+    --muted:   #8a9094;
+    --line:    #e0e1df;
+    --line-2:  #c9cbc8;
+    --accent:  #141618;
+    --ok:      #1c6b3f;
+    --ok-bg:   #eef3ee;
+    --ok-line: #cfe0d2;
+    --erro:    #b3261e;
+    --aviso:   #8a4b12;
+    --aviso-bg:#fdf1e7;
+    --radius:  14px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 560px; margin: 0 auto;
+    padding: 0 16px calc(96px + env(safe-area-inset-bottom));
+  }
+
+  /* ---------- Topo ---------- */
+
+  .topo {
+    position: relative; padding: 26px 0 20px;
+    border-bottom: 1px solid var(--line); margin-bottom: 20px;
+  }
+
+  .tracos {
+    position: absolute; top: 24px; right: 0;
+    display: flex; gap: 5px; align-items: flex-start; opacity: .5;
+  }
+  .tracos i { display: block; width: 1px; background: var(--line-2); }
+  .tracos i:nth-child(1) { height: 22px; }
+  .tracos i:nth-child(2) { height: 38px; }
+  .tracos i:nth-child(3) { height: 14px; }
+
+  .marca { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+  .assinatura {
+    margin: 3px 0 0; font-size: 10px; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------- Abertura ---------- */
+
+  .abertura { margin-bottom: 22px; }
+  .abertura h1 {
+    margin: 0 0 8px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+  }
+  .abertura p { margin: 0 0 10px; font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+  .abertura .quem {
+    font-size: 13px; color: var(--muted); padding-top: 10px;
+    border-top: 1px solid var(--line); margin-top: 14px;
+  }
+
+  /* ---------- Não tenho nada ---------- */
+
+  .atalho {
+    display: flex; gap: 11px; align-items: flex-start;
+    padding: 14px; margin-bottom: 22px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); cursor: pointer; user-select: none;
+  }
+  .atalho input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--accent); flex: 0 0 auto; }
+  .atalho b { display: block; font-size: 14px; font-weight: 600; }
+  .atalho small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+
+  /* ---------- Ambiente ---------- */
+
+  .ambiente { margin-bottom: 26px; }
+
+  .ambiente > h2 {
+    margin: 0 0 10px; font-size: 11px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  }
+
+  .item {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 14px 15px; margin-bottom: 9px;
+  }
+  .item.vazio   { border-style: dashed; }
+  .item.nao     { background: var(--bg); border-style: solid; opacity: .72; }
+  .item.pronto  { border-color: var(--ok-line); }
+
+  .item .linha1 { display: flex; align-items: center; gap: 10px; }
+  .item .nome { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; }
+
+  .item .naotenho {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+    white-space: nowrap;
+  }
+  .item .naotenho input { width: 16px; height: 16px; margin: 0; accent-color: var(--muted); }
+
+  .item .campos { margin-top: 12px; }
+  .item.nao .campos { display: none; }
+
+  .item label {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 4px;
+  }
+
+  input[type="text"] {
+    width: 100%; padding: 11px 12px;
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 16px; font-family: inherit; color: var(--ink);
+    background: var(--card);
+  }
+  input:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(20,22,24,.07);
+  }
+
+  .medidas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .medidas input { text-align: center; }
+
+  .depois { margin-top: 10px; }
+
+  .dica { display: block; margin-top: 5px; font-size: 12px; line-height: 1.4; }
+  .dica.boa  { color: var(--ok); }
+  .dica.ruim { color: var(--aviso); }
+
+  .remover {
+    margin-top: 10px; background: none; border: 0; padding: 0;
+    font-family: inherit; font-size: 12px; color: var(--muted);
+    text-decoration: underline; cursor: pointer;
+  }
+
+  .mais {
+    width: 100%; padding: 12px; margin-top: 2px;
+    background: none; border: 1px dashed var(--line-2); border-radius: 10px;
+    font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2);
+    cursor: pointer;
+  }
+  .mais:hover { border-color: var(--muted); color: var(--ink); }
+
+  /* ---------- Observação final ---------- */
+
+  .obs-geral { margin-bottom: 26px; }
+  .obs-geral label {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 10px;
+  }
+  .obs-geral textarea {
+    width: 100%; min-height: 90px; padding: 12px;
+    border: 1px solid var(--line); border-radius: 9px; resize: vertical;
+    font-size: 16px; font-family: inherit; color: var(--ink); background: var(--card);
+  }
+  .obs-geral textarea:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(20,22,24,.07);
+  }
+
+  /* ---------- Barra de baixo ---------- */
+
+  .barra {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: rgba(242,242,240,.96);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--line);
+    padding: 11px 16px calc(11px + env(safe-area-inset-bottom));
+  }
+  .barra .dentro { max-width: 560px; margin: 0 auto; }
+
+  .progresso {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; color: var(--muted); margin-bottom: 8px;
+  }
+  .progresso .salvo { font-weight: 600; }
+  .progresso .salvo.erro { color: var(--erro); }
+  .progresso .salvo.ok  { color: var(--ok); }
+
+  .botao {
+    width: 100%; padding: 15px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  .botao:disabled { opacity: .4; cursor: default; }
+
+  /* ---------- Telas inteiras ---------- */
+
+  .tela {
+    min-height: 100svh; display: flex; align-items: center; justify-content: center;
+    padding: 28px 20px; text-align: center;
+  }
+  .tela .caixa { max-width: 380px; }
+  .tela h2 { margin: 0 0 8px; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; }
+  .tela p  { margin: 0 0 6px; font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+  .tela .selo {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 46px; height: 46px; border-radius: 50%; margin-bottom: 14px;
+    background: var(--ok-bg); border: 1px solid var(--ok-line);
+  }
+  .tela .selo.ruim { background: var(--aviso-bg); border-color: #f0cfae; }
+
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(20,22,24,.15);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: gira .7s linear infinite; display: inline-block;
+  }
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  .oculto { display: none !important; }
+
+  .rodape {
+    margin-top: 30px; text-align: center; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="tela" id="carregando">
+  <div class="caixa">
+    <span class="spinner"></span>
+    <p style="margin-top:14px">Abrindo o seu formulário...</p>
+  </div>
+</div>
+
+<div class="tela oculto" id="problema">
+  <div class="caixa">
+    <span class="selo ruim">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M10 5.5v5M10 14h.01" stroke="#8a4b12" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <h2 id="problema-titulo">Não consegui abrir</h2>
+    <p id="problema-texto"></p>
+  </div>
+</div>
+
+<div class="tela oculto" id="pronto">
+  <div class="caixa">
+    <span class="selo">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M5 10.5l3.5 3.5L15 7" stroke="#1c6b3f" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <h2>Recebemos, obrigado!</h2>
+    <p id="pronto-texto">Suas informações chegaram para a nossa equipe.</p>
+    <p style="color:var(--muted);font-size:13px;margin-top:12px">
+      Se precisar corrigir alguma coisa, é só falar com o seu consultor.
+    </p>
+  </div>
+</div>
+
+<div class="wrap oculto" id="formulario">
+
+  <header class="topo">
+    <div class="tracos"><i></i><i></i><i></i></div>
+    <h1 class="marca">Dalmóbile <span>· Itens extras</span></h1>
+    <p class="assinatura">Crie seu mundo</p>
+  </header>
+
+  <section class="abertura">
+    <h1 id="saudacao">Olá!</h1>
+    <p>Para o seu projeto encaixar certinho, precisamos saber as medidas
+       dos aparelhos que vão conviver com os móveis — geladeira, fogão,
+       máquina de lavar, televisão.</p>
+    <p><strong>Se você tem o link do aparelho na loja, cole o link e pronto</strong>
+       — a gente tira as medidas da ficha do fabricante, e você não precisa
+       pegar a trena.</p>
+    <p>Preferindo medir, <strong>as medidas são em centímetros</strong> e
+       costumam estar no manual ou numa etiqueta atrás do aparelho.</p>
+    <p style="color:var(--muted);font-size:13px">
+      Pode preencher aos poucos: o que você escrever fica salvo,
+      e este mesmo link continua de onde parou.</p>
+    <p class="quem" id="quem"></p>
+  </section>
+
+  <label class="atalho" for="sem-itens">
+    <input type="checkbox" id="sem-itens">
+    <span>
+      <b>Não tenho itens extras para informar</b>
+      <small>Marque só se nenhum aparelho vai ficar junto dos móveis
+              deste projeto.</small>
+    </span>
+  </label>
+
+  <div id="ambientes"></div>
+
+  <div class="obs-geral" id="bloco-obs">
+    <label for="obs">Mais alguma coisa que devemos saber?</label>
+    <textarea id="obs" placeholder="Opcional. Ex.: a geladeira nova chega em dezembro."></textarea>
+  </div>
+
+  <p class="rodape">Dalmóbile · Crie seu mundo</p>
+</div>
+
+<div class="barra oculto" id="barra">
+  <div class="dentro">
+    <div class="progresso">
+      <span id="conta"></span>
+      <span class="salvo" id="salvo"></span>
+    </div>
+    <button class="botao" id="enviar" type="button">Enviar para a loja</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ITENS EXTRAS — a tela do cliente
+   ------------------------------------------------------------
+   Esta página não fala com o banco: ela só conhece /api/formulario
+   e o token que veio no link. Não tem login, não tem lista, não
+   alcança nada além do próprio formulário.
+
+   DUAS DECISÕES QUE PARECEM DETALHE E NÃO SÃO
+
+   1. Cada item tem "não tenho". Sem isso, campo vazio quer dizer
+      duas coisas opostas — "não tenho forno" e "esqueci de
+      preencher o forno" — e a fábrica não tem como saber qual.
+
+   2. O que ele digita fica no navegador também. Medir geladeira
+      dá vontade de desistir no meio; se a conexão cair no vão da
+      cozinha, o trabalho não pode ir junto.
+   ============================================================ */
+
+'use strict';
+
+const ROTA = '/api/formulario';
+const el = (id) => document.getElementById(id);
+
+const TOKEN = (new URLSearchParams(location.search).get('t') || '').trim().toLowerCase();
+const CHAVE_LOCAL = 'dalmobile:itens-extras:' + TOKEN;
+
+let ficha = null;      // o que veio do servidor
+let dados = null;      // o que está na tela
+let salvando = false;
+let sujo = false;
+
+/* ------------------------------------------------------------
+   Começo
+   ------------------------------------------------------------ */
+
+(async function iniciar() {
+  if (!/^[0-9a-f]{32}$/.test(TOKEN)) {
+    return problema('Link incompleto',
+      'Parece que o endereço foi cortado ao copiar. Peça para o seu ' +
+      'consultor mandar o link de novo, inteiro.');
+  }
+
+  let resposta;
+  try {
+    resposta = await chamar('abrir');
+  } catch (e) {
+    return problema(e.titulo || 'Não consegui abrir', e.message);
+  }
+
+  ficha = resposta.formulario;
+
+  if (ficha.assinado) {
+    el('carregando').classList.add('oculto');
+    el('pronto').classList.remove('oculto');
+    el('pronto-texto').textContent =
+      'Este formulário já foi enviado e assinado. Não precisa fazer mais nada.';
+    return;
+  }
+
+  dados = juntarComOLocal(ficha.dados);
+
+  desenhar();
+
+  el('carregando').classList.add('oculto');
+  el('formulario').classList.remove('oculto');
+  el('barra').classList.remove('oculto');
+
+  if (ficha.status === 'preenchido') {
+    marcarSalvo('já enviado — dá para corrigir', 'ok');
+  }
+})();
+
+/* O rascunho local só entra se for MAIS NOVO que o do servidor.
+   Assim, duas telas abertas não desfazem uma à outra. */
+function juntarComOLocal(doServidor) {
+  const base = (doServidor && doServidor.ambientes) ? doServidor : { ambientes: [] };
+
+  let local = null;
+  try { local = JSON.parse(localStorage.getItem(CHAVE_LOCAL) || 'null'); } catch (e) {}
+
+  if (local && local.em && ficha.atualizado_em &&
+      new Date(local.em) > new Date(ficha.atualizado_em) && local.dados) {
+    return local.dados;
+  }
+  return base;
+}
+
+/* ------------------------------------------------------------
+   Desenho
+   ------------------------------------------------------------ */
+
+function desenhar() {
+  el('saudacao').textContent = 'Olá, ' + primeiroNome(ficha.cliente) + '!';
+
+  el('quem').textContent =
+    'Projeto de ' + ficha.cliente +
+    (ficha.contrato ? ' · contrato ' + ficha.contrato : '');
+
+  el('sem-itens').checked = dados.semItensExtras === true;
+  el('obs').value = dados.observacao || '';
+
+  desenharAmbientes();
+  aplicarSemItens();
+  atualizarConta();
+}
+
+function desenharAmbientes() {
+  const alvo = el('ambientes');
+  alvo.innerHTML = '';
+
+  (dados.ambientes || []).forEach((amb, ia) => {
+    const bloco = document.createElement('section');
+    bloco.className = 'ambiente';
+
+    const titulo = document.createElement('h2');
+    titulo.textContent = amb.nome;
+    bloco.appendChild(titulo);
+
+    (amb.itens || []).forEach((item, ii) => {
+      bloco.appendChild(cartaoItem(amb, item, ia, ii));
+    });
+
+    const mais = document.createElement('button');
+    mais.type = 'button';
+    mais.className = 'mais';
+    mais.textContent = '+ outro item em ' + amb.nome.toLowerCase();
+    mais.addEventListener('click', () => {
+      const nome = (prompt('Qual item? Ex.: Cafeteira, Forno elétrico') || '').trim();
+      if (!nome) return;
+      amb.itens.push({ item: nome, extra: true, naoTenho: false,
+                       marca: '', largura: '', altura: '', prof: '', obs: '' });
+      marcarSujo();
+      desenharAmbientes();
+      atualizarConta();
+    });
+    bloco.appendChild(mais);
+
+    alvo.appendChild(bloco);
+  });
+}
+
+function cartaoItem(amb, item, ia, ii) {
+  const cartao = document.createElement('div');
+  cartao.className = 'item ' + estadoDoItem(item);
+
+  /* --- nome + não tenho --- */
+  const linha1 = document.createElement('div');
+  linha1.className = 'linha1';
+
+  const nome = document.createElement('span');
+  nome.className = 'nome';
+  nome.textContent = item.item;
+
+  const rotulo = document.createElement('label');
+  rotulo.className = 'naotenho';
+
+  const caixa = document.createElement('input');
+  caixa.type = 'checkbox';
+  caixa.checked = item.naoTenho === true;
+  caixa.addEventListener('change', () => {
+    item.naoTenho = caixa.checked;
+    if (item.naoTenho) {
+      item.marca = ''; item.largura = ''; item.altura = ''; item.prof = ''; item.obs = '';
+    }
+    marcarSujo();
+    desenharAmbientes();
+    atualizarConta();
+  });
+
+  rotulo.append(caixa, document.createTextNode('não tenho'));
+  linha1.append(nome, rotulo);
+  cartao.appendChild(linha1);
+
+  /* --- campos --- */
+  const campos = document.createElement('div');
+  campos.className = 'campos';
+
+  campos.appendChild(campo('Modelo ou marca', item, 'marca',
+    'Ex.: Brastemp BRM54, ou "ainda vou comprar"'));
+
+  /* O caminho curto. Medida de cliente erra muito — porta, alça,
+     serpentina de trás —, e medida errada é pior que medida
+     faltando, porque o projeto é desenhado em cima dela. A ficha
+     do fabricante é fonte melhor que a trena. */
+  const bloco = campo('Link do produto na loja', item, 'link',
+    'Cole aqui e não precisa medir');
+  bloco.className = 'depois';
+
+  const dica = document.createElement('span');
+  dica.className = 'dica';
+  bloco.appendChild(dica);
+
+  const avisar = () => {
+    const v = String(item.link || '').trim();
+    if (!v)                  { dica.textContent = ''; dica.className = 'dica'; }
+    else if (pareceLink(v))  { dica.textContent = 'Com o link, não precisa preencher as medidas.';
+                               dica.className = 'dica boa'; }
+    else                     { dica.textContent = 'Isso não parece um link — confira se copiou inteiro.';
+                               dica.className = 'dica ruim'; }
+  };
+
+  bloco.querySelector('input').addEventListener('input', avisar);
+  avisar();
+
+  campos.appendChild(bloco);
+
+  const medidas = document.createElement('div');
+  medidas.className = 'medidas';
+  medidas.appendChild(campo('Largura', item, 'largura', 'cm', true));
+  medidas.appendChild(campo('Altura',  item, 'altura',  'cm', true));
+  medidas.appendChild(campo('Prof.',   item, 'prof',    'cm', true));
+  campos.appendChild(medidas);
+
+  const obs = campo('Observação', item, 'obs', 'Opcional');
+  obs.className = 'depois';
+  campos.appendChild(obs);
+
+  if (item.extra) {
+    const remover = document.createElement('button');
+    remover.type = 'button';
+    remover.className = 'remover';
+    remover.textContent = 'remover este item';
+    remover.addEventListener('click', () => {
+      amb.itens.splice(ii, 1);
+      marcarSujo();
+      desenharAmbientes();
+      atualizarConta();
+    });
+    campos.appendChild(remover);
+  }
+
+  cartao.appendChild(campos);
+  return cartao;
+}
+
+function campo(rotulo, item, chave, dica, numero) {
+  const bloco = document.createElement('div');
+
+  const lab = document.createElement('label');
+  lab.textContent = rotulo;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = item[chave] || '';
+  input.placeholder = dica || '';
+
+  if (numero) {
+    /* inputmode em vez de type="number": o teclado numérico
+       aparece igual, e não vem com as setinhas nem recusa
+       vírgula, que é como a gente escreve medida aqui. */
+    input.inputMode = 'decimal';
+    input.autocomplete = 'off';
+  }
+
+  input.addEventListener('input', () => {
+    item[chave] = input.value;
+    marcarSujo();
+    atualizarConta();
+  });
+
+  input.addEventListener('blur', () => {
+    const cartao = input.closest('.item');
+    if (cartao) cartao.className = 'item ' + estadoDoItem(item);
+    salvar();
+  });
+
+  bloco.append(lab, input);
+  return bloco;
+}
+
+/* Um link de loja fecha o item sozinho: a ficha do fabricante
+   responde o que a trena responderia, com menos chance de erro.
+   Texto que não parece link não fecha — e a tela diz isso, em
+   vez de deixar a pessoa achar que resolveu. */
+function pareceLink(valor) {
+  const v = String(valor || '').trim();
+  if (!v || /\s/.test(v)) return false;
+  return /^https?:\/\//i.test(v) || /^[\w-]+(\.[\w-]+)+(\/|$)/.test(v);
+}
+
+function estadoDoItem(item) {
+  if (item.naoTenho) return 'nao';
+
+  const algum = ['marca', 'link', 'largura', 'altura', 'prof', 'obs']
+    .some((c) => String(item[c] || '').trim());
+  if (!algum) return 'vazio';
+
+  if (pareceLink(item.link)) return 'pronto';
+
+  const medidasOk = ['largura', 'altura', 'prof']
+    .every((c) => String(item[c] || '').trim());
+  return medidasOk ? 'pronto' : '';
+}
+
+/* ------------------------------------------------------------
+   "Não tenho itens extras"
+   ------------------------------------------------------------ */
+
+el('sem-itens').addEventListener('change', () => {
+  dados.semItensExtras = el('sem-itens').checked;
+  marcarSujo();
+  aplicarSemItens();
+  atualizarConta();
+  salvar();
+});
+
+function aplicarSemItens() {
+  const vazio = dados.semItensExtras === true;
+  el('ambientes').classList.toggle('oculto', vazio);
+  el('bloco-obs').classList.toggle('oculto', vazio);
+}
+
+el('obs').addEventListener('input', () => {
+  dados.observacao = el('obs').value;
+  marcarSujo();
+});
+el('obs').addEventListener('blur', salvar);
+
+/* ------------------------------------------------------------
+   Contagem
+   ------------------------------------------------------------ */
+
+function atualizarConta() {
+  if (dados.semItensExtras) {
+    el('conta').textContent = 'Sem itens extras';
+    el('enviar').disabled = false;
+    return;
+  }
+
+  let total = 0, resolvidos = 0;
+
+  (dados.ambientes || []).forEach((a) => (a.itens || []).forEach((i) => {
+    total++;
+    if (i.naoTenho || estadoDoItem(i) === 'pronto') resolvidos++;
+  }));
+
+  el('conta').textContent = total
+    ? resolvidos + ' de ' + total + ' itens resolvidos'
+    : 'Nenhum item na lista';
+
+  el('enviar').disabled = false;
+}
+
+/* ------------------------------------------------------------
+   Salvar
+   ------------------------------------------------------------
+   Grava no navegador na hora e no servidor com folga. Digitar
+   medida é rápido; mandar um pedido por tecla seria desperdício
+   e deixaria a tela travada no celular antigo.
+   ------------------------------------------------------------ */
+
+let relogio = null;
+
+function marcarSujo() {
+  sujo = true;
+  guardarLocal();
+  marcarSalvo('não salvo', '');
+
+  clearTimeout(relogio);
+  relogio = setTimeout(salvar, 1500);
+}
+
+function guardarLocal() {
+  try {
+    localStorage.setItem(CHAVE_LOCAL,
+      JSON.stringify({ em: new Date().toISOString(), dados: dados }));
+  } catch (e) {}
+}
+
+async function salvar() {
+  clearTimeout(relogio);
+  if (!sujo || salvando || !ficha || ficha.assinado) return;
+
+  salvando = true;
+  marcarSalvo('salvando...', '');
+
+  try {
+    await chamar('salvar', { dados: dados });
+    sujo = false;
+    marcarSalvo('salvo', 'ok');
+  } catch (e) {
+    /* Não limpa o sujo: a próxima tentativa manda tudo de novo,
+       e o rascunho continua no navegador. */
+    marcarSalvo('sem conexão — vou tentar de novo', 'erro');
+    clearTimeout(relogio);
+    relogio = setTimeout(salvar, 6000);
+  } finally {
+    salvando = false;
+  }
+}
+
+function marcarSalvo(texto, classe) {
+  const n = el('salvo');
+  n.textContent = texto;
+  n.className = 'salvo' + (classe ? ' ' + classe : '');
+}
+
+/* Trocar de aplicativo no celular é o momento clássico de perder
+   o que foi digitado. Salva ao sair da tela. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { guardarLocal(); salvar(); }
+});
+window.addEventListener('pagehide', guardarLocal);
+
+window.addEventListener('beforeunload', (ev) => {
+  if (sujo) { ev.preventDefault(); ev.returnValue = ''; }
+});
+
+/* ------------------------------------------------------------
+   Enviar
+   ------------------------------------------------------------ */
+
+el('enviar').addEventListener('click', async () => {
+  const faltando = contarFaltando();
+
+  if (faltando && !confirm(
+    faltando === 1
+      ? 'Ainda falta 1 item sem medida nem a marca "não tenho".\n\nEnviar assim mesmo?'
+      : 'Ainda faltam ' + faltando + ' itens sem medida nem a marca "não tenho".' +
+        '\n\nEnviar assim mesmo? Você pode voltar neste link depois e completar.'
+  )) return;
+
+  const botao = el('enviar');
+  botao.disabled = true;
+  botao.textContent = 'Enviando...';
+
+  try {
+    await chamar('finalizar', { dados: dados });
+    sujo = false;
+    try { localStorage.removeItem(CHAVE_LOCAL); } catch (e) {}
+
+    el('formulario').classList.add('oculto');
+    el('barra').classList.add('oculto');
+    el('pronto').classList.remove('oculto');
+
+  } catch (e) {
+    alert(e.message);
+    botao.disabled = false;
+    botao.textContent = 'Enviar para a loja';
+  }
+});
+
+function contarFaltando() {
+  if (dados.semItensExtras) return 0;
+  let n = 0;
+  (dados.ambientes || []).forEach((a) => (a.itens || []).forEach((i) => {
+    if (!i.naoTenho && estadoDoItem(i) !== 'pronto') n++;
+  }));
+  return n;
+}
+
+/* ------------------------------------------------------------
+   Conversa com o servidor
+   ------------------------------------------------------------ */
+
+async function chamar(acao, extra) {
+  let r;
+  try {
+    r = await fetch(ROTA, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ acao: acao, token: TOKEN }, extra || {}))
+    });
+  } catch (e) {
+    const erro = new Error('Sem conexão com a internet. Verifique e tente de novo.');
+    erro.titulo = 'Sem conexão';
+    throw erro;
+  }
+
+  const texto = await r.text();
+  let json = null;
+  if (texto) { try { json = JSON.parse(texto); } catch (e) {} }
+
+  if (!r.ok) {
+    const erro = new Error((json && json.erro) ||
+      'Não consegui falar com a loja agora. Tente de novo em instantes.');
+    if (r.status === 404) erro.titulo = 'Link não encontrado';
+    if (r.status === 410) erro.titulo = 'Link cancelado';
+    throw erro;
+  }
+
+  return json || {};
+}
+
+/* ------------------------------------------------------------
+   Problemas
+   ------------------------------------------------------------ */
+
+function problema(titulo, texto) {
+  el('carregando').classList.add('oculto');
+  el('formulario').classList.add('oculto');
+  el('barra').classList.add('oculto');
+  el('problema-titulo').textContent = titulo;
+  el('problema-texto').textContent = texto;
+  el('problema').classList.remove('oculto');
+}
+
+function primeiroNome(nome) {
+  const limpo = String(nome || '').trim();
+  if (!limpo) return 'tudo bem';
+  /* "Marina e Rafael Toledo" → "Marina e Rafael" */
+  const partes = limpo.split(/\s+/);
+  const e = partes.indexOf('e');
+  if (e > 0 && e < partes.length - 1) return partes.slice(0, e + 2).join(' ');
+  return partes[0];
+}
+</script>
+
+</body>
+</html>

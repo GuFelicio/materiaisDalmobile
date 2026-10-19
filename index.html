@@ -672,6 +672,20 @@ const CATALOGO = [
   },
 
   {
+    /* Material de página própria. Gera o link que vai para o
+       cliente preencher no celular, e acompanha o que voltou. */
+    id: 'itens-extras',
+    nome: 'Itens extras do cliente',
+    descricao: 'Manda um link para o cliente informar marca e medidas da geladeira, do fogão e dos outros aparelhos.',
+    icone: 'regua',
+    formato: 'link',
+    pagina: 'formularios.html',
+    disponivel: true,
+    endpoints: {},
+    campos: []
+  },
+
+  {
     id: 'confirmacao',
     nome: 'Confirmação de agendamento',
     descricao: 'Ao confirmar a medição, apresentação ou montagem, envie este card para o cliente.',
@@ -879,7 +893,8 @@ const ICONES = {
   estrela:    '<path d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4L5.5 17l.9-5L2.8 8.3l5-.7z"/>',
   impressora: '<path d="M6 8V3h8v5"/><path d="M4 8h12v6H4z"/><path d="M6 12h8v5H6z"/>',
   deck:       '<path d="M3 4h14v10H3z"/><path d="M7 17h6M10 14v3"/>',
-  cifrao:     '<path d="M10 2.5v15"/><path d="M13.5 6.2C13.5 4.7 12 3.8 10 3.8S6.5 4.7 6.5 6.4c0 4 7 2.3 7 6.4 0 1.8-1.6 2.7-3.5 2.7s-3.5-.9-3.5-2.6"/>'
+  cifrao:     '<path d="M10 2.5v15"/><path d="M13.5 6.2C13.5 4.7 12 3.8 10 3.8S6.5 4.7 6.5 6.4c0 4 7 2.3 7 6.4 0 1.8-1.6 2.7-3.5 2.7s-3.5-.9-3.5-2.6"/>',
+  regua:      '<path d="M2.5 7h15v6h-15z"/><path d="M6 7v2.5M8.5 7v1.5M11 7v2.5M13.5 7v1.5M16 7v2.5"/>'
 };
 
 function svg(nome) {

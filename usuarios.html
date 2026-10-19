@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Contas · Central de Peças</title>
+<style>
+  :root {
+    --bg:      #f2f2f0;
+    --card:    #ffffff;
+    --ink:     #141618;
+    --ink-2:   #4a5054;
+    --muted:   #8a9094;
+    --line:    #e0e1df;
+    --line-2:  #c9cbc8;
+    --accent:  #141618;
+    --ok:      #1c6b3f;
+    --erro:    #b3261e;
+    --radius:  14px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px 56px; }
+
+  /* ---------- Cabeçalho ---------- */
+
+  .topo {
+    position: relative;
+    padding: 28px 0 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+
+  .tracos {
+    position: absolute; top: 26px; right: 0;
+    display: flex; gap: 5px; align-items: flex-start;
+    opacity: .5; pointer-events: none;
+  }
+  .tracos i { display: block; width: 1px; background: var(--line-2); }
+  .tracos i:nth-child(1) { height: 22px; }
+  .tracos i:nth-child(2) { height: 38px; }
+  .tracos i:nth-child(3) { height: 14px; }
+
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+
+  .assinatura {
+    margin: 3px 0 0; font-size: 10px; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+
+  .voltar {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: none; border: 0; padding: 0; margin-bottom: 16px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--ink-2); cursor: pointer; text-decoration: none;
+  }
+
+  /* ---------- Blocos ---------- */
+
+  .painel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px;
+    margin-bottom: 26px;
+  }
+
+  .painel > h2 { margin: 0 0 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+  .painel > p.desc { margin: 0 0 20px; font-size: 13px; color: var(--ink-2); }
+
+  .seccao-titulo {
+    font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 12px;
+  }
+
+  /* ---------- Campos ---------- */
+
+  .campo { margin-bottom: 15px; }
+  .campo > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .campo .nota {
+    display: block; font-size: 12px; font-weight: 400; color: var(--muted);
+    margin: -2px 0 6px;
+  }
+
+  input[type="text"], input[type="email"], select {
+    width: 100%; padding: 12px 13px;
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 16px; font-family: inherit; color: var(--ink);
+    background: var(--card); appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath fill='none' stroke='%238a9094' stroke-width='1.6' d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center;
+    padding-right: 36px; cursor: pointer;
+  }
+
+  input:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(20,22,24,.07);
+  }
+
+  .com-botao { display: flex; gap: 8px; }
+  .com-botao input { flex: 1; min-width: 0; }
+  .com-botao button {
+    flex: 0 0 auto; padding: 0 14px; border-radius: 9px;
+    border: 1px solid var(--line-2); background: none;
+    font-size: 13px; font-weight: 600; font-family: inherit;
+    color: var(--ink-2); cursor: pointer; white-space: nowrap;
+  }
+  .com-botao button:hover { border-color: var(--accent); color: var(--ink); }
+
+  .toggle {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+    padding: 13px 14px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+    font-size: 14px; font-weight: 600; cursor: pointer; user-select: none;
+  }
+  .toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+  .botao {
+    width: 100%; padding: 15px; border: 0; border-radius: 9px;
+    background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 600; font-family: inherit;
+    cursor: pointer; margin-top: 6px;
+  }
+  .botao:disabled { opacity: .45; cursor: default; }
+
+  /* ---------- Entrega da senha ---------- */
+
+  .entrega {
+    margin-top: 18px; padding: 16px;
+    background: #eef3ee; border: 1px solid #cfe0d2; border-radius: 10px;
+  }
+  .entrega h3 {
+    margin: 0 0 10px; font-size: 14px; font-weight: 700; color: #2c5137;
+  }
+  .entrega .par {
+    display: flex; justify-content: space-between; gap: 10px;
+    font-size: 13px; padding: 5px 0; border-top: 1px solid #d9e5db;
+  }
+  .entrega .par:first-of-type { border-top: 0; }
+  .entrega .par b { font-weight: 600; color: #2c5137; }
+  .entrega .par span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+  .entrega .recado {
+    margin: 12px 0 0; padding: 11px 12px; background: #fff;
+    border: 1px solid #d9e5db; border-radius: 8px;
+    font-size: 13px; line-height: 1.5; color: var(--ink-2);
+    white-space: pre-wrap;
+  }
+  .entrega .acoes { display: flex; gap: 8px; margin-top: 12px; }
+  .entrega .acoes button {
+    flex: 1; padding: 11px; border-radius: 9px; border: 0;
+    background: #2c5137; color: #fff;
+    font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  .entrega .acoes button.claro {
+    background: none; color: #2c5137; border: 1px solid #cfe0d2;
+  }
+  .entrega .aviso { margin: 10px 0 0; font-size: 12px; color: #8a4b12; }
+
+  /* ---------- Lista de contas ---------- */
+
+  .conta {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 15px 16px; margin-bottom: 10px;
+  }
+
+  .conta .cabeca { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .conta .nome { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .selo {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+    border: 1px solid var(--line-2); color: var(--muted);
+  }
+  .selo.admin     { background: #eef3ee; border-color: #cfe0d2; color: #2c5137; }
+  .selo.gerente   { background: #eef1f5; border-color: #ccd6e0; color: #2c4151; }
+  .selo.bloqueado { background: #fdf1e7; border-color: #f0cfae; color: #8a4b12; }
+
+  .conta .acoes a.ir-cargos {
+    padding: 6px 10px; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    text-decoration: none; white-space: nowrap;
+  }
+  .conta .acoes a.ir-cargos:hover { border-color: var(--line-2); color: var(--ink); }
+  .selo.eu        { background: var(--bg); color: var(--ink-2); }
+
+  .conta .sub {
+    margin: 3px 0 0; font-size: 12px; color: var(--muted);
+    line-height: 1.45; word-break: break-word;
+  }
+
+  .conta .acoes {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px;
+    padding-top: 11px; border-top: 1px solid var(--line);
+  }
+  .conta .acoes button {
+    padding: 6px 10px; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: 12px; font-weight: 600; font-family: inherit;
+    color: var(--ink-2); cursor: pointer;
+  }
+  .conta .acoes button:hover { border-color: var(--line-2); color: var(--ink); }
+  .conta .acoes button.perigo { color: var(--erro); }
+  .conta .acoes button:disabled { opacity: .4; cursor: default; }
+
+  .conta .gaveta {
+    margin-top: 12px; padding: 13px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 9px;
+  }
+  .conta .gaveta label {
+    display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px;
+  }
+  .conta .gaveta .dupla { display: flex; gap: 8px; margin-top: 10px; }
+  .conta .gaveta .dupla button {
+    flex: 1; padding: 10px; border-radius: 8px; border: 0;
+    font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    background: var(--accent); color: #fff;
+  }
+  .conta .gaveta .dupla button.claro {
+    background: none; color: var(--ink-2); border: 1px solid var(--line-2);
+  }
+
+  /* ---------- Avisos ---------- */
+
+  .msg { font-size: 14px; color: var(--ink-2); margin: 0; }
+  .msg.erro { color: var(--erro); font-weight: 500; }
+  .msg.ok   { color: var(--ok); }
+  .msg.centro { text-align: center; }
+
+  .muro {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 28px 22px; text-align: center;
+  }
+  .muro h2 { margin: 0 0 6px; font-size: 17px; font-weight: 700; }
+  .muro p { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(20,22,24,.15); border-top-color: var(--accent);
+    border-radius: 50%; animation: gira .7s linear infinite;
+    display: inline-block; vertical-align: -3px; margin-right: 8px;
+  }
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  .oculto { display: none !important; }
+
+  .rodape {
+    margin-top: 32px; text-align: center; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+</style>
+<!-- Nasce escondida; só aparece quando o auth.js confirma a sessão. -->
+<style id="trava-entrada">html { visibility: hidden; }</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topo">
+    <div class="tracos"><i></i><i></i><i></i></div>
+    <h1 class="marca">Contas <span>· Central de Peças</span></h1>
+    <p class="assinatura">Uso do administrador</p>
+  </header>
+
+  <a class="voltar" href="index.html">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Todos os materiais
+  </a>
+
+  <div id="carregando">
+    <p class="msg centro"><span class="spinner"></span>Conferindo o seu acesso...</p>
+  </div>
+
+  <div id="barrado" class="muro oculto">
+    <h2>Esta área é só do administrador</h2>
+    <p>Sua conta não está marcada como administradora. Se isso é um erro,
+       fale com o Gu.</p>
+  </div>
+
+  <div id="falhou" class="muro oculto">
+    <h2>Não consegui carregar</h2>
+    <p id="falhou-texto"></p>
+  </div>
+
+  <main id="conteudo" class="oculto">
+
+    <section class="painel">
+      <h2>Criar uma conta</h2>
+      <p class="desc">A conta nasce pronta para usar, com a senha que você
+        definir aqui. Nenhum e-mail é enviado — você entrega a senha pela mão,
+        e a pessoa troca depois no rodapé da Central.</p>
+
+      <div class="campo">
+        <label for="n-email">E-mail</label>
+        <input id="n-email" type="email" autocomplete="off"
+               placeholder="nome@dalmobilesjc.com.br">
+      </div>
+
+      <div class="campo">
+        <label for="n-nome">Nome</label>
+        <span class="nota">Deixando vazio, eu uso o começo do e-mail.</span>
+        <input id="n-nome" type="text" autocomplete="off" placeholder="Ex.: Juliana Mendes">
+      </div>
+
+      <div class="campo">
+        <label for="n-loja">Loja</label>
+        <select id="n-loja"></select>
+      </div>
+
+      <div class="campo">
+        <label for="n-senha">Senha</label>
+        <span class="nota">Pelo menos 8 caracteres. Sorteei uma fácil de ditar.</span>
+        <div class="com-botao">
+          <input id="n-senha" type="text" autocomplete="off">
+          <button type="button" id="n-sortear">sortear outra</button>
+        </div>
+      </div>
+
+      <label class="toggle" for="n-admin">
+        <input type="checkbox" id="n-admin">
+        Também é administrador
+      </label>
+
+      <button class="botao" id="n-criar">Criar conta</button>
+
+      <div id="n-recado"></div>
+    </section>
+
+    <section>
+      <h2 class="seccao-titulo">Quem tem acesso</h2>
+      <div id="lista"></div>
+    </section>
+
+  </main>
+
+  <p class="rodape">Lumina · Uso interno</p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script>
+/* ============================================================
+   CONTAS
+   ------------------------------------------------------------
+   Esta tela não tem poder nenhum por si: tudo passa por
+   /api/usuarios, que roda no Cloudflare, guarda a chave secreta
+   e confere no banco se quem pediu é admin. Esconder o botão é
+   educação com quem não é admin, não é a proteção.
+   ============================================================ */
+
+'use strict';
+
+const LOJAS = [
+  { id: '',    nome: '— sem loja —' },
+  { id: 'sjc', nome: 'São José dos Campos' },
+  { id: 'cgt', nome: 'Caraguatatuba' }
+];
+
+const ROTA = '/api/usuarios';
+
+const el = (id) => document.getElementById(id);
+
+let euId = null;
+let contas = [];
+
+/* ------------------------------------------------------------
+   Conversa com a função
+   ------------------------------------------------------------ */
+
+async function chamar(acao, extra) {
+  const auth = window.dalmobileAuth;
+  if (!auth || !auth.cliente) throw new Error('Sessão não encontrada. Recarregue a página.');
+
+  const { data, error } = await auth.cliente.auth.getSession();
+  const sessao = data ? data.session : null;
+
+  if (error || !sessao || !sessao.access_token) {
+    throw new Error('Sua sessão expirou. Recarregue a página e entre de novo.');
+  }
+
+  const r = await fetch(ROTA, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer ' + sessao.access_token
+    },
+    body: JSON.stringify(Object.assign({ acao: acao }, extra || {}))
+  });
+
+  const texto = await r.text();
+
+  let json = null;
+  if (texto) { try { json = JSON.parse(texto); } catch (e) {} }
+
+  if (!r.ok) {
+    const e = new Error(
+      (json && json.erro) ||
+      (r.status === 404
+        ? 'A rota /api/usuarios não respondeu. A pasta functions ainda não ' +
+          'subiu, ou o site não foi publicado depois dela.'
+        : 'O servidor respondeu com erro ' + r.status + '.')
+    );
+    e.status = r.status;
+    throw e;
+  }
+
+  return json || {};
+}
+
+/* ------------------------------------------------------------
+   Começo: espera a sessão e tenta listar
+   ------------------------------------------------------------ */
+
+(async function iniciar() {
+
+  /* O auth.js resolve a sessão de forma assíncrona; aqui a gente
+     espera ele publicar o usuário antes de pedir qualquer coisa. */
+  for (let i = 0; i < 60 && !(window.dalmobileAuth && window.dalmobileAuth.usuario); i++) {
+    await new Promise((r) => setTimeout(r, 150));
+  }
+
+  if (!(window.dalmobileAuth && window.dalmobileAuth.usuario)) {
+    /* Sem sessão, a tela de entrada do auth.js está por cima
+       mesmo — não há nada a fazer aqui. */
+    return;
+  }
+
+  montarFormulario();
+
+  try {
+    await carregar();
+    el('carregando').classList.add('oculto');
+    el('conteudo').classList.remove('oculto');
+
+  } catch (e) {
+    el('carregando').classList.add('oculto');
+
+    if (e.status === 403) {
+      el('barrado').classList.remove('oculto');
+      return;
+    }
+
+    el('falhou-texto').textContent = e.message;
+    el('falhou').classList.remove('oculto');
+  }
+})();
+
+async function carregar() {
+  const r = await chamar('listar');
+  contas = r.contas || [];
+  euId = r.eu || null;
+  desenharLista();
+}
+
+/* ------------------------------------------------------------
+   Criar
+   ------------------------------------------------------------ */
+
+function montarFormulario() {
+  const sel = el('n-loja');
+  LOJAS.forEach((l) => {
+    const o = document.createElement('option');
+    o.value = l.id;
+    o.textContent = l.nome;
+    sel.appendChild(o);
+  });
+  sel.value = 'sjc';
+
+  el('n-senha').value = sortearSenha();
+  el('n-sortear').addEventListener('click', () => {
+    el('n-senha').value = sortearSenha();
+  });
+
+  el('n-criar').addEventListener('click', criar);
+
+  ['n-email', 'n-nome'].forEach((id) => {
+    el(id).addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') criar();
+    });
+  });
+}
+
+async function criar() {
+  const email = el('n-email').value.trim().toLowerCase();
+  const nome  = el('n-nome').value.trim();
+  const loja  = el('n-loja').value;
+  const senha = el('n-senha').value;
+  const admin = el('n-admin').checked;
+
+  const recado = el('n-recado');
+
+  if (!email) { dizer(recado, 'Escreva o e-mail da pessoa.', 'erro'); return; }
+  if (senha.length < 8) { dizer(recado, 'A senha precisa ter pelo menos 8 caracteres.', 'erro'); return; }
+
+  const botao = el('n-criar');
+  botao.disabled = true;
+  dizer(recado, 'Criando...', '');
+
+  try {
+    const r = await chamar('criar', { email, nome, loja, senha, admin });
+
+    recado.innerHTML = '';
+    recado.appendChild(cartaoEntrega(
+      'Conta criada',
+      nome || nomeDoEmail(email),
+      email, senha, r.aviso
+    ));
+
+    el('n-email').value = '';
+    el('n-nome').value = '';
+    el('n-admin').checked = false;
+    el('n-senha').value = sortearSenha();
+
+    await carregar();
+
+  } catch (e) {
+    dizer(recado, e.message, 'erro');
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+/* O cartão que você copia e manda. Ele é a única vez que a senha
+   aparece: depois de sair da tela, nem eu nem o Supabase sabem
+   qual era — só o que ela virou lá dentro. */
+function cartaoEntrega(titulo, nome, email, senha, aviso) {
+  const caixa = document.createElement('div');
+  caixa.className = 'entrega';
+
+  const recado =
+    'Oi, ' + (nome ? primeiroNome(nome) : 'tudo bem') + '! ' +
+    'Seu acesso à Central de Peças da Dalmóbile:\n\n' +
+    'Site: ' + location.origin + '\n' +
+    'E-mail: ' + email + '\n' +
+    'Senha: ' + senha + '\n\n' +
+    'Depois de entrar, você pode trocar essa senha por uma sua: ' +
+    'é o link "trocar minha senha", no pé da página.';
+
+  const h3 = document.createElement('h3');
+  h3.textContent = titulo;
+  caixa.appendChild(h3);
+
+  caixa.appendChild(par('E-mail', email));
+  caixa.appendChild(par('Senha', senha));
+
+  const bloco = document.createElement('p');
+  bloco.className = 'recado';
+  bloco.textContent = recado;
+  caixa.appendChild(bloco);
+
+  const acoes = document.createElement('div');
+  acoes.className = 'acoes';
+
+  const bRecado = document.createElement('button');
+  bRecado.type = 'button';
+  bRecado.textContent = 'Copiar o recado';
+  bRecado.addEventListener('click', () => copiar(recado, bRecado, 'Copiar o recado'));
+
+  const bSenha = document.createElement('button');
+  bSenha.type = 'button';
+  bSenha.className = 'claro';
+  bSenha.textContent = 'Copiar só a senha';
+  bSenha.addEventListener('click', () => copiar(senha, bSenha, 'Copiar só a senha'));
+
+  acoes.append(bRecado, bSenha);
+  caixa.appendChild(acoes);
+
+  if (aviso) {
+    const p = document.createElement('p');
+    p.className = 'aviso';
+    p.textContent = aviso;
+    caixa.appendChild(p);
+  }
+
+  return caixa;
+}
+
+function par(rotulo, valor) {
+  const linha = document.createElement('div');
+  linha.className = 'par';
+  const b = document.createElement('b');
+  b.textContent = rotulo;
+  const s = document.createElement('span');
+  s.textContent = valor;
+  linha.append(b, s);
+  return linha;
+}
+
+async function copiar(texto, botao, original) {
+  let deu = false;
+
+  try {
+    await navigator.clipboard.writeText(texto);
+    deu = true;
+  } catch (e) {
+    /* Sem permissão de área de transferência (acontece em http e em
+       alguns navegadores embutidos): seleciona para copiar à mão. */
+    try {
+      const area = document.createElement('textarea');
+      area.value = texto;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      deu = document.execCommand('copy');
+      area.remove();
+    } catch (e2) {}
+  }
+
+  botao.textContent = deu ? 'Copiado' : 'Copie à mão acima';
+  setTimeout(() => { botao.textContent = original; }, 2000);
+}
+
+/* ------------------------------------------------------------
+   Lista
+   ------------------------------------------------------------ */
+
+function desenharLista() {
+  const alvo = el('lista');
+  alvo.innerHTML = '';
+
+  if (!contas.length) {
+    const p = document.createElement('p');
+    p.className = 'msg centro';
+    p.textContent = 'Nenhuma conta ainda.';
+    alvo.appendChild(p);
+    return;
+  }
+
+  contas.forEach((c) => alvo.appendChild(cartaoConta(c)));
+}
+
+function cartaoConta(c) {
+  const cartao = document.createElement('div');
+  cartao.className = 'conta';
+
+  const cabeca = document.createElement('div');
+  cabeca.className = 'cabeca';
+
+  const nome = document.createElement('span');
+  nome.className = 'nome';
+  nome.textContent = c.nome || c.email;
+  cabeca.appendChild(nome);
+
+  /* O cargo aparece aqui, mas quem muda é a aba Contas da
+     Central. Dois lugares mexendo na mesma coisa é como a
+     informação começa a divergir. */
+  if (c.admin)          cabeca.appendChild(selo('admin', 'administrador'));
+  else if (c.gerente)   cabeca.appendChild(selo('gerente', 'gerente'));
+  if (c.bloqueado)      cabeca.appendChild(selo('bloqueado', 'bloqueado'));
+  if (c.sou_eu)         cabeca.appendChild(selo('eu', 'você'));
+
+  const sub = document.createElement('p');
+  sub.className = 'sub';
+  sub.textContent = [
+    c.email,
+    nomeDaLoja(c.loja),
+    c.trabalhos ? c.trabalhos + (c.trabalhos === 1 ? ' trabalho' : ' trabalhos') : null,
+    c.ultimo_acesso ? 'entrou ' + quando(c.ultimo_acesso) : 'nunca entrou'
+  ].filter(Boolean).join(' · ');
+
+  const acoes = document.createElement('div');
+  acoes.className = 'acoes';
+
+  const gaveta = document.createElement('div');
+  gaveta.className = 'gaveta oculto';
+
+  /* --- senha nova --- */
+  acoes.appendChild(botao('nova senha', () => {
+    abrirGaveta(gaveta, gavetaSenha(c, gaveta));
+  }));
+
+  /* --- nome e loja --- */
+  acoes.appendChild(botao('editar', () => {
+    abrirGaveta(gaveta, gavetaPerfil(c, gaveta));
+  }));
+
+  /* --- bloquear / liberar --- */
+  acoes.appendChild(botao(
+    c.bloqueado ? 'liberar' : 'bloquear',
+    async (b) => {
+      if (!c.bloqueado && !confirm(
+        'Bloquear ' + (c.nome || c.email) + '?\n\n' +
+        'A pessoa deixa de entrar na hora. Os trabalhos dela ficam todos ' +
+        'salvos, e você pode liberar depois.'
+      )) return;
+
+      await agir(b, 'acesso', { id: c.id, bloquear: !c.bloqueado });
+    },
+    c.sou_eu && !c.bloqueado
+  ));
+
+  /* --- cargo: aqui só se vê, muda na aba Contas --- */
+  const irParaCargos = document.createElement('a');
+  irParaCargos.href = 'index.html#contas';
+  irParaCargos.className = 'ir-cargos';
+  irParaCargos.textContent = 'mudar cargo →';
+  acoes.appendChild(irParaCargos);
+
+  /* --- apagar --- */
+  acoes.appendChild(botao('apagar', async (b) => {
+    const perda = c.trabalhos
+      ? '\n\nATENÇÃO: os ' + c.trabalhos + ' trabalhos salvos por ela vão ' +
+        'embora junto, e isso não tem volta. Para só fechar a entrada e ' +
+        'guardar o trabalho, use "bloquear".'
+      : '\n\nIsso não tem volta.';
+
+    if (!confirm('Apagar a conta de ' + (c.nome || c.email) + '?' + perda)) return;
+
+    await agir(b, 'apagar', { id: c.id, confirmo: true });
+  }, c.sou_eu, true));
+
+  cartao.append(cabeca, sub, acoes, gaveta);
+  return cartao;
+}
+
+function selo(classe, texto) {
+  const s = document.createElement('span');
+  s.className = 'selo ' + classe;
+  s.textContent = texto;
+  return s;
+}
+
+function botao(texto, aoClicar, desligado, perigo) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  if (perigo) b.className = 'perigo';
+  b.textContent = texto;
+  if (desligado) { b.disabled = true; return b; }
+  b.addEventListener('click', () => aoClicar(b));
+  return b;
+}
+
+/* Executa e recarrega. O botão trava enquanto roda, para não
+   mandar o mesmo pedido duas vezes num toque nervoso. */
+async function agir(botao, acao, dados) {
+  const antes = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = '...';
+
+  try {
+    await chamar(acao, dados);
+    await carregar();
+  } catch (e) {
+    alert(e.message);
+    botao.disabled = false;
+    botao.textContent = antes;
+  }
+}
+
+function abrirGaveta(gaveta, conteudo) {
+  if (!gaveta.classList.contains('oculto') && gaveta.dataset.tipo === conteudo.tipo) {
+    gaveta.classList.add('oculto');
+    gaveta.innerHTML = '';
+    return;
+  }
+  gaveta.innerHTML = '';
+  gaveta.dataset.tipo = conteudo.tipo;
+  gaveta.appendChild(conteudo.no);
+  gaveta.classList.remove('oculto');
+}
+
+function gavetaSenha(c, gaveta) {
+  const no = document.createDocumentFragment();
+
+  const label = document.createElement('label');
+  label.textContent = 'Senha nova para ' + (c.nome || c.email);
+
+  const linha = document.createElement('div');
+  linha.className = 'com-botao';
+
+  const campo = document.createElement('input');
+  campo.type = 'text';
+  campo.value = sortearSenha();
+
+  const sortear = document.createElement('button');
+  sortear.type = 'button';
+  sortear.textContent = 'sortear outra';
+  sortear.addEventListener('click', () => { campo.value = sortearSenha(); });
+
+  linha.append(campo, sortear);
+
+  const dupla = document.createElement('div');
+  dupla.className = 'dupla';
+
+  const cancelar = document.createElement('button');
+  cancelar.type = 'button';
+  cancelar.className = 'claro';
+  cancelar.textContent = 'Cancelar';
+  cancelar.addEventListener('click', () => {
+    gaveta.classList.add('oculto');
+    gaveta.innerHTML = '';
+  });
+
+  const aplicar = document.createElement('button');
+  aplicar.type = 'button';
+  aplicar.textContent = 'Definir senha';
+
+  aplicar.addEventListener('click', async () => {
+    if (campo.value.length < 8) {
+      alert('A senha precisa ter pelo menos 8 caracteres.');
+      return;
+    }
+
+    aplicar.disabled = true;
+    cancelar.disabled = true;
+    aplicar.textContent = 'Salvando...';
+
+    try {
+      await chamar('senha', { id: c.id, senha: campo.value });
+
+      gaveta.innerHTML = '';
+      gaveta.appendChild(cartaoEntrega(
+        'Senha trocada', c.nome, c.email, campo.value, null
+      ));
+
+    } catch (e) {
+      alert(e.message);
+      aplicar.disabled = false;
+      cancelar.disabled = false;
+      aplicar.textContent = 'Definir senha';
+    }
+  });
+
+  dupla.append(cancelar, aplicar);
+  no.append(label, linha, dupla);
+
+  return { tipo: 'senha', no: no };
+}
+
+function gavetaPerfil(c, gaveta) {
+  const no = document.createDocumentFragment();
+
+  const lNome = document.createElement('label');
+  lNome.textContent = 'Nome';
+
+  const cNome = document.createElement('input');
+  cNome.type = 'text';
+  cNome.value = c.nome || '';
+  cNome.placeholder = 'Ex.: Patrícia Souza';
+
+  const lLoja = document.createElement('label');
+  lLoja.textContent = 'Loja';
+  lLoja.style.marginTop = '10px';
+
+  const cLoja = document.createElement('select');
+  LOJAS.forEach((l) => {
+    const o = document.createElement('option');
+    o.value = l.id;
+    o.textContent = l.nome;
+    cLoja.appendChild(o);
+  });
+  cLoja.value = c.loja || '';
+
+  const dupla = document.createElement('div');
+  dupla.className = 'dupla';
+
+  const cancelar = document.createElement('button');
+  cancelar.type = 'button';
+  cancelar.className = 'claro';
+  cancelar.textContent = 'Cancelar';
+  cancelar.addEventListener('click', () => {
+    gaveta.classList.add('oculto');
+    gaveta.innerHTML = '';
+  });
+
+  const salvar = document.createElement('button');
+  salvar.type = 'button';
+  salvar.textContent = 'Salvar';
+
+  salvar.addEventListener('click', async () => {
+    salvar.disabled = true;
+    cancelar.disabled = true;
+    salvar.textContent = 'Salvando...';
+
+    try {
+      await chamar('perfil', { id: c.id, nome: cNome.value, loja: cLoja.value });
+      await carregar();
+    } catch (e) {
+      alert(e.message);
+      salvar.disabled = false;
+      cancelar.disabled = false;
+      salvar.textContent = 'Salvar';
+    }
+  });
+
+  dupla.append(cancelar, salvar);
+  no.append(lNome, cNome, lLoja, cLoja, dupla);
+
+  return { tipo: 'perfil', no: no };
+}
+
+/* ------------------------------------------------------------
+   Miudezas
+   ------------------------------------------------------------ */
+
+/* Duas palavras e dois números: passa dos 8 caracteres, dá para
+   ditar no telefone sem soletrar, e ninguém adivinha. */
+const PALAVRAS = [
+  'mesa', 'porta', 'vidro', 'pedra', 'campo', 'ponte', 'folha', 'vento',
+  'praia', 'torre', 'linha', 'ferro', 'barco', 'nuvem', 'trigo', 'cobre',
+  'marco', 'fonte', 'prata', 'ramo', 'telha', 'muro', 'cedro', 'areia'
+];
+
+function sortearSenha() {
+  const n = sorteados(3);
+  const a = PALAVRAS[n[0] % PALAVRAS.length];
+  let b = PALAVRAS[n[1] % PALAVRAS.length];
+  if (b === a) b = PALAVRAS[(n[1] + 7) % PALAVRAS.length];
+  return a + '-' + b + (10 + (n[2] % 90));
+}
+
+function sorteados(quantos) {
+  if (window.crypto && window.crypto.getRandomValues) {
+    const v = new Uint32Array(quantos);
+    window.crypto.getRandomValues(v);
+    return Array.from(v);
+  }
+  const v = [];
+  for (let i = 0; i < quantos; i++) v.push(Math.floor(Math.random() * 1e9));
+  return v;
+}
+
+function nomeDoEmail(email) {
+  return String(email || '').split('@')[0]
+    .replace(/[._-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map((p) => p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : '')
+    .join(' ');
+}
+
+function primeiroNome(nome) {
+  return String(nome || '').trim().split(/\s+/)[0] || '';
+}
+
+function nomeDaLoja(id) {
+  const l = LOJAS.find((x) => x.id === id);
+  return (id && l) ? l.nome : null;
+}
+
+function quando(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+
+  const dia = 86400000;
+  const soData = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const diff = Math.round((soData(new Date()) - soData(d)) / dia);
+
+  if (diff <= 0) return 'hoje';
+  if (diff === 1) return 'ontem';
+  if (diff < 30) return 'há ' + diff + ' dias';
+
+  return 'em ' + d.toLocaleDateString('pt-BR',
+    { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function dizer(alvo, texto, classe) {
+  alvo.innerHTML = '';
+  if (!texto) return;
+  const p = document.createElement('p');
+  p.className = 'msg' + (classe ? ' ' + classe : '');
+  p.style.marginTop = '14px';
+  p.textContent = texto;
+  alvo.appendChild(p);
+}
+</script>
+
+</body>
+</html>
