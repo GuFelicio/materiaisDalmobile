@@ -66,6 +66,16 @@
   .amb input { width: 17px; height: 17px; margin: 0; accent-color: var(--accent); }
   .amb.marcado { background: var(--ok-bg); border-color: var(--ok-line); }
 
+  .novo-amb { display: flex; gap: 8px; margin-top: 8px; }
+  .novo-amb input { flex: 1; min-width: 0; font-size: 14px; padding: 10px 12px; }
+  .novo-amb button {
+    flex: 0 0 auto; padding: 0 14px; border-radius: 9px;
+    border: 1px dashed var(--line-2); background: none;
+    font-size: 13px; font-weight: 600; font-family: inherit;
+    color: var(--ink-2); cursor: pointer; white-space: nowrap;
+  }
+  .novo-amb button:hover { border-style: solid; border-color: var(--accent); color: var(--ink); }
+
   .botao { width: 100%; padding: 15px; border: 0; border-radius: 9px; background: var(--accent);
            color: #fff; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; margin-top: 8px; }
   .botao:disabled { opacity: .45; cursor: default; }
@@ -177,6 +187,12 @@
       <label>Ambientes do projeto</label>
       <span class="nota">Marque só os que têm aparelho. O cliente vê apenas estes.</span>
       <div class="ambientes" id="n-ambientes"></div>
+
+      <div class="novo-amb">
+        <input id="n-novo-amb-nome" type="text" autocomplete="off"
+               placeholder="Outro ambiente. Ex.: Quarto 2, Varanda">
+        <button type="button" id="n-novo-amb">acrescentar</button>
+      </div>
     </div>
 
     <button class="botao" id="n-criar" type="button">Gerar o link</button>
@@ -234,6 +250,11 @@ const el = (id) => document.getElementById(id);
 let EU = { id: null, loja: '', admin: false };
 let documentos = [];
 
+/* Cópia viva do catálogo: o consultor pode acrescentar ambiente
+   que não estava na lista, e isso vale só para o link que ele
+   está gerando agora. O AMBIENTES original fica intacto. */
+let ambientes = AMBIENTES.map((a) => ({ nome: a.nome, itens: a.itens.slice() }));
+
 /* ------------------------------------------------------------
    Começo
    ------------------------------------------------------------ */
@@ -271,17 +292,45 @@ function montarFormulario() {
   });
   sel.value = EU.loja || (localStorage.getItem('dalmobile:loja') || 'sjc');
 
+  desenharAmbientes();
+
+  el('n-criar').addEventListener('click', criar);
+  el('n-cliente').addEventListener('keydown', (e) => { if (e.key === 'Enter') criar(); });
+
+  el('n-novo-amb').addEventListener('click', acrescentarAmbiente);
+  el('n-novo-amb-nome').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); acrescentarAmbiente(); }
+  });
+}
+
+function desenharAmbientes() {
   const caixa = el('n-ambientes');
-  AMBIENTES.forEach((amb, i) => {
+
+  /* Guarda o que já estava marcado: redesenhar não pode desfazer
+     escolha de quem está no meio do preenchimento. */
+  const marcados = new Set(
+    Array.from(caixa.querySelectorAll('input:checked')).map((c) => c.value));
+  const primeiraVez = !caixa.children.length;
+
+  caixa.innerHTML = '';
+
+  ambientes.forEach((amb, i) => {
     const rot = document.createElement('label');
     rot.className = 'amb';
 
     const chk = document.createElement('input');
     chk.type = 'checkbox';
     chk.value = String(i);
+
     /* Cozinha e lavanderia vêm marcadas: são as que quase sempre
-       têm aparelho, e o resto o consultor acrescenta. */
-    chk.checked = amb.nome === 'Cozinha' || amb.nome === 'Lavanderia';
+       têm aparelho, e o resto o consultor acrescenta. Ambiente
+       que ele mesmo digitou nasce marcado — ninguém escreve um
+       nome para deixar desmarcado. */
+    chk.checked = primeiraVez
+      ? (amb.nome === 'Cozinha' || amb.nome === 'Lavanderia')
+      : (marcados.has(String(i)) || amb.novo === 'recem');
+
+    if (amb.novo === 'recem') delete amb.novo;
 
     const atualiza = () => rot.classList.toggle('marcado', chk.checked);
     chk.addEventListener('change', atualiza);
@@ -290,9 +339,32 @@ function montarFormulario() {
     rot.append(chk, document.createTextNode(amb.nome));
     caixa.appendChild(rot);
   });
+}
 
-  el('n-criar').addEventListener('click', criar);
-  el('n-cliente').addEventListener('keydown', (e) => { if (e.key === 'Enter') criar(); });
+function acrescentarAmbiente() {
+  const campo = el('n-novo-amb-nome');
+  const nome = campo.value.trim();
+  if (!nome) { campo.focus(); return; }
+
+  const jaTem = ambientes.find(
+    (a) => a.nome.toLowerCase() === nome.toLowerCase());
+
+  if (jaTem) {
+    /* Em vez de criar um ambiente repetido, marca o que já existe
+       — é o que a pessoa queria de qualquer jeito. */
+    const i = ambientes.indexOf(jaTem);
+    const chk = el('n-ambientes').querySelector('input[value="' + i + '"]');
+    if (chk) { chk.checked = true; chk.dispatchEvent(new Event('change')); }
+    campo.value = '';
+    return;
+  }
+
+  /* Sem itens: o ambiente é novo, e quem sabe o que tem nele é o
+     cliente. Ele acrescenta item por item na tela dele. */
+  ambientes.push({ nome: nome, itens: [], novo: 'recem' });
+  campo.value = '';
+  desenharAmbientes();
+  campo.focus();
 }
 
 /* ------------------------------------------------------------
@@ -306,7 +378,8 @@ async function criar() {
   if (!nome) { dizer(recado, 'Escreva o nome do cliente.', 'erro'); el('n-cliente').focus(); return; }
 
   const marcados = Array.from(el('n-ambientes').querySelectorAll('input:checked'))
-    .map((c) => AMBIENTES[Number(c.value)]);
+    .map((c) => ambientes[Number(c.value)])
+    .filter(Boolean);
 
   if (!marcados.length) { dizer(recado, 'Marque ao menos um ambiente.', 'erro'); return; }
 

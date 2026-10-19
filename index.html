@@ -255,14 +255,25 @@
   .abas {
     display: flex; gap: 2px; margin-bottom: 22px;
     border-bottom: 1px solid var(--line);
+
+    /* Com cinco abas não cabe tudo num celular estreito. Rolar é
+       melhor que espremer até o texto cortar — e no desktop, onde
+       sobra espaço, elas continuam dividindo a largura igual. */
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
+  .abas::-webkit-scrollbar { display: none; }
 
   .abas button {
-    flex: 1; min-width: 0; padding: 11px 4px 10px;
+    flex: 1 0 auto; min-width: 0; padding: 11px 7px 10px;
     background: none; border: 0; border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     font-family: inherit; font-size: 11px; font-weight: 700;
-    letter-spacing: .06em; text-transform: uppercase;
+    /* Com cinco abas, cada 0,01em de espaçamento custa 4px na
+       linha toda. Apertei até as cinco caberem num iPhone de pé
+       sem cortar a última — aba cortada por 4px parece defeito. */
+    letter-spacing: .045em; text-transform: uppercase;
     color: var(--muted); cursor: pointer;
     transition: color .12s;
   }
@@ -437,6 +448,7 @@
       <button type="button" role="tab" data-aba="gerar"     aria-selected="true">Gerar</button>
       <button type="button" role="tab" data-aba="materiais" aria-selected="false">Materiais</button>
       <button type="button" role="tab" data-aba="links"     aria-selected="false">Links</button>
+      <button type="button" role="tab" data-aba="posvenda"  aria-selected="false">Pós&nbsp;venda</button>
       <button type="button" role="tab" data-aba="contas"    aria-selected="false" class="oculto">Contas</button>
     </nav>
 
@@ -464,6 +476,14 @@
         <input id="busca-links" type="search" placeholder="Buscar link..." autocomplete="off">
       </div>
       <div id="atalhos"></div>
+    </div>
+
+    <div class="painel-aba oculto" data-painel="posvenda">
+      <p class="aviso-aba" style="text-align:left;margin:0 0 16px">
+        Documentos que o cliente preenche e assina pelo celular, por um
+        link que você manda.
+      </p>
+      <div class="grade" id="grade-posvenda"></div>
     </div>
 
     <div class="painel-aba oculto" data-painel="contas">
@@ -671,16 +691,45 @@ const CATALOGO = [
     campos: []
   },
 
+  /* --- Pós venda ---------------------------------------------
+     fase: 'posvenda' tira o item do catálogo de peças e põe na
+     aba própria. São outra coisa: peça você gera e manda pronta;
+     documento o cliente preenche e assina. Misturar os dois na
+     mesma lista confunde quem está com pressa. */
+
   {
-    /* Material de página própria. Gera o link que vai para o
-       cliente preencher no celular, e acompanha o que voltou. */
     id: 'itens-extras',
     nome: 'Itens extras do cliente',
-    descricao: 'Manda um link para o cliente informar marca e medidas da geladeira, do fogão e dos outros aparelhos.',
+    descricao: 'Link para o cliente informar marca e medidas da geladeira, do fogão e dos outros aparelhos.',
     icone: 'regua',
     formato: 'link',
+    fase: 'posvenda',
     pagina: 'formularios.html',
     disponivel: true,
+    endpoints: {},
+    campos: []
+  },
+
+  {
+    id: 'medicao',
+    nome: 'Termo de medição',
+    descricao: 'Documento 101: o técnico preenche o checklist em campo e o cliente assina o termo quando algum item não está apto.',
+    icone: 'regua',
+    formato: 'link',
+    fase: 'posvenda',
+    disponivel: false,
+    endpoints: {},
+    campos: []
+  },
+
+  {
+    id: 'montagem',
+    nome: 'Checklist de montagem',
+    descricao: 'O montador preenche no celular e o cliente assina a vistoria final ali mesmo, sem depender de sinal.',
+    icone: 'caixa',
+    formato: 'link',
+    fase: 'posvenda',
+    disponivel: false,
     endpoints: {},
     campos: []
   },
@@ -991,10 +1040,17 @@ function abaInicial() {
    MENU
    ============================================================ */
 
+/* Duas grades, uma função: peças na aba Gerar, documentos na
+   aba Pós venda. Quem decide é o campo "fase" do catálogo. */
 function montarHub() {
-  grade.innerHTML = '';
+  desenharGrade(grade,              (m) => m.fase !== 'posvenda');
+  desenharGrade(el('grade-posvenda'), (m) => m.fase === 'posvenda');
+}
 
-  CATALOGO.forEach((material) => {
+function desenharGrade(alvo, filtro) {
+  alvo.innerHTML = '';
+
+  CATALOGO.filter(filtro).forEach((material) => {
     const botao = document.createElement('button');
     botao.className = 'item';
     botao.type = 'button';
@@ -1028,7 +1084,7 @@ function montarHub() {
       });
     }
 
-    grade.appendChild(botao);
+    alvo.appendChild(botao);
   });
 }
 

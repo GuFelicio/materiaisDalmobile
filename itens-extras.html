@@ -158,6 +158,18 @@
   }
   .mais:hover { border-color: var(--muted); color: var(--ink); }
 
+  .mais.novo-ambiente {
+    margin-top: 8px; padding: 14px; font-size: 14px;
+    border-color: var(--line-2); color: var(--ink);
+  }
+
+  .ambiente-vazio {
+    margin: 0 0 9px; padding: 13px 15px;
+    background: var(--card); border: 1px dashed var(--line-2);
+    border-radius: var(--radius);
+    font-size: 13px; line-height: 1.5; color: var(--muted);
+  }
+
   /* ---------- Observação final ---------- */
 
   .obs-geral { margin-bottom: 26px; }
@@ -440,6 +452,17 @@ function desenharAmbientes() {
     titulo.textContent = amb.nome;
     bloco.appendChild(titulo);
 
+    if (!(amb.itens || []).length) {
+      /* Ambiente que entrou depois, ainda sem nada. Sem este
+         recado, a seção fica só com o título e um botão, e parece
+         defeito em vez de convite. */
+      const vazio = document.createElement('p');
+      vazio.className = 'ambiente-vazio';
+      vazio.textContent = 'Nenhum aparelho listado aqui ainda. ' +
+                          'Use o botão abaixo para acrescentar.';
+      bloco.appendChild(vazio);
+    }
+
     (amb.itens || []).forEach((item, ii) => {
       bloco.appendChild(cartaoItem(amb, item, ia, ii));
     });
@@ -461,6 +484,36 @@ function desenharAmbientes() {
 
     alvo.appendChild(bloco);
   });
+
+  /* O consultor monta a lista pelo que sabe do projeto, mas quem
+     está dentro da casa é o cliente. Se faltar a lavanderia, ele
+     resolve aqui em vez de ligar para a loja. */
+  const novo = document.createElement('button');
+  novo.type = 'button';
+  novo.className = 'mais novo-ambiente';
+  novo.textContent = '+ outro ambiente';
+
+  novo.addEventListener('click', () => {
+    const nome = (prompt('Qual ambiente? Ex.: Quarto 2, Varanda, Escritório') || '').trim();
+    if (!nome) return;
+
+    const jaTem = (dados.ambientes || []).find(
+      (a) => String(a.nome || '').toLowerCase() === nome.toLowerCase());
+
+    if (jaTem) {
+      alert('"' + jaTem.nome + '" já está na lista, mais acima.');
+      return;
+    }
+
+    dados.ambientes = dados.ambientes || [];
+    dados.ambientes.push({ nome: nome, itens: [] });
+
+    marcarSujo();
+    desenharAmbientes();
+    atualizarConta();
+  });
+
+  alvo.appendChild(novo);
 }
 
 function cartaoItem(amb, item, ia, ii) {
