@@ -28,7 +28,7 @@
    baixou da primeira vez.
    ============================================================ */
 
-const VERSAO = 'dalmobile-medicao-v2';
+const VERSAO = 'dalmobile-campo-v3';
 
 /* O que precisa existir no aparelho para a tela funcionar
    sozinha. Se algum destes faltar, falta função: sem as fontes
@@ -47,11 +47,20 @@ const VERSAO = 'dalmobile-medicao-v2';
    reconhecidos na hora de servir. Em servidor local vale o
    com .html; no Cloudflare, o sem. Um dos dois sempre pega, e
    a falha do outro é esperada. */
-const PAGINA = ['medicao', 'medicao.html'];
+const PAGINAS = {
+  medicao:  ['medicao', 'medicao.html'],
+  montagem: ['montagem', 'montagem.html']
+};
 
-const ESSENCIAIS = PAGINA.concat([
+const TODAS_AS_PAGINAS = Object.keys(PAGINAS).reduce(function (lista, k) {
+  return lista.concat(PAGINAS[k]);
+}, []);
+
+const ESSENCIAIS = TODAS_AS_PAGINAS.concat([
   'auth.js',
+  'campo.js',
   'pdf-101.js',
+  'pdf-montagem.js',
   'vendor/pdf-lib.min.js',
   'vendor/fontkit.umd.min.js',
   'Krub-Medium.ttf',
@@ -120,12 +129,23 @@ async function guardar(cache, caminho) {
 async function avisarSeFaltouAPagina() {
   const cache = await caches.open(VERSAO);
 
-  for (const p of PAGINA) {
-    if (await cache.match(p, { ignoreSearch: true })) return true;
+  const faltando = [];
+
+  for (const chave of Object.keys(PAGINAS)) {
+    let achou = false;
+    for (const p of PAGINAS[chave]) {
+      if (await cache.match(p, { ignoreSearch: true })) { achou = true; break; }
+    }
+    if (!achou) faltando.push(chave);
   }
 
-  console.error('[sw] A TELA NÃO FOI GUARDADA. Ela não vai abrir offline.');
-  return false;
+  if (faltando.length) {
+    console.error('[sw] NÃO GUARDEI: ' + faltando.join(', ') +
+                  '. Essas telas não vão abrir offline.');
+    return false;
+  }
+
+  return true;
 }
 
 
@@ -168,7 +188,8 @@ self.addEventListener('fetch', function (evento) {
      cache primeiro — faria o medidor rodar uma versão velha
      por dias sem perceber. */
   if (pedido.mode === 'navigate') {
-    if (!ePaginaDaMedicao(url)) return;
+    const qual = qualPagina(url);
+    if (!qual) return;
 
     evento.respondWith(
       fetch(pedido)
@@ -176,7 +197,7 @@ self.addEventListener('fetch', function (evento) {
           guardarCopia(pedido, resposta);
           return resposta;
         })
-        .catch(function () { return paginaGuardada(); })
+        .catch(function () { return paginaGuardada(qual); })
     );
     return;
   }
@@ -205,20 +226,26 @@ self.addEventListener('fetch', function (evento) {
    Apoio
    ------------------------------------------------------------ */
 
-/* Reconhece a tela de medição nos dois endereços: /medicao
-   (como o Cloudflare serve) e /medicao.html (como o arquivo se
-   chama e como um servidor local entrega). */
-function ePaginaDaMedicao(url) {
+/* Qual das telas de campo está sendo aberta — e devolve a chave,
+   não só sim/não: offline, uma navegação para /montagem não pode
+   receber a tela de medição guardada. Reconhece os dois endereços
+   de cada uma, /x (como o Cloudflare serve) e /x.html (como o
+   arquivo se chama e como um servidor local entrega). */
+function qualPagina(url) {
   const caminho = url.pathname.replace(/^\/+/, '').replace(/\/+$/, '');
-  return PAGINA.indexOf(caminho) !== -1 ||
-         PAGINA.some(function (p) { return caminho.endsWith('/' + p); });
+
+  return Object.keys(PAGINAS).find(function (chave) {
+    return PAGINAS[chave].some(function (p) {
+      return caminho === p || caminho.endsWith('/' + p);
+    });
+  }) || null;
 }
 
-/* Entrega a cópia guardada da página, venha ela de qual dos dois
-   endereços tiver funcionado na instalação. */
-function paginaGuardada() {
+/* Entrega a cópia guardada daquela página, venha ela de qual dos
+   dois endereços tiver funcionado na instalação. */
+function paginaGuardada(chave) {
   return caches.open(VERSAO).then(function (cache) {
-    return PAGINA.reduce(function (antes, p) {
+    return PAGINAS[chave].reduce(function (antes, p) {
       return antes.then(function (achado) {
         return achado || cache.match(p, { ignoreSearch: true });
       });

@@ -346,109 +346,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="vendor/pdf-lib.min.js"></script>
 <script src="vendor/fontkit.umd.min.js"></script>
+<script src="campo.js"></script>
 <script src="auth.js"></script>
 <script src="pdf-101.js"></script>
 <script>
 (function () {
   'use strict';
 
-  /* ============================================================
-     1. Armazém local — IndexedDB
-     ------------------------------------------------------------
-     Por que IndexedDB e não localStorage: as fotos. localStorage
-     guarda texto, tem teto de uns 5 MB e obrigaria a converter
-     cada foto em base64, que incha o arquivo em 33%. Três fotos
-     de obra já estouram. IndexedDB guarda Blob do jeito que saiu
-     da câmera e tem folga de centenas de MB.
-     ============================================================ */
-
-  const Armazem = (function () {
-    const NOME = 'dalmobile-medicao';
-    const VERSAO = 1;
-    let bd = null;
-
-    function abrir() {
-      if (bd) return Promise.resolve(bd);
-
-      return new Promise(function (ok, falha) {
-        const p = indexedDB.open(NOME, VERSAO);
-
-        p.onupgradeneeded = function () {
-          const b = p.result;
-          if (!b.objectStoreNames.contains('medicoes')) b.createObjectStore('medicoes', { keyPath: 'id' });
-          if (!b.objectStoreNames.contains('fotos'))    b.createObjectStore('fotos',    { keyPath: 'id' });
-        };
-
-        p.onsuccess = function () { bd = p.result; ok(bd); };
-        p.onerror   = function () { falha(p.error); };
-      });
-    }
-
-    function transacao(loja, modo, acao) {
-      return abrir().then(function (b) {
-        return new Promise(function (ok, falha) {
-          const t = b.transaction(loja, modo);
-          const pedido = acao(t.objectStore(loja));
-          t.oncomplete = function () { ok(pedido ? pedido.result : undefined); };
-          t.onerror    = function () { falha(t.error); };
-        });
-      });
-    }
-
-    return {
-      salvar:      function (m)  { return transacao('medicoes', 'readwrite', function (s) { return s.put(m); }); },
-      ler:         function (id) { return transacao('medicoes', 'readonly',  function (s) { return s.get(id); }); },
-      todas:       function ()   { return transacao('medicoes', 'readonly',  function (s) { return s.getAll(); }); },
-      apagar:      function (id) { return transacao('medicoes', 'readwrite', function (s) { return s.delete(id); }); },
-      salvarFoto:  function (f)  { return transacao('fotos',    'readwrite', function (s) { return s.put(f); }); },
-      lerFoto:     function (id) { return transacao('fotos',    'readonly',  function (s) { return s.get(id); }); },
-      apagarFoto:  function (id) { return transacao('fotos',    'readwrite', function (s) { return s.delete(id); }); }
-    };
-  })();
+  const C = window.Campo;
+  const Armazem = C.armazem('medicoes');
 
 
-  /* ============================================================
-     2. Fotos — comprimir antes de guardar
-     ------------------------------------------------------------
-     Um celular atual entrega 4 a 12 MB por foto. Dez dessas no
-     PDF dão um arquivo que não passa no WhatsApp e um rascunho
-     que não cabe no aparelho. 1400px no lado maior, JPEG 72%,
-     resolve em ~200 KB e ainda mostra com sobra a tomada fora
-     de lugar, que é o que o documento precisa provar.
-     ============================================================ */
-
-  const LADO_MAIOR = 1400;
-  const QUALIDADE = 0.72;
-
-  function comprimir(arquivo) {
-    return new Promise(function (ok, falha) {
-      const url = URL.createObjectURL(arquivo);
-      const img = new Image();
-
-      img.onload = function () {
-        URL.revokeObjectURL(url);
-
-        const escala = Math.min(1, LADO_MAIOR / Math.max(img.width, img.height));
-        const l = Math.round(img.width * escala);
-        const a = Math.round(img.height * escala);
-
-        const tela = document.createElement('canvas');
-        tela.width = l; tela.height = a;
-        tela.getContext('2d').drawImage(img, 0, 0, l, a);
-
-        tela.toBlob(function (blob) {
-          if (blob) ok(blob); else falha(new Error('não consegui converter a foto'));
-        }, 'image/jpeg', QUALIDADE);
-      };
-
-      img.onerror = function () {
-        URL.revokeObjectURL(url);
-        falha(new Error('não consegui abrir a foto'));
-      };
-
-      img.src = url;
-    });
-  }
 
 
   /* ============================================================
@@ -461,14 +369,7 @@
   let salvando = null;       // debounce
   const previas = {};        // id da foto -> objectURL, para não vazar memória
 
-  function agora() { return new Date().toISOString(); }
 
-  function novoId(prefixo) {
-    const r = (crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : String(Date.now()) + '-' + Math.random().toString(16).slice(2);
-    return prefixo + '-' + r;
-  }
 
   function el(id) { return document.getElementById(id); }
 
@@ -476,14 +377,14 @@
     const eu = window.dalmobileAuth && window.dalmobileAuth.usuario;
 
     return {
-      id: novoId('med'),
+      id: C.novoId('med'),
       remoto: null,
       enviado: false,
       autor: eu ? eu.id : null,
       cliente: '', contrato: '',
       loja: (window.EU && window.EU.loja) || 'sjc',
-      criado_em: agora(),
-      atualizado_em: agora(),
+      criado_em: C.agora(),
+      atualizado_em: C.agora(),
       dados: {
         tipoContrato: 'total',
         ambientes: [{ nome: '', checklist: '', projetoDefinido: null }],
@@ -506,12 +407,6 @@
      se não saiu e o celular cair na massa, acabou.
      ============================================================ */
 
-  function temServidor() {
-    if (!navigator.onLine) return null;
-    if (window.dalmobileAuth && window.dalmobileAuth.offline) return null;
-    const a = window.dalmobileAuth;
-    return (a && a.cliente) ? a.cliente : null;
-  }
 
   async function pintarRede() {
     const faixa = el('rede');
@@ -575,10 +470,10 @@
       const resumo = contar(m);
 
       b.innerHTML =
-        '<h3>' + escapar(m.cliente || 'Sem nome') + '</h3>' +
-        '<p>' + escapar(m.contrato || 'sem contrato') + ' · ' +
+        '<h3>' + C.escapar(m.cliente || 'Sem nome') + '</h3>' +
+        '<p>' + C.escapar(m.contrato || 'sem contrato') + ' · ' +
                 (m.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos') + ' · ' +
-                dataCurta(m.atualizado_em) + '</p>' +
+                C.dataCurta(m.atualizado_em) + '</p>' +
         '<div class="tags">' +
           (m.enviado ? '<span class="tag ok">no sistema</span>'
                      : '<span class="tag aviso">só neste aparelho</span>') +
@@ -650,7 +545,7 @@
 
       d.innerHTML =
         '<div class="amb-topo">' +
-          '<input type="text" placeholder="Ex.: Cozinha" value="' + escapar(amb.nome || '') + '">' +
+          '<input type="text" placeholder="Ex.: Cozinha" value="' + C.escapar(amb.nome || '') + '">' +
           '<button type="button" title="Remover">×</button>' +
         '</div>' +
         '<div class="mini">' +
@@ -719,9 +614,9 @@
     d.className = 'item' + (resposta.situacao ? ' ' + resposta.situacao : '');
 
     d.innerHTML =
-      '<header><span class="letra">' + item.letra + ')</span><h3>' + escapar(item.titulo) + '</h3></header>' +
+      '<header><span class="letra">' + item.letra + ')</span><h3>' + C.escapar(item.titulo) + '</h3></header>' +
       '<button type="button" class="porque">por que isso importa</button>' +
-      '<p class="explica">' + escapar(item.texto) + '</p>' +
+      '<p class="explica">' + C.escapar(item.texto) + '</p>' +
       '<div class="escolha">' +
         '<button type="button" class="sim" data-v="apto">Apto</button>' +
         '<button type="button" class="nao" data-v="nao-apto">Não apto</button>' +
@@ -789,8 +684,16 @@
       anexar.classList.toggle('vazio', !(resposta.fotos || []).length);
     }
 
-    anexar.querySelector('input').onchange = function () {
-      receberFotos(this, resposta, fotos, pintar);
+    anexar.querySelector('input').onchange = async function () {
+      const novas = await C.receber(this.files, function () {
+        avisar('Não consegui usar uma das fotos.');
+      });
+      this.value = '';
+
+      resposta.fotos = (resposta.fotos || []).concat(novas);
+      await guardar();
+      desenharFotos(fotos, resposta, pintar);
+      pintar();
     };
 
     desenharFotos(fotos, resposta, pintar);
@@ -810,11 +713,11 @@
       d.innerHTML =
         '<img alt="">' +
         '<button type="button" class="tirar" title="Remover">×</button>' +
-        '<input type="text" placeholder="Legenda" value="' + escapar(f.legenda || '') + '">';
+        '<input type="text" placeholder="Legenda" value="' + C.escapar(f.legenda || '') + '">';
 
       const img = d.querySelector('img');
 
-      Armazem.lerFoto(f.id).then(function (reg) {
+      C.fotos.ler(f.id).then(function (reg) {
         if (!reg) return;
         if (previas[f.id]) URL.revokeObjectURL(previas[f.id]);
         previas[f.id] = URL.createObjectURL(reg.blob);
@@ -827,7 +730,7 @@
       };
 
       d.querySelector('.tirar').onclick = function () {
-        Armazem.apagarFoto(f.id);
+        C.fotos.apagar(f.id);
         if (previas[f.id]) { URL.revokeObjectURL(previas[f.id]); delete previas[f.id]; }
         resposta.fotos.splice(i, 1);
         guardar();
@@ -842,28 +745,6 @@
   /* O campo de arquivo com capture="environment" abre a câmera
      traseira direto no celular; no computador abre o seletor de
      arquivos. Um controle só, nos dois lugares. */
-  async function receberFotos(entrada, resposta, caixa, aoMudar) {
-    const arquivos = Array.prototype.slice.call(entrada.files || []);
-    entrada.value = '';
-    if (!arquivos.length) return;
-
-    for (const arquivo of arquivos) {
-      try {
-        const blob = await comprimir(arquivo);
-        const id = novoId('foto');
-        await Armazem.salvarFoto({ id: id, blob: blob });
-        resposta.fotos = resposta.fotos || [];
-        resposta.fotos.push({ id: id, legenda: '' });
-      } catch (erro) {
-        console.error(erro);
-        avisar('Não consegui usar uma das fotos.');
-      }
-    }
-
-    await guardar();
-    desenharFotos(caixa, resposta, aoMudar);
-    if (aoMudar) aoMudar();
-  }
 
   /* ---------- parecer final ---------- */
 
@@ -919,7 +800,7 @@
   async function guardar() {
     if (!atual) return;
     colher();
-    atual.atualizado_em = agora();
+    atual.atualizado_em = C.agora();
     atual.enviado = false;
     await Armazem.salvar(atual);
     pintarEstado();
@@ -958,7 +839,7 @@
   async function sincronizar(m) {
     if (!m || m.enviado) return;
 
-    const sb = temServidor();
+    const sb = C.temServidor();
     if (!sb) return;
 
     /* As fotos ficam no aparelho nesta versão: elas vão para o
@@ -1031,7 +912,7 @@
       for (const item of ITENS) {
         const r = atual.dados.itens[item.letra];
         for (const f of ((r && r.fotos) || [])) {
-          const reg = await Armazem.lerFoto(f.id);
+          const reg = await C.fotos.ler(f.id);
           if (reg) fotos[f.id] = new Uint8Array(await reg.blob.arrayBuffer());
         }
       }
@@ -1097,35 +978,15 @@
     const botao = this;
     colher();
 
-    let destino = null;
-
-    if (window.showSaveFilePicker) {
-      try {
-        destino = await window.showSaveFilePicker({
-          suggestedName: PDF101.nomeDoArquivo(atual),
-          types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }]
-        });
-      } catch (erro) {
-        /* Fechou o diálogo sem escolher: não gera nada. */
-        if (erro && erro.name === 'AbortError') return;
-        destino = null;   // navegador recusou; segue no download
-      }
-    }
+    const destino = await C.escolherPasta(PDF101.nomeDoArquivo(atual));
+    if (destino === 'cancelado') return;
 
     botao.disabled = true;
     botao.textContent = 'Gerando…';
 
     try {
       const pdf = await montarPdf();
-
-      if (destino) {
-        const escrita = await destino.createWritable();
-        await escrita.write(pdf.blob);
-        await escrita.close();
-      } else {
-        baixarComum(pdf);
-      }
-
+      await C.entregar(destino, pdf.blob, pdf.nome);
     } catch (erro) {
       console.error(erro);
       avisar('Não consegui salvar o PDF. ' + (erro.message || ''));
@@ -1135,35 +996,13 @@
     }
   };
 
-  function baixarComum(pdf) {
-    const url = URL.createObjectURL(pdf.blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = pdf.nome;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-  }
-
-  el('enviar').onclick = comPdf(el('enviar'), 'Enviar', async function (pdf) {
-    const arquivo = new File([pdf.blob], pdf.nome, { type: 'application/pdf' });
-
-    try {
-      await navigator.share({ files: [arquivo], title: pdf.nome });
-    } catch (erro) {
-      /* Fechar o menu sem escolher nada não é erro. */
-      if (!erro || erro.name !== 'AbortError') throw erro;
-    }
+  el('enviar').onclick = comPdf(el('enviar'), 'Enviar', function (pdf) {
+    return C.compartilhar(pdf.blob, pdf.nome);
   });
 
   /* "Enviar" só aparece onde o aparelho sabe mandar arquivo.
      Botão que não faz nada é pior que botão que não existe. */
-  (function () {
-    const teste = new File([new Uint8Array([1])], 'x.pdf', { type: 'application/pdf' });
-    const podeMandar = !!(navigator.canShare && navigator.canShare({ files: [teste] }));
-    el('enviar').hidden = !podeMandar;
-  })();
+  el('enviar').hidden = !C.podeCompartilharArquivo();
 
 
   /* ============================================================
@@ -1198,7 +1037,7 @@
 
     for (const item of ITENS) {
       const r = atual.dados.itens[item.letra];
-      for (const f of ((r && r.fotos) || [])) await Armazem.apagarFoto(f.id);
+      for (const f of ((r && r.fotos) || [])) await C.fotos.apagar(f.id);
     }
 
     await Armazem.apagar(atual.id);
@@ -1210,16 +1049,7 @@
      11. Miudezas
      ============================================================ */
 
-  function escapar(t) {
-    return String(t == null ? '' : t)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
 
-  function dataCurta(iso) {
-    const d = new Date(iso);
-    return isNaN(d) ? '—' : d.toLocaleDateString('pt-BR');
-  }
 
   function avisar(texto) { alert(texto); }
 

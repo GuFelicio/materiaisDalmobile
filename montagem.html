@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f2f2f0">
+<title>Checklist de montagem · Dalmóbile</title>
+
+<!-- ============================================================
+     CHECKLIST DE MONTAGEM — tela do responsável
+     ------------------------------------------------------------
+     Controle interno: quem preenche confere o trabalho da equipe
+     de montagem. O cliente não vê nem assina.
+
+     São 36 itens, quase o dobro do Documento 101, e isso manda na
+     tela inteira: cada item ocupa POUCO espaço vertical e se
+     resolve em um toque. Um item que exige dois toques vira 72
+     toques no total, e um formulário que ninguém termina.
+
+     O que NÃO tem aqui, de propósito: um botão de "marcar tudo
+     como conforme". Ele economizaria minutos reais, já que a
+     maioria das montagens passa — e é exatamente por isso que
+     acabaria com a inspeção. Um checklist preenchido de uma vez
+     só não é registro de nada.
+
+     Depende de campo.js (armazém offline, fotos, conexão), que é
+     o mesmo código usado pela tela de medição.
+     ============================================================ -->
+
+<style>
+  :root {
+    --bg: #f2f2f0; --card: #fff; --ink: #141618; --ink-2: #4a5054;
+    --muted: #8a9094; --line: #e0e1df; --line-2: #c9cbc8;
+    --ok: #1c6b3f; --ok-bg: #eef3ee; --ok-line: #cfe0d2;
+    --aviso: #8a4b12; --aviso-bg: #fdf1e7; --aviso-line: #f0cfae;
+    --erro: #b3261e; --erro-bg: #fdeceb; --erro-line: #f3c9c6;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-size: 16px; line-height: 1.5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 16px 120px; }
+
+  .topo { position: relative; padding: 24px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+  .assinatura { margin: 3px 0 0; font-size: 10px; font-weight: 600; letter-spacing: .18em;
+                text-transform: uppercase; color: var(--muted); }
+
+  .voltar { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0;
+            padding: 13px 0; margin: 0 0 6px; font-family: inherit; font-size: 14.5px;
+            font-weight: 600; color: var(--ink-2); cursor: pointer; text-decoration: none; }
+
+  .rede { display: none; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 16px;
+          border-radius: 10px; font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  .rede.off { display: flex; background: var(--aviso-bg); border: 1px solid var(--aviso-line); color: var(--aviso); }
+  .rede.pendente { display: flex; background: var(--ok-bg); border: 1px solid var(--ok-line); color: var(--ok); }
+  .rede b { display: block; font-weight: 400; color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
+
+  .painel { background: var(--card); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 18px; margin-bottom: 18px; }
+  .painel > h2 { margin: 0 0 3px; font-size: 17px; font-weight: 700; letter-spacing: -0.015em; }
+  .painel > h2 + p { margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2); }
+
+  label.rot { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em;
+              text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+  input[type=text], textarea, select {
+    width: 100%; font-family: inherit; font-size: 16px; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-2); border-radius: 10px;
+    padding: 12px 13px; line-height: 1.45; min-height: 46px;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+  .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .campo { margin-bottom: 14px; }
+  @media (max-width: 430px) { .dupla { grid-template-columns: 1fr; } }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+         font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+         border-radius: 10px; padding: 13px 18px; border: 1px solid var(--ink);
+         background: var(--ink); color: #fff; min-height: 46px; }
+  .btn.vazio { background: #fff; color: var(--ink); }
+  .btn.largo { width: 100%; }
+  .btn:disabled { opacity: .45; cursor: default; }
+
+  .ficha { display: block; width: 100%; text-align: left; background: var(--card);
+           border: 1px solid var(--line); border-radius: var(--radius);
+           padding: 15px 16px; margin-bottom: 10px; cursor: pointer; font-family: inherit; }
+  .ficha h3 { margin: 0 0 3px; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .ficha p { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .ficha .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+         text-transform: uppercase; padding: 4px 8px; border-radius: 6px;
+         background: #f2f2f0; color: var(--ink-2); border: 1px solid var(--line); }
+  .tag.ok    { background: var(--ok-bg);    color: var(--ok);    border-color: var(--ok-line); }
+  .tag.aviso { background: var(--aviso-bg); color: var(--aviso); border-color: var(--aviso-line); }
+  .tag.erro  { background: var(--erro-bg);  color: var(--erro);  border-color: var(--erro-line); }
+
+  .vazio-msg { text-align: center; padding: 30px 16px; color: var(--ink-2); font-size: 14.5px; }
+
+  /* ---------- blocos e itens ---------- */
+
+  .bloco-titulo { display: flex; align-items: baseline; justify-content: space-between;
+                  gap: 12px; margin: 30px 0 12px; }
+  .bloco-titulo h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+                     text-transform: uppercase; color: var(--muted); }
+  .bloco-titulo .conta { font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .bloco-titulo .conta.pronto { color: var(--ok); }
+  .bloco-titulo .conta.falta  { color: var(--aviso); }
+
+  /* Item enxuto: 36 deles precisam caber numa rolagem que
+     alguém termina. Sem card, sem sombra, sem respiro grande. */
+  .item { background: var(--card); border: 1px solid var(--line);
+          border-radius: 11px; padding: 13px 14px; margin-bottom: 8px; }
+  .item.nao { border-color: var(--erro-line); background: #fffcfc; }
+
+  .item h3 { margin: 0 0 10px; font-size: 14.5px; font-weight: 600;
+             line-height: 1.35; letter-spacing: -0.005em; }
+
+  .escolha { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .escolha button {
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    border-radius: 9px; padding: 12px 4px; min-height: 46px; line-height: 1.2;
+    border: 1.5px solid var(--line-2); background: #fff; color: var(--ink-2);
+  }
+  .escolha button[aria-pressed=true].sim { background: var(--ok-bg);   border-color: var(--ok);   color: var(--ok); }
+  .escolha button[aria-pressed=true].nao { background: var(--erro-bg); border-color: var(--erro); color: var(--erro); }
+  .escolha button[aria-pressed=true].na  { background: #ebebe8;        border-color: var(--line-2); color: var(--ink-2); }
+
+  .extras { display: flex; gap: 7px; align-items: center; margin-top: 9px; flex-wrap: wrap; }
+
+  .anexar, .obs-btn {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    border: 1.5px solid var(--line-2); border-radius: 9px;
+    padding: 10px 13px; min-height: 44px; background: #fff;
+    font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  }
+  .anexar span { font-size: 16px; line-height: 1; }
+  .obs-btn[aria-expanded=true] { background: #ebebe8; }
+
+  /* Item não conforme e sem registro: os botões cobram. */
+  .item.nao .anexar.vazio { border-color: var(--erro); color: var(--erro); background: var(--erro-bg); }
+
+  .obs-campo { margin-top: 9px; }
+  .obs-campo[hidden] { display: none; }
+
+  .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .fotos:not(:empty) { margin-top: 9px; }
+  .foto { position: relative; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); background: #ebebe8; }
+  .foto img { display: block; width: 100%; height: 104px; object-fit: cover; }
+  .foto input { width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0;
+                font-size: 12.5px; padding: 10px 8px; background: #fff; min-height: 0; }
+  .foto .tirar { position: absolute; top: 5px; right: 5px; width: 34px; height: 34px;
+                 border-radius: 50%; border: 0; background: rgba(20,22,24,.78); color: #fff;
+                 font-size: 17px; line-height: 1; cursor: pointer; }
+
+  .barra { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(242,242,240,.96);
+           backdrop-filter: blur(8px); border-top: 1px solid var(--line);
+           padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); z-index: 40; }
+  .barra .dentro { max-width: 620px; margin: 0 auto; display: flex; gap: 9px; align-items: center; }
+  .barra .estado { flex: 1; font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+  .barra .btn { flex: 0 0 auto; }
+
+  .oculto { display: none !important; }
+</style>
+
+<style id="trava-entrada">html { visibility: hidden; }</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header class="topo">
+    <h1 class="marca">Dalmóbile <span>· Central de Peças</span></h1>
+    <p class="assinatura">Checklist de montagem</p>
+  </header>
+
+  <div class="rede" id="rede"></div>
+
+  <section id="tela-lista">
+    <a class="voltar" href="index.html">← Voltar para a Central</a>
+
+    <div class="painel">
+      <h2>Montagens</h2>
+      <p>Controle interno de qualidade. Tudo fica salvo neste aparelho, com ou sem internet.</p>
+      <button class="btn largo" id="nova">+ Nova montagem</button>
+    </div>
+
+    <div id="lista"></div>
+  </section>
+
+  <section id="tela-ficha" class="oculto">
+    <button class="voltar" id="voltar-lista">← Montagens</button>
+
+    <div class="painel">
+      <h2>Dados da montagem</h2>
+
+      <div class="campo">
+        <label class="rot" for="f-cliente">Cliente</label>
+        <input type="text" id="f-cliente" autocomplete="off" placeholder="Nome do cliente">
+      </div>
+
+      <div class="dupla">
+        <div class="campo">
+          <label class="rot" for="f-contrato">Nº do contrato</label>
+          <input type="text" id="f-contrato" autocomplete="off" placeholder="OR-D...">
+        </div>
+        <div class="campo">
+          <label class="rot" for="f-loja">Loja</label>
+          <select id="f-loja">
+            <option value="sjc">São José dos Campos</option>
+            <option value="cgt">Caraguatatuba</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label class="rot" for="f-ambiente">Ambiente</label>
+        <input type="text" id="f-ambiente" autocomplete="off" placeholder="Ex.: Cozinha e área de serviço">
+      </div>
+
+      <div class="campo" style="margin-bottom:0">
+        <label class="rot" for="f-responsavel">Responsável pelo preenchimento</label>
+        <input type="text" id="f-responsavel" autocomplete="off" placeholder="Seu nome">
+      </div>
+    </div>
+
+    <div id="blocos"></div>
+
+    <div class="campo" style="margin-top:22px">
+      <label class="rot" for="f-observacoes">Observações gerais e não conformidades</label>
+      <textarea id="f-observacoes" placeholder="O que não coube nos itens acima"></textarea>
+    </div>
+
+    <button class="btn vazio largo" id="apagar"
+            style="margin-top:6px;border-color:var(--erro-line);color:var(--erro)">
+      Apagar esta montagem
+    </button>
+  </section>
+
+</div>
+
+<div class="barra oculto" id="barra">
+  <div class="dentro">
+    <div class="estado" id="estado"></div>
+    <button class="btn vazio" id="enviar" hidden>Enviar</button>
+    <button class="btn" id="salvar">Salvar PDF</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
+<script src="campo.js"></script>
+<script src="auth.js"></script>
+<script src="pdf-montagem.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const C = window.Campo;
+  const Armazem = C.armazem('montagens');
+
+  const BLOCOS = window.PDFMontagem ? PDFMontagem.BLOCOS : [];
+
+  let atual = null;
+  let salvando = null;
+  const previas = {};
+
+  function el(id) { return document.getElementById(id); }
+
+
+  /* ============================================================
+     Nova ficha
+     ============================================================ */
+
+  function fichaNova() {
+    const eu = window.dalmobileAuth && window.dalmobileAuth.usuario;
+
+    return {
+      id: C.novoId('mont'),
+      remoto: null,
+      enviado: false,
+      cliente: '', contrato: '',
+      loja: (window.EU && window.EU.loja) || 'sjc',
+      criado_em: C.agora(),
+      atualizado_em: C.agora(),
+      dados: {
+        ambiente: '',
+        responsavel: (eu && eu.user_metadata && eu.user_metadata.nome) || '',
+        itens: {},
+        observacoes: ''
+      }
+    };
+  }
+
+
+  /* ============================================================
+     Conexão
+     ============================================================ */
+
+  async function pintarRede() {
+    const faixa = el('rede');
+    const pendentes = (await Armazem.todas()).filter(function (m) { return !m.enviado; }).length;
+
+    faixa.className = 'rede';
+    faixa.innerHTML = '';
+
+    if (!navigator.onLine) {
+      faixa.classList.add('off');
+      faixa.innerHTML = 'Sem internet — tudo continua funcionando.' +
+        '<b>O que você preencher fica salvo aqui e sobe sozinho quando o sinal voltar. ' +
+        'O PDF você gera mesmo offline.</b>';
+      return;
+    }
+
+    if (pendentes) {
+      faixa.classList.add('pendente');
+      faixa.innerHTML = pendentes + (pendentes > 1 ? ' montagens ainda não subiram.' : ' montagem ainda não subiu.') +
+        '<b>Elas sobem sozinhas; se demorar, é só abrir a montagem que ela tenta de novo.</b>';
+    }
+  }
+
+  window.addEventListener('online',  function () { pintarRede(); sincronizarTudo(); });
+  window.addEventListener('offline', pintarRede);
+
+
+  /* ============================================================
+     Lista
+     ============================================================ */
+
+  async function mostrarLista() {
+    el('tela-ficha').classList.add('oculto');
+    el('tela-lista').classList.remove('oculto');
+    el('barra').classList.add('oculto');
+    atual = null;
+    limparPrevias();
+
+    await pintarRede();
+
+    const todas = (await Armazem.todas()).sort(function (a, b) {
+      return String(b.atualizado_em).localeCompare(String(a.atualizado_em));
+    });
+
+    const caixa = el('lista');
+
+    if (!todas.length) {
+      caixa.innerHTML = '<p class="vazio-msg">Nenhuma montagem ainda.<br>' +
+        'Toque em <b>Nova montagem</b> antes de sair — assim a tela já fica ' +
+        'guardada no aparelho.</p>';
+      return;
+    }
+
+    caixa.innerHTML = '';
+
+    todas.forEach(function (m) {
+      const c = PDFMontagem.contar(m.dados);
+
+      const b = document.createElement('button');
+      b.className = 'ficha';
+      b.onclick = function () { abrirFicha(m.id); };
+
+      b.innerHTML =
+        '<h3>' + C.escapar(m.cliente || 'Sem nome') + '</h3>' +
+        '<p>' + C.escapar(m.dados.ambiente || 'ambiente não informado') + ' · ' +
+                C.escapar(m.contrato || 'sem contrato') + ' · ' +
+                C.dataCurta(m.atualizado_em) + '</p>' +
+        '<div class="tags">' +
+          (m.enviado ? '<span class="tag ok">no sistema</span>'
+                     : '<span class="tag aviso">só neste aparelho</span>') +
+          (c.faltam ? '<span class="tag">' + c.faltam + ' sem resposta</span>' : '') +
+          (c.nao ? '<span class="tag erro">' + c.nao + ' não conforme</span>' : '') +
+          (!c.faltam && !c.nao ? '<span class="tag ok">tudo conforme</span>' : '') +
+        '</div>';
+
+      caixa.appendChild(b);
+    });
+  }
+
+
+  /* ============================================================
+     Ficha
+     ============================================================ */
+
+  async function abrirFicha(id) {
+    const m = await Armazem.ler(id);
+    if (!m) return mostrarLista();
+
+    atual = m;
+    limparPrevias();
+
+    el('tela-lista').classList.add('oculto');
+    el('tela-ficha').classList.remove('oculto');
+    el('barra').classList.remove('oculto');
+    window.scrollTo(0, 0);
+
+    el('f-cliente').value     = m.cliente || '';
+    el('f-contrato').value    = m.contrato || '';
+    el('f-loja').value        = m.loja || 'sjc';
+    el('f-ambiente').value    = m.dados.ambiente || '';
+    el('f-responsavel').value = m.dados.responsavel || '';
+    el('f-observacoes').value = m.dados.observacoes || '';
+
+    desenharBlocos();
+    pintarEstado();
+    sincronizar(m);
+  }
+
+  function desenharBlocos() {
+    const caixa = el('blocos');
+    caixa.innerHTML = '';
+
+    BLOCOS.forEach(function (bloco) {
+      const cab = document.createElement('div');
+      cab.className = 'bloco-titulo';
+      cab.innerHTML = '<h2>' + C.escapar(bloco.titulo) + '</h2>' +
+                      '<span class="conta" data-bloco="' + bloco.id + '"></span>';
+      caixa.appendChild(cab);
+
+      bloco.itens.forEach(function (item) {
+        caixa.appendChild(montarItem(bloco, item));
+      });
+    });
+
+    pintarContas();
+  }
+
+  /* Quantos faltam em cada bloco. Com 36 itens, rolar de volta
+     para procurar o que ficou em branco é o jeito mais rápido de
+     desistir do formulário. */
+  function pintarContas() {
+    BLOCOS.forEach(function (bloco) {
+      const alvo = document.querySelector('.conta[data-bloco="' + bloco.id + '"]');
+      if (!alvo) return;
+
+      const respostas = atual.dados.itens || {};
+      const faltam = bloco.itens.filter(function (i) {
+        return !(respostas[i.id] || {}).resposta;
+      }).length;
+
+      alvo.textContent = faltam
+        ? faltam + ' de ' + bloco.itens.length + ' sem resposta'
+        : 'completo';
+      alvo.className = 'conta ' + (faltam ? 'falta' : 'pronto');
+    });
+  }
+
+  function montarItem(bloco, item) {
+    const v = PDFMontagem.VOCABULARIO[bloco.vocabulario];
+
+    const resposta = atual.dados.itens[item.id] ||
+                     (atual.dados.itens[item.id] = { resposta: '', obs: '', fotos: [] });
+
+    const d = document.createElement('div');
+    d.className = 'item' + (resposta.resposta === 'nao' ? ' nao' : '');
+
+    d.innerHTML =
+      '<h3>' + C.escapar(item.texto) + '</h3>' +
+      '<div class="escolha">' +
+        '<button type="button" class="sim" data-v="ok">'  + C.escapar(v.ok)  + '</button>' +
+        '<button type="button" class="nao" data-v="nao">' + C.escapar(v.nao) + '</button>' +
+        '<button type="button" class="na"  data-v="na">'  + C.escapar(v.na)  + '</button>' +
+      '</div>' +
+      '<div class="extras">' +
+        '<label class="anexar"><span>+</span> Foto' +
+          '<input type="file" accept="image/*" capture="environment" hidden multiple>' +
+        '</label>' +
+        '<button type="button" class="obs-btn" aria-expanded="false">Observação</button>' +
+      '</div>' +
+      '<div class="obs-campo" hidden>' +
+        '<textarea placeholder="O que foi encontrado"></textarea>' +
+      '</div>' +
+      '<div class="fotos"></div>';
+
+    const anexar = d.querySelector('.anexar');
+    const obsBtn = d.querySelector('.obs-btn');
+    const obsCampo = d.querySelector('.obs-campo');
+    const obs = d.querySelector('textarea');
+    const fotos = d.querySelector('.fotos');
+
+    obs.value = resposta.obs || '';
+    obs.oninput = function () { resposta.obs = obs.value; guardar(); };
+
+    obsBtn.onclick = function () {
+      const abrindo = obsCampo.hidden;
+      obsCampo.hidden = !abrindo;
+      obsBtn.setAttribute('aria-expanded', String(abrindo));
+      if (abrindo) obs.focus();
+    };
+
+    d.querySelectorAll('.escolha button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(resposta.resposta === b.dataset.v));
+
+      b.onclick = function () {
+        /* Tocar de novo no que já estava marcado desmarca — um
+           "conforme" dado por engano precisa ter volta. */
+        resposta.resposta = (resposta.resposta === b.dataset.v) ? '' : b.dataset.v;
+
+        d.querySelectorAll('.escolha button').forEach(function (o) {
+          o.setAttribute('aria-pressed', String(resposta.resposta === o.dataset.v));
+        });
+
+        d.className = 'item' + (resposta.resposta === 'nao' ? ' nao' : '');
+
+        /* Não conforme abre a observação sozinho: é ali que o
+           supervisor diz o que precisa ser corrigido. */
+        if (resposta.resposta === 'nao' && obsCampo.hidden) {
+          obsCampo.hidden = false;
+          obsBtn.setAttribute('aria-expanded', 'true');
+        }
+
+        pintar();
+        guardar();
+        pintarEstado();
+        pintarContas();
+      };
+    });
+
+    function pintar() {
+      anexar.classList.toggle('vazio', !(resposta.fotos || []).length);
+      if (resposta.obs && obsCampo.hidden) {
+        obsCampo.hidden = false;
+        obsBtn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    anexar.querySelector('input').onchange = async function () {
+      const novas = await C.receber(this.files, function () {
+        alert('Não consegui usar uma das fotos.');
+      });
+      this.value = '';
+
+      resposta.fotos = (resposta.fotos || []).concat(novas);
+      await guardar();
+      desenharFotos(fotos, resposta, pintar);
+      pintar();
+    };
+
+    desenharFotos(fotos, resposta, pintar);
+    pintar();
+
+    return d;
+  }
+
+  function desenharFotos(caixa, resposta, aoMudar) {
+    caixa.innerHTML = '';
+
+    (resposta.fotos || []).forEach(function (f, i) {
+      const d = document.createElement('div');
+      d.className = 'foto';
+      d.innerHTML =
+        '<img alt="">' +
+        '<button type="button" class="tirar" title="Remover">×</button>' +
+        '<input type="text" placeholder="Legenda" value="' + C.escapar(f.legenda || '') + '">';
+
+      const img = d.querySelector('img');
+
+      C.fotos.ler(f.id).then(function (reg) {
+        if (!reg) return;
+        if (previas[f.id]) URL.revokeObjectURL(previas[f.id]);
+        previas[f.id] = URL.createObjectURL(reg.blob);
+        img.src = previas[f.id];
+      });
+
+      d.querySelector('input').oninput = function () {
+        resposta.fotos[i].legenda = this.value;
+        guardar();
+      };
+
+      d.querySelector('.tirar').onclick = function () {
+        C.fotos.apagar(f.id);
+        if (previas[f.id]) { URL.revokeObjectURL(previas[f.id]); delete previas[f.id]; }
+        resposta.fotos.splice(i, 1);
+        guardar();
+        desenharFotos(caixa, resposta, aoMudar);
+        if (aoMudar) aoMudar();
+      };
+
+      caixa.appendChild(d);
+    });
+  }
+
+
+  /* ============================================================
+     Salvar
+     ============================================================ */
+
+  function colher() {
+    if (!atual) return;
+    atual.cliente  = el('f-cliente').value.trim();
+    atual.contrato = el('f-contrato').value.trim();
+    atual.loja     = el('f-loja').value;
+
+    atual.dados.ambiente    = el('f-ambiente').value.trim();
+    atual.dados.responsavel = el('f-responsavel').value.trim();
+    atual.dados.observacoes = el('f-observacoes').value;
+  }
+
+  async function guardar() {
+    if (!atual) return;
+    colher();
+    atual.atualizado_em = C.agora();
+    atual.enviado = false;
+    await Armazem.salvar(atual);
+    pintarEstado();
+
+    clearTimeout(salvando);
+    salvando = setTimeout(function () { sincronizar(atual); }, 4000);
+  }
+
+  ['f-cliente','f-contrato','f-ambiente','f-responsavel','f-observacoes'].forEach(function (id) {
+    el(id).addEventListener('input', guardar);
+  });
+  el('f-loja').addEventListener('change', guardar);
+
+  function pintarEstado() {
+    if (!atual) return;
+    const c = PDFMontagem.contar(atual.dados);
+
+    el('estado').innerHTML = c.faltam
+      ? '<b>' + (c.total - c.faltam) + '</b> de ' + c.total + ' respondidos'
+      : (c.nao ? '<b>' + c.nao + '</b> não conforme' + (c.nao > 1 ? 's' : '')
+               : 'Tudo conforme');
+  }
+
+
+  /* ============================================================
+     Sincronia
+     ============================================================ */
+
+  async function sincronizar(m) {
+    if (!m || m.enviado) return;
+
+    const sb = C.temServidor();
+    if (!sb) return;
+
+    const linha = {
+      tipo: 'montagem',
+      cliente: m.cliente || '',
+      contrato: m.contrato || '',
+      loja: m.loja,
+      dados: m.dados,
+      status: 'preenchido',
+      preenchido_em: m.atualizado_em
+    };
+
+    try {
+      const r = m.remoto
+        ? await sb.from('formularios').update(linha).eq('id', m.remoto).select('id').single()
+        : await sb.from('formularios').insert(linha).select('id').single();
+
+      if (r.error) throw r.error;
+
+      m.remoto = r.data.id;
+      m.enviado = true;
+      await Armazem.salvar(m);
+
+      pintarEstado();
+      pintarRede();
+
+    } catch (erro) {
+      console.warn('Não subiu agora; fica para a próxima.', erro);
+    }
+  }
+
+  async function sincronizarTudo() {
+    for (const m of await Armazem.todas()) {
+      if (!m.enviado) await sincronizar(m);
+    }
+    pintarRede();
+    if (!el('tela-lista').classList.contains('oculto')) mostrarLista();
+  }
+
+
+  /* ============================================================
+     PDF
+     ============================================================ */
+
+  async function montarPdf() {
+    colher();
+
+    const listas = PDFMontagem.todosOsItens().map(function (par) {
+      return (atual.dados.itens[par.item.id] || {}).fotos;
+    });
+
+    const fotos = await C.bytesDasFotos(listas);
+
+    const bytes = await PDFMontagem.montar({
+      cliente: atual.cliente,
+      contrato: atual.contrato,
+      loja: atual.loja,
+      dados: atual.dados,
+      preenchido_em: atual.atualizado_em,
+      fotos: fotos
+    });
+
+    return {
+      nome: PDFMontagem.nomeDoArquivo(atual),
+      blob: new Blob([bytes], { type: 'application/pdf' })
+    };
+  }
+
+  /* A pasta é pedida ANTES de montar o PDF: o diálogo só abre
+     enquanto o toque ainda vale para o navegador, e um checklist
+     com fotos demora o bastante para estourar esse prazo. */
+  el('salvar').onclick = async function () {
+    if (!atual) return;
+
+    const botao = this;
+    colher();
+
+    const destino = await C.escolherPasta(PDFMontagem.nomeDoArquivo(atual));
+    if (destino === 'cancelado') return;
+
+    botao.disabled = true;
+    botao.textContent = 'Gerando…';
+
+    try {
+      const pdf = await montarPdf();
+      await C.entregar(destino, pdf.blob, pdf.nome);
+    } catch (erro) {
+      console.error(erro);
+      alert('Não consegui salvar o PDF. ' + (erro.message || ''));
+    } finally {
+      botao.disabled = false;
+      botao.textContent = 'Salvar PDF';
+    }
+  };
+
+  el('enviar').onclick = async function () {
+    if (!atual) return;
+
+    const botao = this;
+    botao.disabled = true;
+    botao.textContent = 'Gerando…';
+
+    try {
+      const pdf = await montarPdf();
+      await C.compartilhar(pdf.blob, pdf.nome);
+    } catch (erro) {
+      console.error(erro);
+      alert('Não consegui gerar o PDF. ' + (erro.message || ''));
+    } finally {
+      botao.disabled = false;
+      botao.textContent = 'Enviar';
+    }
+  };
+
+  el('enviar').hidden = !C.podeCompartilharArquivo();
+
+
+  /* ============================================================
+     Botões gerais
+     ============================================================ */
+
+  el('nova').onclick = async function () {
+    const m = fichaNova();
+    await Armazem.salvar(m);
+    abrirFicha(m.id);
+  };
+
+  el('voltar-lista').onclick = async function () {
+    await guardar();
+    mostrarLista();
+  };
+
+  el('apagar').onclick = async function () {
+    if (!atual) return;
+
+    const aviso = atual.enviado
+      ? 'Apagar esta montagem deste aparelho? Ela já subiu para o sistema e continua lá.'
+      : 'Apagar esta montagem? Ela ainda NÃO subiu para o sistema — isso não tem volta.';
+
+    if (!confirm(aviso)) return;
+
+    for (const par of PDFMontagem.todosOsItens()) {
+      const r = atual.dados.itens[par.item.id];
+      for (const f of ((r && r.fotos) || [])) await C.fotos.apagar(f.id);
+    }
+
+    await Armazem.apagar(atual.id);
+    mostrarLista();
+  };
+
+
+  /* ============================================================
+     Miudezas e partida
+     ============================================================ */
+
+  function limparPrevias() {
+    Object.keys(previas).forEach(function (id) {
+      URL.revokeObjectURL(previas[id]);
+      delete previas[id];
+    });
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden' && atual) guardar();
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function (e) {
+      console.warn('Service worker não registrou; a tela não vai abrir offline.', e);
+    });
+  }
+
+  if (!window.PDFMontagem) {
+    alert('O gerador de PDF não carregou. Abra a tela uma vez com internet.');
+  }
+
+  mostrarLista();
+  sincronizarTudo();
+
+})();
+</script>
+</body>
+</html>
