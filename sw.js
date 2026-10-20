@@ -28,14 +28,28 @@
    baixou da primeira vez.
    ============================================================ */
 
-const VERSAO = 'dalmobile-medicao-v1';
+const VERSAO = 'dalmobile-medicao-v2';
 
 /* O que precisa existir no aparelho para a tela funcionar
    sozinha. Se algum destes faltar, falta função: sem as fontes
    o PDF sai em Helvetica, sem as logos sai sem marca — mas sem
    pdf-lib não sai PDF nenhum. */
-const ESSENCIAIS = [
-  'medicao.html',
+/* O Cloudflare Pages serve a página sem a extensão: um pedido a
+   /medicao.html volta 308 para /medicao. Isso tem duas
+   consequências que já custaram um bug aqui:
+
+     1. cache.add() REJEITA resposta redirecionada. Guardar
+        'medicao.html' contra o Cloudflare falha calado.
+     2. A navegação real acontece em /medicao, sem .html, então
+        procurar por "medicao.html" no endereço não acha nada.
+
+   Por isso os dois endereços entram na lista e os dois são
+   reconhecidos na hora de servir. Em servidor local vale o
+   com .html; no Cloudflare, o sem. Um dos dois sempre pega, e
+   a falha do outro é esperada. */
+const PAGINA = ['medicao', 'medicao.html'];
+
+const ESSENCIAIS = PAGINA.concat([
   'auth.js',
   'pdf-101.js',
   'vendor/pdf-lib.min.js',
@@ -44,7 +58,7 @@ const ESSENCIAIS = [
   'Krub-Bold.ttf',
   'imgs/dalmoSJC_preto_1.png',
   'imgs/logoDalmo_caraguaPreto.png'
-];
+]);
 
 /* O supabase-js vem de CDN. Ele é guardado junto porque, sem
    ele, o auth.js desiste antes de chegar à tela. */
@@ -68,16 +82,51 @@ self.addEventListener('install', function (evento) {
       const tudo = ESSENCIAIS.concat(DE_FORA);
 
       return Promise.all(tudo.map(function (caminho) {
-        return cache.add(new Request(caminho, { cache: 'reload' }))
-          .catch(function (erro) {
-            console.warn('[sw] não guardei ' + caminho, erro);
-          });
+        return guardar(cache, caminho).catch(function (erro) {
+          console.warn('[sw] não guardei ' + caminho, erro);
+        });
       }));
+    }).then(function (cache) {
+      return avisarSeFaltouAPagina();
     }).then(function () {
       return self.skipWaiting();
     })
   );
 });
+
+
+/* Busca e guarda, reconstruindo a resposta.
+
+   O caminho óbvio, cache.add(), não serve aqui: ele REJEITA
+   resposta que veio de redirect, e o Cloudflare redireciona
+   /medicao.html para /medicao. Era assim que a página sumia do
+   cache sem ninguém notar.
+
+   Refazendo a Response a partir do corpo, o redirect deixa de
+   existir para o cache e a cópia fica guardada no endereço que
+   foi pedido. */
+async function guardar(cache, caminho) {
+  const resposta = await fetch(caminho, { cache: 'reload' });
+  if (!resposta.ok) throw new Error('resposta ' + resposta.status);
+
+  await cache.put(caminho, new Response(await resposta.blob(), {
+    status: 200,
+    headers: resposta.headers
+  }));
+}
+
+/* A tela precisa estar guardada, senão o service worker inteiro
+   não serviu para nada: é só ela que não pode faltar na obra. */
+async function avisarSeFaltouAPagina() {
+  const cache = await caches.open(VERSAO);
+
+  for (const p of PAGINA) {
+    if (await cache.match(p, { ignoreSearch: true })) return true;
+  }
+
+  console.error('[sw] A TELA NÃO FOI GUARDADA. Ela não vai abrir offline.');
+  return false;
+}
 
 
 /* ------------------------------------------------------------
@@ -119,7 +168,7 @@ self.addEventListener('fetch', function (evento) {
      cache primeiro — faria o medidor rodar uma versão velha
      por dias sem perceber. */
   if (pedido.mode === 'navigate') {
-    if (url.pathname.indexOf('medicao.html') === -1) return;
+    if (!ePaginaDaMedicao(url)) return;
 
     evento.respondWith(
       fetch(pedido)
@@ -127,10 +176,7 @@ self.addEventListener('fetch', function (evento) {
           guardarCopia(pedido, resposta);
           return resposta;
         })
-        .catch(function () {
-          return caches.match('medicao.html', { ignoreSearch: true })
-            .then(function (c) { return c || semRede(); });
-        })
+        .catch(function () { return paginaGuardada(); })
     );
     return;
   }
@@ -158,6 +204,29 @@ self.addEventListener('fetch', function (evento) {
 /* ------------------------------------------------------------
    Apoio
    ------------------------------------------------------------ */
+
+/* Reconhece a tela de medição nos dois endereços: /medicao
+   (como o Cloudflare serve) e /medicao.html (como o arquivo se
+   chama e como um servidor local entrega). */
+function ePaginaDaMedicao(url) {
+  const caminho = url.pathname.replace(/^\/+/, '').replace(/\/+$/, '');
+  return PAGINA.indexOf(caminho) !== -1 ||
+         PAGINA.some(function (p) { return caminho.endsWith('/' + p); });
+}
+
+/* Entrega a cópia guardada da página, venha ela de qual dos dois
+   endereços tiver funcionado na instalação. */
+function paginaGuardada() {
+  return caches.open(VERSAO).then(function (cache) {
+    return PAGINA.reduce(function (antes, p) {
+      return antes.then(function (achado) {
+        return achado || cache.match(p, { ignoreSearch: true });
+      });
+    }, Promise.resolve(null));
+  }).then(function (achado) {
+    return achado || semRede();
+  });
+}
 
 function eEssencial(url, pedido) {
   if (DE_FORA.some(function (d) { return pedido.url.indexOf(d) === 0; })) return true;
