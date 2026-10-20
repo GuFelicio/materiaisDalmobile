@@ -112,9 +112,23 @@
 
   /* ---------- lista de medições ---------- */
 
-  .ficha { display: block; width: 100%; text-align: left; background: var(--card);
-           border: 1px solid var(--line); border-radius: var(--radius);
-           padding: 15px 16px; margin-bottom: 10px; cursor: pointer; font-family: inherit; }
+  /* O cartão é um contêiner, não um botão: dentro dele vive o
+     botão de abrir e, para o administrador, o de apagar. Botão
+     dentro de botão é HTML inválido e o clique fica imprevisível. */
+  .ficha { background: var(--card); border: 1px solid var(--line);
+           border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+  .ficha.removido { opacity: .62; border-style: dashed; }
+
+  .ficha > .abrir { display: block; width: 100%; text-align: left; background: none;
+                    border: 0; padding: 15px 16px; cursor: pointer; font-family: inherit;
+                    color: inherit; }
+
+  .ficha .acoes { display: flex; gap: 8px; padding: 0 16px 13px; }
+  .ficha .acoes button { font-family: inherit; font-size: 13px; font-weight: 600;
+                         cursor: pointer; border-radius: 9px; padding: 10px 13px;
+                         min-height: 44px; background: #fff;
+                         border: 1px solid var(--erro-line); color: var(--erro); }
+  .ficha .acoes button:disabled { opacity: .5; cursor: default; }
   .ficha h3 { margin: 0 0 3px; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
   .ficha p { margin: 0; font-size: 13px; color: var(--ink-2); }
   .ficha .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
@@ -410,7 +424,7 @@
 
   async function pintarRede() {
     const faixa = el('rede');
-    const pendentes = (await Armazem.todas()).filter(function (m) { return !m.enviado; }).length;
+    const pendentes = (await Armazem.todas()).filter(function (m) { return !m.enviado && !m.removido; }).length;
 
     faixa.className = 'rede';
     faixa.innerHTML = '';
@@ -462,28 +476,83 @@
 
     caixa.innerHTML = '';
 
-    todas.forEach(function (m) {
-      const b = document.createElement('button');
-      b.className = 'ficha';
-      b.onclick = function () { abrirFicha(m.id); };
+    const souAdmin = (await C.eu()).admin;
 
+    todas.forEach(function (m) {
       const resumo = contar(m);
 
-      b.innerHTML =
+      const cartao = document.createElement('div');
+      cartao.className = 'ficha' + (m.removido ? ' removido' : '');
+
+      const abrir = document.createElement('button');
+      abrir.className = 'abrir';
+      abrir.onclick = function () { abrirFicha(m.id); };
+
+      abrir.innerHTML =
         '<h3>' + C.escapar(m.cliente || 'Sem nome') + '</h3>' +
         '<p>' + C.escapar(m.contrato || 'sem contrato') + ' · ' +
                 (m.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos') + ' · ' +
                 C.dataCurta(m.atualizado_em) + '</p>' +
         '<div class="tags">' +
-          (m.enviado ? '<span class="tag ok">no sistema</span>'
-                     : '<span class="tag aviso">só neste aparelho</span>') +
+          etiquetaDoEnvio(m) +
           (resumo.faltam ? '<span class="tag">' + resumo.faltam + ' sem resposta</span>' : '') +
           (resumo.reprovados ? '<span class="tag erro">' + resumo.reprovados + ' não apto</span>' : '') +
           (!resumo.faltam && !resumo.reprovados ? '<span class="tag ok">checklist completo</span>' : '') +
         '</div>';
 
-      caixa.appendChild(b);
+      cartao.appendChild(abrir);
+
+      if (souAdmin && m.remoto && !m.removido) {
+        cartao.appendChild(acaoDeApagar(m, 'medição'));
+      }
+
+      caixa.appendChild(cartao);
     });
+  }
+
+
+  /* Três estados, não dois. O terceiro só aparece depois que a
+     sincronia descobre que o administrador mandou a ficha para a
+     lixeira — e é importante que o medidor veja isso, em vez de
+     achar que o registro dele continua valendo. */
+  function etiquetaDoEnvio(m) {
+    if (m.removido) return '<span class="tag erro">removido pelo administrador</span>';
+    return m.enviado ? '<span class="tag ok">no sistema</span>'
+                     : '<span class="tag aviso">só neste aparelho</span>';
+  }
+
+  /* Só para administrador, e só no que já subiu: o que ainda está
+     no aparelho se resolve com o "Apagar" de dentro da ficha. */
+  function acaoDeApagar(m, oQue) {
+    const linha = document.createElement('div');
+    linha.className = 'acoes';
+
+    const b = document.createElement('button');
+    b.textContent = 'apagar do sistema';
+
+    b.onclick = async function () {
+      if (!confirm('Mandar a ' + oQue + ' de ' + (m.cliente || 'sem nome') +
+                   ' para a lixeira?\n\n' +
+                   'Ela some das listas na hora. Dá para restaurar depois, ' +
+                   'na aba Contas da Central.')) return;
+
+      b.disabled = true;
+      b.textContent = 'apagando…';
+
+      try {
+        await C.mandarParaLixeira(m.remoto);
+        m.removido = true;
+        await Armazem.salvar(m);
+        mostrarLista();
+      } catch (erro) {
+        alert(erro.message);
+        b.disabled = false;
+        b.textContent = 'apagar do sistema';
+      }
+    };
+
+    linha.appendChild(b);
+    return linha;
   }
 
   function contar(m) {
@@ -839,6 +908,11 @@
   async function sincronizar(m) {
     if (!m || m.enviado) return;
 
+    /* Removido pelo administrador: não insiste. Sem isto o
+       aparelho reenviaria a cada abertura, para sempre, e o
+       banco devolveria sempre o mesmo 'apagado'. */
+    if (m.removido) return;
+
     const sb = C.temServidor();
     if (!sb) return;
 
@@ -857,18 +931,20 @@
     };
 
     try {
-      let r;
-
-      if (m.remoto) {
-        r = await sb.from('formularios').update(linha).eq('id', m.remoto).select('id').single();
-      } else {
-        r = await sb.from('formularios').insert(linha).select('id').single();
-      }
+      const r = m.remoto
+        ? await sb.from('formularios').update(linha).eq('id', m.remoto).select('id,status').single()
+        : await sb.from('formularios').insert(linha).select('id,status').single();
 
       if (r.error) throw r.error;
 
       m.remoto = r.data.id;
       m.enviado = true;
+
+      /* O banco devolve o estado DEPOIS do gatilho. Se voltou
+         'apagado', o administrador mandou esta ficha para a
+         lixeira: o conteúdo foi gravado, mas ela não revive. É
+         assim que este aparelho fica sabendo. */
+      m.removido = r.data.status === 'apagado';
       await Armazem.salvar(m);
 
       pintarEstado();
@@ -882,7 +958,7 @@
   async function sincronizarTudo() {
     const todas = await Armazem.todas();
     for (const m of todas) {
-      if (!m.enviado) await sincronizar(m);
+      if (!m.enviado && !m.removido) await sincronizar(m);
     }
     pintarRede();
     if (!el('tela-lista').classList.contains('oculto')) mostrarLista();

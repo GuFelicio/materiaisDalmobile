@@ -191,6 +191,112 @@ window.Campo = (function () {
 
 
   /* ------------------------------------------------------------
+     Quem sou eu
+     ------------------------------------------------------------
+     O cargo vem do banco e fica guardado no aparelho, porque em
+     obra não há rede para perguntar de novo.
+
+     ⚠️ ISTO É DICA DE TELA, NÃO É TRANCA.
+     Quem mexer no armazenamento do próprio navegador faz o botão
+     de apagar aparecer. E não vai conseguir nada: apagar é uma
+     função do banco que confere eh_admin() do lado de lá. O que
+     está aqui decide o que se MOSTRA; o que se PODE está no
+     Supabase, onde ninguém alcança pelo console.
+     ------------------------------------------------------------ */
+
+  const CHAVE_EU = 'dalmobile-eu';
+  const NINGUEM = { id: null, nome: '', loja: '', admin: false, gerente: false };
+
+  let euGuardado = null;
+
+  function lerEuDoAparelho() {
+    try {
+      const bruto = localStorage.getItem(CHAVE_EU);
+      return bruto ? JSON.parse(bruto) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function eu() {
+    if (euGuardado) return euGuardado;
+
+    const doAparelho = lerEuDoAparelho();
+    const sb = temServidor();
+    const sessao = window.dalmobileAuth && window.dalmobileAuth.usuario;
+
+    if (!sb || !sessao) {
+      euGuardado = doAparelho || NINGUEM;
+      return euGuardado;
+    }
+
+    try {
+      const r = await sb.from('perfis')
+        .select('id,nome,loja,admin,gerente')
+        .eq('id', sessao.id)
+        .limit(1);
+
+      if (r.error || !r.data || !r.data.length) throw r.error || new Error('perfil não veio');
+
+      const p = r.data[0];
+      euGuardado = {
+        id: p.id,
+        nome: p.nome || '',
+        loja: p.loja || '',
+        admin: p.admin === true,
+        gerente: p.gerente === true
+      };
+
+      try { localStorage.setItem(CHAVE_EU, JSON.stringify(euGuardado)); } catch (e) {}
+
+    } catch (erro) {
+      console.warn('Não li o perfil; uso o que estava guardado.', erro);
+      euGuardado = doAparelho || NINGUEM;
+    }
+
+    return euGuardado;
+  }
+
+
+  /* ------------------------------------------------------------
+     Lixeira
+     ------------------------------------------------------------
+     Três ações, todas decididas pelo banco. A tela só chama e
+     mostra o que voltar — inclusive o erro, que já vem escrito
+     em português de dentro do Postgres.
+     ------------------------------------------------------------ */
+
+  function exigeServidor() {
+    const sb = temServidor();
+    if (!sb) throw new Error('Sem internet. Isto precisa de conexão — tente de novo quando o sinal voltar.');
+    return sb;
+  }
+
+  async function mandarParaLixeira(id) {
+    const r = await exigeServidor().rpc('apagar_formulario', { alvo: id });
+    if (r.error) throw new Error(r.error.message || 'Não consegui apagar.');
+  }
+
+  async function restaurarDaLixeira(id) {
+    const r = await exigeServidor().rpc('restaurar_formulario', { alvo: id });
+    if (r.error) throw new Error(r.error.message || 'Não consegui restaurar.');
+  }
+
+  /* Sem volta. Só da lixeira, e só o banco deixa. */
+  async function apagarDeVez(id) {
+    const r = await exigeServidor().from('formularios').delete().eq('id', id).select('id');
+    if (r.error) throw new Error(r.error.message || 'Não consegui apagar.');
+
+    /* delete que não casa linha nenhuma volta sem erro e sem
+       dados: para o RLS, "não pode" e "não existe" são a mesma
+       resposta. Sem esta conferência, a tela diria que apagou. */
+    if (!r.data || !r.data.length) {
+      throw new Error('Nada foi apagado. O formulário já não existia, ou seu perfil não é administrador.');
+    }
+  }
+
+
+  /* ------------------------------------------------------------
      Miudezas
      ------------------------------------------------------------ */
 
@@ -282,6 +388,10 @@ window.Campo = (function () {
     receber: receber,
     bytesDasFotos: bytesDasFotos,
     temServidor: temServidor,
+    eu: eu,
+    mandarParaLixeira: mandarParaLixeira,
+    restaurarDaLixeira: restaurarDaLixeira,
+    apagarDeVez: apagarDeVez,
     agora: agora,
     novoId: novoId,
     escapar: escapar,

@@ -210,6 +210,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script src="campo.js"></script>
 <script src="auth.js"></script>
 <script src="pdf-102.js"></script>
 <script>
@@ -481,7 +482,13 @@ async function copiar(texto, botao, original) {
    Lista
    ------------------------------------------------------------ */
 
+/* Cargo de quem está na tela. Vale para mostrar o botão de
+   apagar — quem decide se pode é o Supabase, na função
+   apagar_formulario(), que confere eh_admin() do lado de lá. */
+let SOU_ADMIN = false;
+
 async function carregar() {
+  SOU_ADMIN = (await window.Campo.eu()).admin;
   const alvo = el('lista');
   alvo.innerHTML = '<p class="msg centro"><span class="spinner"></span>Carregando...</p>';
 
@@ -581,6 +588,27 @@ function cartaoDoc(d) {
       b.textContent = antes;
     }
   }));
+
+  if (SOU_ADMIN) {
+    acoes.appendChild(botao('apagar', async (b) => {
+      if (!confirm('Mandar o documento de ' + d.cliente + ' para a lixeira?\n\n' +
+                   'Ele some desta lista na hora. Dá para restaurar depois, ' +
+                   'na aba Contas da Central.')) return;
+
+      const antes = b.textContent;
+      b.disabled = true;
+      b.textContent = 'apagando…';
+
+      try {
+        await window.Campo.mandarParaLixeira(d.id);
+        carregar();
+      } catch (erro) {
+        alert(erro.message);
+        b.disabled = false;
+        b.textContent = antes;
+      }
+    }, true));
+  }
 
   if (d.status !== 'assinado') {
     acoes.appendChild(botao('cancelar link', async (b) => {
