@@ -157,18 +157,62 @@ const PDF101 = (function () {
     }
   ];
 
-  /* Advertência da página 1 — texto oficial, íntegro. */
-  const ADVERTENCIA =
-    'Só será considerado apto para medição e irá contar os prazos de entrega, se ' +
-    'checklist estiver em anexo; Em caso de ambientes com indefinições de cores e ' +
-    'modelos, também não será dado andamento no processo;\n' +
-    'Caso alguns destes itens não estejam aptos para a medição quando da visita do ' +
-    'técnico, paralisamos o processo notificando-o, para que os itens sejam ajustados ' +
-    'ou para que seja assinado o termo de responsabilidade anexo, podendo agendar nova ' +
-    'data, salientando que uma nova visita poderá ser cobrada.';
+  /* ========================================================
+     TEXTO JURÍDICO — mexer SÓ AQUI
+     --------------------------------------------------------
+     Tudo que o cliente lê e assina está neste bloco, e em
+     nenhum outro lugar do sistema. Ajustar uma cláusula é
+     editar aqui; o resto do arquivo é desenho.
 
-  /* Termo de responsabilidade — texto oficial, íntegro. */
-  const TERMO_CLIENTE =
+     PROCEDÊNCIA DE CADA TEXTO, que é o que importa quando
+     alguém for revisar:
+
+       TERMO_RESPONSABILIDADE e NOTA_RISCOS
+         Oficiais, do Documento 101 Revisão 3 (14/08/2023),
+         palavra por palavra. Não reescrever.
+
+       ADVERTENCIA, TERMO_CIENCIA e PARECER_SUSPENSAO
+         Minuta, out/2026, a partir do que a Dalmóbile pediu
+         em reunião. Aprovados pelo cliente para entrar em
+         uso, com revisão jurídica prevista depois.
+     ======================================================== */
+
+  /* Substitui a OBS do documento original. A palavra que faz o
+     trabalho aqui é "cumulativo": sem ela, lê-se "ou" e basta
+     uma das duas condições. */
+  const ADVERTENCIA =
+    'O imóvel somente será considerado APTO PARA MEDIÇÃO, e os prazos contratuais de ' +
+    'produção, entrega e montagem somente terão início, após o cumprimento cumulativo ' +
+    'das seguintes condições: (i) aprovação e assinatura, pelo CLIENTE, do presente ' +
+    'termo com parecer de aptidão; e (ii) entrega, pelo CLIENTE, do checklist de ' +
+    'eletrodomésticos e demais aparelhos, com as especificações completas.\n' +
+    'Enquanto qualquer uma destas condições não for cumprida, o processo permanecerá ' +
+    'suspenso, sem contagem de prazo, não respondendo a DALMÓBILE pelos atrasos daí ' +
+    'decorrentes. Ambientes com indefinição de cores, modelos ou acabamentos impedem ' +
+    'igualmente o andamento do processo, com os mesmos efeitos.\n' +
+    'Constatada a inaptidão de qualquer item na visita do técnico, o processo será ' +
+    'paralisado e o CLIENTE notificado, para que: (i) promova os ajustes necessários, ' +
+    'hipótese em que será agendada nova visita, podendo esta ser cobrada; ou ' +
+    '(ii) assine o termo de responsabilidade anexo, assumindo os riscos de prosseguir ' +
+    'nas condições verificadas.';
+
+  /* AMBIENTES APTOS — o cliente assina e o prazo começa.
+     Não existia no documento original, que nunca previu
+     assinatura quando está tudo certo. */
+  const TERMO_CIENCIA =
+    'Declaro que a medição foi realizada no imóvel na data acima, na minha presença ou ' +
+    'com a minha autorização, e que os ambientes relacionados neste documento foram ' +
+    'verificados e considerados aptos pelo técnico responsável.\n' +
+    'Declaro estar ciente de que, a partir da assinatura deste termo e desde que ' +
+    'entregue o checklist de eletrodomésticos e aparelhos, iniciam-se os prazos ' +
+    'contratuais de produção, entrega e montagem, na forma do contrato firmado.\n' +
+    'Declaro, ainda, estar ciente de que alterações de projeto, acabamento ou ' +
+    'especificação solicitadas após esta data poderão implicar readequação de prazos e ' +
+    'custos adicionais, que serão submetidos à minha aprovação antes da execução.';
+
+  /* NÃO APTO e o cliente opta por prosseguir — texto oficial,
+     íntegro, do Documento 101. */
+  const TERMO_RESPONSABILIDADE =
     'Assumo inteira responsabilidade pelos riscos* associados ao projeto em decorrência ' +
     'das condições do local da obra, conforme registro fotográfico realizado pelo técnico ' +
     'responsável pela medição, e afirmo estar ciente das possíveis consequências para ' +
@@ -180,6 +224,18 @@ const PDF101 = (function () {
     'eventuais necessidades de troca de peças, cortes, desmontagens e remontagens, ' +
     'fretes adicionais, etc. Qualquer custo adicional será submetido a aprovação antes ' +
     'de sua execução.';
+
+  /* NÃO APTO e o cliente vai corrigir — aqui o CLIENTE NÃO
+     ASSINA. Quem assina é a Dalmóbile, e o documento vale como
+     comprovação de que a visita aconteceu e de que o cliente
+     foi avisado. É esse aviso que suspende o prazo. */
+  const PARECER_SUSPENSAO =
+    'Os itens assinalados como não aptos impedem a realização da medição nas condições ' +
+    'verificadas na data acima. O processo permanece suspenso e os prazos contratuais ' +
+    'não se iniciam até a conclusão dos ajustes e a realização de nova visita técnica.\n' +
+    'Este documento é enviado ao CLIENTE como comprovação da visita técnica e das ' +
+    'condições encontradas, podendo a nova visita ser agendada e cobrada, conforme ' +
+    'contrato.';
 
   const FECHAMENTO =
     'Considerando todas as possíveis causas e consequências ao projeto e à qualidade ' +
@@ -228,7 +284,7 @@ const PDF101 = (function () {
     blocoAdvertencia(e);
     blocoChecklist(e, dados);
     blocoParecerFinal(e, dados);
-    blocoTermoDoCliente(e, dados);
+    blocoDoFecho(e, dados);
 
     rodapes(e, doc);
 
@@ -817,48 +873,160 @@ const PDF101 = (function () {
 
 
   /* --------------------------------------------------------
-     Bloco 5 — termo de responsabilidade do cliente
+     Bloco 5 — o fecho, que depende do parecer
      --------------------------------------------------------
-     Só entra quando faz sentido: se o técnico reprovou alguma
-     coisa. Num documento em que tudo passou, imprimir um termo
-     de responsabilidade em branco convida alguém a assiná-lo
-     depois, sem ninguém saber de quê.
+     TRÊS DESFECHOS, TRÊS DOCUMENTOS DIFERENTES. Esta é a parte
+     do PDF com consequência contratual, e por isso ela nunca
+     adivinha: cada caminho só sai quando o técnico disse qual é.
+
+       aptos
+         O cliente assina dando ciência de que o prazo começa.
+
+       nao-aptos + caminho 'prosseguir'
+         O cliente assina o termo de responsabilidade e o prazo
+         começa assim mesmo, com o risco por escrito.
+
+       nao-aptos + caminho 'corrigir'
+         O CLIENTE NÃO ASSINA. Quem assina é a Dalmóbile, e o
+         documento vale como prova de que a visita aconteceu e
+         de que o cliente foi avisado. O prazo fica suspenso.
+
+     Sem o caminho escolhido, o documento sai dizendo que falta
+     escolher — e não sai nem um termo nem outro. Imprimir um
+     termo de assinatura "por via das dúvidas" é convidar
+     alguém a assinar depois, sem ninguém saber de quê.
      -------------------------------------------------------- */
 
-  function blocoTermoDoCliente(e, dados) {
-    const respostas = dados.itens || {};
-    const algumReprovado = ITENS.some((i) => (respostas[i.letra] || {}).situacao === 'nao-apto');
-    const precisa = algumReprovado || dados.parecerFinal === 'nao-aptos';
+  function blocoDoFecho(e, dados) {
+    const aptos = dados.parecerFinal === 'aptos';
+    const naoAptos = dados.parecerFinal === 'nao-aptos';
 
-    if (!precisa) {
-      caber(e, 40);
-      e.y -= 4;
-      texto(e,
-        'Todos os itens verificados foram considerados aptos para medição. ' +
-        'Não houve necessidade de termo de responsabilidade do cliente.',
-        8.4, 'media', COR.suave, { largura: UTIL });
-      e.y -= 16;
-      fechamento(e);
-      return;
-    }
+    if (aptos) return termoDeCiencia(e);
 
-    /* O termo começa em página própria: ele é o documento que o
-       cliente assina, e assinar o rodapé de uma página que
-       começa no meio de outro assunto é pedir contestação. */
+    if (naoAptos && dados.caminhoInapto === 'prosseguir') return termoDeResponsabilidade(e);
+    if (naoAptos && dados.caminhoInapto === 'corrigir')    return parecerDeSuspensao(e, dados);
+
+    /* Parecer em branco, ou "não apto" sem caminho escolhido. */
+    caber(e, 70);
+    e.y -= 6;
+
+    avisoEmFalta(e, naoAptos
+      ? 'O técnico marcou os ambientes como NÃO APTOS, mas não registrou se o cliente ' +
+        'optou por corrigir e remarcar ou por prosseguir assumindo os riscos. Sem essa ' +
+        'escolha não há como emitir o termo correto, e os prazos contratuais não se ' +
+        'iniciam por este documento.'
+      : 'O parecer final do técnico não foi informado. Este documento não conclui pela ' +
+        'aptidão nem pela inaptidão do imóvel, e os prazos contratuais não se iniciam ' +
+        'por ele.');
+
+    fechamento(e);
+  }
+
+  function avisoEmFalta(e, aviso) {
+    const linhas = quebrar(aviso, e.fontes.negrito, 9, UTIL - 32);
+    const altura = linhas.length * (9 * 1.45) + 26;
+
+    caber(e, altura + 20);
+
+    e.pagina.drawRectangle({
+      x: MARGEM.esq, y: e.y - altura, width: UTIL, height: altura,
+      color: e.rgb(0.99, 0.96, 0.91)
+    });
+    e.pagina.drawRectangle({
+      x: MARGEM.esq, y: e.y - altura, width: 2.4, height: altura,
+      color: e.rgb.apply(null, COR.falta)
+    });
+
+    let yy = e.y - 18;
+    linhas.forEach((l) => {
+      e.pagina.drawText(l, {
+        x: MARGEM.esq + 14, y: yy, size: 9, font: e.fontes.negrito,
+        color: e.rgb.apply(null, COR.falta)
+      });
+      yy -= 9 * 1.45;
+    });
+
+    e.y -= altura + 20;
+  }
+
+  /* O que o cliente assina sempre começa em página própria:
+     assinar o rodapé de uma página que começa no meio de outro
+     assunto é pedir contestação. */
+
+  function termoDeCiencia(e) {
     novaPagina(e);
-
-    titulo(e, 'TERMO DE RESPONSABILIDADE DO CLIENTE');
+    titulo(e, 'TERMO DE CIÊNCIA E INÍCIO DE PRAZOS');
 
     texto(e,
-      'Caso o parecer do técnico responsável seja "Não apto para medição" e sua decisão ' +
-      'seja prosseguir com a medição e elaboração do Projeto Executivo, assine o termo ' +
-      'abaixo:',
+      'Os ambientes relacionados neste documento foram considerados aptos para medição. ' +
+      'Assine abaixo para dar ciência do início dos prazos contratuais:',
       8.6, 'media', COR.suave, { largura: UTIL });
     e.y -= 16;
 
-    /* O corpo do termo, em caixa, para separar do resto. */
-    const linhas = quebrar(TERMO_CLIENTE, e.fontes.media, 10, UTIL - 32);
+    caixaDeTermo(e, TERMO_CIENCIA);
+    e.y -= 40;
+
+    linhaDeAssinatura(e, 'Nome do cliente');
+    e.y -= 14;
+    linhaDeAssinatura(e, 'Assinatura do cliente');
+    e.y -= 26;
+
+    fechamento(e);
+  }
+
+  function termoDeResponsabilidade(e) {
+    novaPagina(e);
+    titulo(e, 'TERMO DE RESPONSABILIDADE DO CLIENTE');
+
+    texto(e,
+      'O parecer do técnico responsável foi "Não apto para medição" e o cliente optou ' +
+      'por prosseguir com a medição e a elaboração do Projeto Executivo. Assine o ' +
+      'termo abaixo:',
+      8.6, 'media', COR.suave, { largura: UTIL });
+    e.y -= 16;
+
+    caixaDeTermo(e, TERMO_RESPONSABILIDADE);
+    e.y -= 40;
+
+    linhaDeAssinatura(e, 'Nome do cliente');
+    e.y -= 14;
+    linhaDeAssinatura(e, 'Assinatura do cliente');
+    e.y -= 26;
+
+    texto(e, NOTA_RISCOS, 7.2, 'media', COR.suave, { largura: UTIL });
+    e.y -= 18;
+
+    fechamento(e);
+  }
+
+  /* Aqui NÃO há linha de assinatura do cliente, e isso é o ponto
+     do documento: ele prova que a Dalmóbile foi, viu e avisou.
+     Uma linha em branco esperando o cliente faria parecer que
+     falta alguma coisa para o prazo ficar suspenso — e não
+     falta. O aviso basta. */
+  function parecerDeSuspensao(e, dados) {
+    novaPagina(e);
+    titulo(e, 'PARECER DE INAPTIDÃO E SUSPENSÃO DE PRAZOS');
+
+    caixaDeTermo(e, PARECER_SUSPENSAO);
+    e.y -= 24;
+
+    texto(e,
+      'Documento emitido e assinado pela Dalmóbile. Não requer assinatura do cliente.',
+      8, 'negrito', COR.suave, { largura: UTIL });
+    e.y -= 22;
+
+    assinaturaDoTecnico(e, dados);
+    e.y -= 6;
+
+    fechamento(e);
+  }
+
+  function caixaDeTermo(e, conteudo) {
+    const linhas = quebrar(conteudo, e.fontes.media, 10, UTIL - 32);
     const altura = linhas.length * (10 * 1.45) + 28;
+
+    caber(e, altura + 20);
 
     e.pagina.drawRectangle({
       x: MARGEM.esq, y: e.y - altura, width: UTIL, height: altura,
@@ -874,21 +1042,7 @@ const PDF101 = (function () {
       yy -= 10 * 1.45;
     });
 
-    e.y -= altura + 40;
-
-    /* Linhas de assinatura à mão. A assinatura eletrônica entra
-       depois; até lá, este documento é impresso ou assinado na
-       tela do celular e fotografado. */
-    linhaDeAssinatura(e, 'Nome do cliente');
-    e.y -= 14;
-    linhaDeAssinatura(e, 'Assinatura do cliente');
-
-    e.y -= 26;
-
-    texto(e, NOTA_RISCOS, 7.2, 'media', COR.suave, { largura: UTIL });
-    e.y -= 18;
-
-    fechamento(e);
+    e.y -= altura;
   }
 
   function linhaDeAssinatura(e, rotulo) {

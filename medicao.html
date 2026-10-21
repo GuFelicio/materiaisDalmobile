@@ -339,6 +339,18 @@
         <textarea id="f-nao-aptos" placeholder="Relacione os ambientes"></textarea>
       </div>
 
+      <div id="campo-caminho" hidden style="margin-top:16px">
+        <label class="rot">O que o cliente decidiu?</label>
+        <div class="escolha" id="caminho-inapto" style="grid-template-columns:1fr">
+          <button type="button" class="na"  data-v="corrigir">
+            Vai corrigir e remarcar a visita
+          </button>
+          <button type="button" class="nao" data-v="prosseguir">
+            Quer prosseguir assumindo os riscos
+          </button>
+        </div>
+      </div>
+
       <p class="nota" id="nota-termo"></p>
     </div>
 
@@ -406,6 +418,7 @@
         itens: {},
         outros: '',
         parecerFinal: '',
+        caminhoInapto: '',
         ambientesNaoAptos: '',
         tecnico: (eu && eu.user_metadata && eu.user_metadata.nome) || ''
       }
@@ -831,21 +844,63 @@
       };
     });
 
-    el('campo-nao-aptos').hidden = atual.dados.parecerFinal !== 'nao-aptos';
+    const naoApto = atual.dados.parecerFinal === 'nao-aptos';
+
+    el('campo-nao-aptos').hidden = !naoApto;
+    el('campo-caminho').hidden = !naoApto;
+
+    /* Trocou para "aptos": a escolha do caminho perde o sentido
+       e não pode ficar guardada atrás da tela, senão volta a
+       valer se alguém trocar de novo. */
+    if (!naoApto && atual.dados.caminhoInapto) atual.dados.caminhoInapto = '';
+
+    el('caminho-inapto').querySelectorAll('button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(atual.dados.caminhoInapto === b.dataset.v));
+
+      b.onclick = function () {
+        atual.dados.caminhoInapto =
+          (atual.dados.caminhoInapto === b.dataset.v) ? '' : b.dataset.v;
+        pintarParecerFinal();
+        guardar();
+      };
+    });
+
     pintarNotaDoTermo();
   }
 
-  /* O medidor precisa saber, ANTES de gerar, se o PDF vai sair
-     com termo de responsabilidade — porque se sair, ele tem que
-     colher a assinatura do cliente antes de ir embora. */
+  /* O medidor precisa saber, ANTES de gerar, o que vai sair no
+     PDF — porque disso depende se ele pode ir embora ou se tem
+     de colher assinatura ali mesmo. São três documentos
+     diferentes, e só um deles dispensa o cliente. */
   function pintarNotaDoTermo() {
-    const r = contar(atual);
-    const vai = r.reprovados > 0 || atual.dados.parecerFinal === 'nao-aptos';
+    const d = atual.dados;
+    const nota = el('nota-termo');
 
-    el('nota-termo').innerHTML = vai
-      ? '<b>O PDF vai sair com o termo de responsabilidade do cliente.</b> ' +
-        'Colha a assinatura antes de sair da obra.'
-      : 'Sem itens reprovados, o PDF sai sem termo de responsabilidade.';
+    if (d.parecerFinal === 'aptos') {
+      nota.innerHTML = '<b>O PDF vai sair com o termo de ciência de início de prazos.</b> ' +
+        'O cliente precisa assinar — é a assinatura dele que faz o prazo de entrega começar.';
+      return;
+    }
+
+    if (d.parecerFinal === 'nao-aptos') {
+      if (d.caminhoInapto === 'prosseguir') {
+        nota.innerHTML = '<b>O PDF vai sair com o termo de responsabilidade.</b> ' +
+          'O cliente precisa assinar antes de você sair da obra: é ele assumindo os ' +
+          'riscos de seguir nas condições que você fotografou.';
+        return;
+      }
+      if (d.caminhoInapto === 'corrigir') {
+        nota.innerHTML = '<b>O PDF vai sair como parecer de suspensão de prazos.</b> ' +
+          'O cliente <b>não assina</b> — quem assina é a Dalmóbile. O documento vai ' +
+          'para o e-mail dele como comprovação da visita, e o prazo fica parado.';
+        return;
+      }
+      nota.innerHTML = '<b>Falta dizer o que o cliente decidiu.</b> ' +
+        'Sem isso o PDF sai sem termo nenhum, avisando que a escolha ficou pendente.';
+      return;
+    }
+
+    nota.innerHTML = 'Marque o parecer final para saber qual documento vai sair.';
   }
 
 
