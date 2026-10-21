@@ -82,7 +82,7 @@ const DADOS = (function () {
     if (!u) return { admin: false };
 
     const { data, error } = await c
-      .from('perfis').select('id, email, nome, loja, admin').eq('id', u.id).single();
+      .from('perfis').select('id, email, nome, loja, admin, gerente').eq('id', u.id).single();
 
     /* Perfil ausente não é motivo para travar a página — a pessoa
        só não é administradora. */
@@ -95,9 +95,31 @@ const DADOS = (function () {
     return p.admin === true;
   }
 
-  /* Nome de exibição de cada autor. Só o administrador consegue
-     ler perfis que não são o dele — para os outros isso devolve
-     um mapa vazio, e a tela nem mostra a coluna. */
+  async function souGerente() {
+    const p = await meuPerfil();
+    return p.gerente === true;
+  }
+
+  /* A pergunta que as listas realmente fazem.
+     ------------------------------------------------------------
+     Elas perguntavam "sou administrador?" para decidir se mostram
+     de quem é cada trabalho. Errado desde que o cargo de gerência
+     existe: o gerente TAMBÉM vê o trabalho dos outros, só que
+     limitado à loja dele — e via a lista sem nome em cima de
+     nada, sem entender por quê.
+
+     Quem enxerga trabalho alheio é quem precisa saber de quem
+     ele é. É esta a pergunta. */
+  async function vejoDeOutros() {
+    const p = await meuPerfil();
+    return p.admin === true || p.gerente === true;
+  }
+
+  /* Nome de exibição de cada autor.
+     O banco decide quem alcança qual perfil: pode_ver_perfil()
+     libera o próprio, tudo para o administrador, e a loja inteira
+     para o gerente. Quem não alcança recebe mapa vazio e a tela
+     fica sem o selo — que é o lado certo de errar. */
   async function autores(ids) {
     const c = exigirSessao();
     const unicos = Array.from(new Set((ids || []).filter(Boolean)));
@@ -257,7 +279,7 @@ const DADOS = (function () {
 
   return {
     salvar, listar, abrir, apagar,
-    souAdmin, meuPerfil, listaDeConsultores,
+    souAdmin, souGerente, vejoDeOutros, meuPerfil, listaDeConsultores,
     marcarFoto, indexar, quando, traduzir
   };
 })();

@@ -2197,7 +2197,10 @@ campoBusca.addEventListener('input', () => {
   buscaDemora = setTimeout(carregarLista, 280);
 });
 
-let ehAdmin = false;
+/* Não é "sou administrador" — é "enxergo o trabalho dos outros".
+   O gerente também enxerga, dentro da loja dele, e por isso
+   também precisa ver de quem é cada trabalho. */
+let vejoDeOutros = false;
 let consultores = [];
 let donoAberto = null;   // nome do autor, quando o trabalho não é meu
 
@@ -2206,8 +2209,8 @@ let donoAberto = null;   // nome do autor, quando o trabalho não é meu
    comum — o que é o lado seguro de errar. */
 (async function descobrirPapel() {
   try {
-    ehAdmin = await DADOS.souAdmin();
-    if (!ehAdmin) return;
+    vejoDeOutros = await DADOS.vejoDeOutros();
+    if (!vejoDeOutros) return;
 
     document.querySelector('.gaveta-topo h2').textContent = 'Trabalhos da equipe';
 
@@ -2256,7 +2259,7 @@ async function carregarLista() {
       /* O autor só aparece para quem enxerga o trabalho dos outros.
          Para o consultor comum a lista é toda dele, e o selo seria
          ruído. */
-      const selo = (ehAdmin && l.autorNome)
+      const selo = (vejoDeOutros && l.autorNome)
         ? '<span class="autor' + (l.meu ? ' meu' : '') + '">' +
           escaparHtml(l.meu ? 'você' : l.autorNome) + '</span>'
         : '';
@@ -2319,7 +2322,7 @@ async function abrirTrabalho(id) {
     /* Se não for meu, a tarja mostra de quem é */
     const meuId = window.dalmobileAuth && window.dalmobileAuth.usuario
       ? window.dalmobileAuth.usuario.id : null;
-    const dono = (ehAdmin && t.autor && t.autor !== meuId)
+    const dono = (vejoDeOutros && t.autor && t.autor !== meuId)
       ? (consultores.find((c) => c.id === t.autor) || {}).nome || 'outro consultor'
       : null;
 
