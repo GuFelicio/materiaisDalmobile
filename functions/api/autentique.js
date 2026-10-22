@@ -29,6 +29,16 @@
        SUPABASE_SECRET              a secret key (sb_secret_...)   ⚠️ Secret
        AUTENTIQUE_TOKEN             o token da conta               ⚠️ Secret
        AUTENTIQUE_WEBHOOK_SECRET    o segredo do webhook           ⚠️ Secret
+       RESEND_API_KEY               a chave do Resend              ⚠️ Secret
+       EMAIL_REMETENTE              opcional. Enquanto o domínio da Dalmóbile
+                                    não estiver verificado, deixe de fora: o
+                                    padrão é 'onboarding@resend.dev', que o
+                                    Resend aceita sem DNS — mas que SÓ entrega
+                                    no e-mail da conta Resend.
+       EMAIL_TESTE_PARA             opcional. Com ela, TODO aviso vai para este
+                                    endereço em vez dos destinatários de
+                                    verdade, e o corpo diz para quem teria ido.
+                                    É o que torna o teste possível antes do DNS.
 
    NO PAINEL DA AUTENTIQUE
        Cadastre o endereço
@@ -264,18 +274,20 @@ async function documentoTerminou(env, evento) {
   });
 
   /* null = o documento não aponta para formulário nenhum daqui
-     (criado à mão no painel, ou sandbox já apagado). Não há onde
-     guardar endereço, e tentar seria uma leitura e um PATCH à
-     toa em cada aviso. */
+     (criado à mão no painel, ou sandbox já apagado). */
   if (marcou === null) return;
+
+  const ficha = await lerFichaPorDocumento(env, id);
+  if (!ficha) return;
 
   /* O PDF assinado fica hospedado na Autentique. Guardar o
      endereço dá acesso imediato pela Central, sem precisar de
-     Storage nem bucket nem política nova. Se um dia a Dalmóbile
-     quiser cópia própria, é só baixar por aqui. */
+     Storage nem bucket nem política nova. */
   if (doc.files && doc.files.signed) {
-    await guardarRecado(env, id, { pdfAssinado: doc.files.signed });
+    await guardarRecado(env, ficha, { pdfAssinado: doc.files.signed });
   }
+
+  await avisarAEquipe(env, ficha, estado.ultimaAssinatura);
 }
 
 
@@ -482,32 +494,189 @@ async function chamarBanco(env, funcao, args) {
 }
 
 
-/* Acrescenta informação ao 'dados' do formulário sem reescrever o
-   resto. Lê, mescla e grava — com a chave secreta, porque aqui
-   não há pessoa nenhuma logada. */
-async function guardarRecado(env, docId, acrescimo) {
-  const base = String(env.SUPABASE_URL).replace(/\/+$/, '');
-  const cab = {
+function cabecalhoDoBanco(env) {
+  return {
     apikey: env.SUPABASE_SECRET,
     authorization: 'Bearer ' + env.SUPABASE_SECRET,
     'content-type': 'application/json'
   };
+}
 
-  const r = await fetch(base + '/rest/v1/formularios?select=id,dados&limit=1'
-    + '&autentique_id=eq.' + encodeURIComponent(docId), { headers: cab });
+async function lerFichaPorDocumento(env, docId) {
+  const base = String(env.SUPABASE_URL).replace(/\/+$/, '');
 
-  if (!r.ok) return;
+  const r = await fetch(base + '/rest/v1/formularios'
+    + '?select=id,cliente,contrato,loja,status,dados&limit=1'
+    + '&autentique_id=eq.' + encodeURIComponent(docId),
+    { headers: cabecalhoDoBanco(env) });
+
+  if (!r.ok) return null;
 
   const linhas = await r.json();
-  const ficha = linhas && linhas[0];
-  if (!ficha) return;
+  return (linhas && linhas[0]) || null;
+}
+
+/* Acrescenta informação ao 'dados' do formulário sem reescrever o
+   resto. Lê, mescla e grava — com a chave secreta, porque aqui
+   não há pessoa nenhuma logada. */
+async function guardarRecado(env, ficha, acrescimo) {
+  const base = String(env.SUPABASE_URL).replace(/\/+$/, '');
 
   const dados = ficha.dados || {};
   dados.assinatura = Object.assign({}, dados.assinatura || {}, acrescimo);
 
   await fetch(base + '/rest/v1/formularios?id=eq.' + encodeURIComponent(ficha.id), {
     method: 'PATCH',
-    headers: Object.assign({ prefer: 'return=minimal' }, cab),
+    headers: Object.assign({ prefer: 'return=minimal' }, cabecalhoDoBanco(env)),
     body: JSON.stringify({ dados: dados })
   });
+}
+
+
+/* ------------------------------------------------------------
+   O aviso para a equipe
+   ------------------------------------------------------------
+   Quem recebe sai do BANCO, não daqui: a regra mora no
+   destinatarios_do_aviso e é a mesma para qualquer coisa que um
+   dia precise avisar. Este arquivo só escreve e manda.
+
+   A ORDEM É PENSADA PARA NÃO MANDAR DUAS VEZES NEM NENHUMA:
+
+     1. Pergunta quem recebe. Lista vazia (medição inapta para
+        corrigir, por exemplo) e acabou — sem marcar nada, senão
+        a ficha ficaria "avisada" sem ter avisado ninguém.
+     2. RESERVA o aviso no banco. Se a Autentique repetir o
+        evento, a segunda chamada devolve false e para aqui.
+     3. Manda. Se falhar, DEVOLVE a reserva e estoura — assim a
+        Autentique tenta de novo (ela repete em 60s, 120s e 300s)
+        em vez de a assinatura virar silêncio.
+   ------------------------------------------------------------ */
+
+async function avisarAEquipe(env, ficha, assinadoEm) {
+  const chave = String(env.RESEND_API_KEY || '').trim();
+
+  if (!chave) {
+    console.warn('[autentique] sem RESEND_API_KEY: ninguém foi avisado');
+    return;
+  }
+
+  const gente = await chamarBanco(env, 'destinatarios_do_aviso', { alvo: ficha.id });
+  if (!gente || !gente.length) return;
+
+  const reservou = await chamarBanco(env, 'marcar_avisado', { alvo: ficha.id });
+  if (reservou !== true) return;   // já avisado antes
+
+  try {
+    await mandarEmail(env, chave, ficha, gente, assinadoEm);
+  } catch (e) {
+    await liberarAviso(env, ficha.id);
+    throw e;
+  }
+}
+
+/* Devolve a reserva, para a próxima tentativa poder avisar. */
+async function liberarAviso(env, id) {
+  try {
+    await fetch(String(env.SUPABASE_URL).replace(/\/+$/, '')
+      + '/rest/v1/formularios?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: Object.assign({ prefer: 'return=minimal' }, cabecalhoDoBanco(env)),
+      body: JSON.stringify({ avisado_em: null })
+    });
+  } catch (e) {
+    console.error('[autentique] não consegui liberar o aviso de ' + id);
+  }
+}
+
+
+async function mandarEmail(env, chave, ficha, gente, assinadoEm) {
+  const remetente = String(env.EMAIL_REMETENTE || '').trim()
+                 || 'Central de Peças <onboarding@resend.dev>';
+
+  /* Enquanto o domínio da Dalmóbile não estiver verificado, o
+     remetente de teste do Resend só entrega no e-mail da conta.
+     Com EMAIL_TESTE_PARA, tudo vai para lá e o corpo conta para
+     quem teria ido — dá para conferir o roteamento inteiro sem
+     mexer nos e-mails de verdade das pessoas. */
+  const teste = String(env.EMAIL_TESTE_PARA || '').trim();
+  const para = teste ? [teste] : gente.map(function (p) { return p.email; });
+
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer ' + chave,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: remetente,
+      to: para,
+      subject: assunto(ficha),
+      html: corpoDoEmail(ficha, gente, assinadoEm, teste)
+    })
+  });
+
+  if (!r.ok) {
+    const texto = await r.text();
+    throw new Error('Resend devolveu ' + r.status + ': ' + texto.slice(0, 200));
+  }
+}
+
+
+function assunto(ficha) {
+  return 'Prazo iniciado · ' + (ficha.cliente || 'cliente')
+       + (ficha.contrato ? ' · ' + ficha.contrato : '');
+}
+
+
+/* O e-mail é uma TAREFA, não um recibo. Quem abre precisa saber,
+   sem clicar em nada: de quem é, que o prazo começou, em que dia,
+   e o que o cliente decidiu. O link é para conferir, não para
+   descobrir. */
+function corpoDoEmail(ficha, gente, assinadoEm, teste) {
+  const d = ficha.dados || {};
+  const apto = d.parecerFinal === 'aptos';
+
+  const quando = assinadoEm
+    ? new Date(assinadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    : 'hoje';
+
+  const loja = ficha.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos';
+
+  const situacao = apto
+    ? 'Os ambientes foram considerados <b>aptos</b> e o cliente assinou o termo de ciência.'
+    : 'Os ambientes foram considerados <b>não aptos</b>, e o cliente assinou o termo '
+      + 'de responsabilidade para <b>prosseguir assumindo os riscos</b>.';
+
+  const aviso = teste
+    ? '<p style="background:#fdf1e7;border:1px solid #f0cfae;padding:10px 12px;'
+      + 'border-radius:8px;font-size:13px;color:#8a4b12"><b>ENVIO DE TESTE.</b> '
+      + 'Na produção este e-mail iria para: '
+      + escapar(gente.map(function (p) { return p.nome + ' (' + p.email + ')'; }).join(', '))
+      + '.</p>'
+    : '';
+
+  return '<div style="font:15px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;'
+    + 'max-width:520px;color:#141618">'
+    + aviso
+    + '<p style="font-size:18px;margin:0 0 4px"><b>' + escapar(ficha.cliente || 'Cliente') + '</b></p>'
+    + '<p style="margin:0 0 18px;color:#4a5054">'
+    + escapar(ficha.contrato || 'sem contrato') + ' · ' + loja + '</p>'
+    + '<p style="background:#eef3ee;border:1px solid #cfe0d2;padding:12px 14px;'
+    + 'border-radius:8px;margin:0 0 18px">'
+    + '<b>Os prazos de produção, entrega e montagem começaram a contar em '
+    + quando + '.</b></p>'
+    + '<p>' + situacao + '</p>'
+    + '<p style="margin:22px 0 0"><a href="https://materiais.luminamkt.co/medicao" '
+    + 'style="background:#141618;color:#fff;text-decoration:none;padding:12px 18px;'
+    + 'border-radius:8px;display:inline-block">Abrir na Central de Peças</a></p>'
+    + '<p style="margin-top:22px;font-size:12.5px;color:#4a5054">'
+    + 'Você recebeu porque é ' + escapar((gente[0] || {}).papel || 'da equipe')
+    + ' na Central de Peças. Este aviso é automático.</p>'
+    + '</div>';
+}
+
+function escapar(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
