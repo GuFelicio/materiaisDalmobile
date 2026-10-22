@@ -297,6 +297,123 @@ window.Campo = (function () {
 
 
   /* ------------------------------------------------------------
+     Etiquetas
+     ------------------------------------------------------------
+     DOIS EIXOS, NÃO UM. O parecer e o estado não se excluem —
+     se multiplicam, e a combinação que mais importa é justamente
+     a que uma etiqueta só esconderia:
+
+       não aprovado + assinado
+         o imóvel tinha problema, o cliente aceitou seguir assim
+         mesmo, e o prazo está correndo.
+
+     Numa etiqueta só isso vira "não aprovado" OU "assinado", e
+     qualquer uma das duas, sozinha, dá a impressão errada.
+
+     O parecer só aparece onde significa alguma coisa: o Doc 102
+     é o cliente informando aparelhos, não tem o que aprovar.
+     ------------------------------------------------------------ */
+
+  function etiquetaParecer(doc) {
+    const d = doc.dados || {};
+
+    if (doc.tipo === 'medicao') {
+      if (d.parecerFinal === 'aptos')     return { texto: 'aprovado',     classe: 'ok' };
+      if (d.parecerFinal === 'nao-aptos') return { texto: 'não aprovado', classe: 'erro' };
+      return { texto: 'sem parecer', classe: 'aviso' };
+    }
+
+    if (doc.tipo === 'montagem') {
+      const itens = d.itens || {};
+      let nao = 0, faltam = 0;
+
+      Object.keys(itens).forEach(function (k) {
+        const r = itens[k].resposta;
+        if (r === 'nao') nao += 1;
+        else if (!r) faltam += 1;
+      });
+
+      /* Conta só o que está gravado: uma montagem sincronizada
+         com o checklist pela metade tem menos chaves que itens,
+         e dizer "tudo conforme" nesse caso seria mentira. */
+      const respondidos = Object.keys(itens).length - faltam;
+
+      if (nao) return { texto: nao + ' não conforme', classe: 'erro' };
+      if (respondidos < 36) return { texto: 'incompleto', classe: 'aviso' };
+      return { texto: 'tudo conforme', classe: 'ok' };
+    }
+
+    return null;   // itens-extras não tem parecer
+  }
+
+  function etiquetaEstado(doc) {
+    if (doc.status === 'assinado')   return { texto: 'assinado',       classe: 'ok' };
+    if (doc.status === 'cancelado')  return { texto: 'cancelado',      classe: '' };
+    if (doc.status === 'preenchido') return { texto: 'não assinado',   classe: 'aviso' };
+    return { texto: 'não preenchido', classe: '' };
+  }
+
+  function pintarEtiqueta(et) {
+    if (!et) return '';
+    return '<span class="tag' + (et.classe ? ' ' + et.classe : '') + '">' +
+           escapar(et.texto) + '</span>';
+  }
+
+
+  /* ------------------------------------------------------------
+     Documentos da equipe
+     ------------------------------------------------------------
+     As telas de campo listam o que está NESTE aparelho. Isto aqui
+     é o outro lado: o que está no servidor, da equipe.
+
+     Quem vê o quê não é decidido aqui — é o RLS. Um gerente
+     recebe a loja dele, o administrador recebe tudo, e um
+     consultor recebe só o que é dele. Por isso a tela chama sem
+     filtro: o filtro já veio de fábrica.
+     ------------------------------------------------------------ */
+
+  async function listarDaEquipe(tipo, limite) {
+    const sb = temServidor();
+    if (!sb) return null;   // null = não deu para perguntar, diferente de lista vazia
+
+    const r = await sb
+      .from('formularios_sem_token')
+      .select('id,tipo,autor,loja,cliente,contrato,status,dados,atualizado_em')
+      .eq('tipo', tipo)
+      .order('atualizado_em', { ascending: false })
+      .limit(limite || 40);
+
+    if (r.error) {
+      console.warn('Não listei os documentos da equipe.', r.error);
+      return null;
+    }
+
+    const linhas = r.data || [];
+    const nomes = await nomesDosAutores(sb, linhas.map(function (l) { return l.autor; }));
+
+    linhas.forEach(function (l) { l.autorNome = nomes[l.autor] || ''; });
+    return linhas;
+  }
+
+  /* O banco decide quais perfis esta pessoa alcança. Quem não
+     alcança recebe mapa vazio e a tela fica sem o nome — que é
+     o lado certo de errar. */
+  async function nomesDosAutores(sb, ids) {
+    const unicos = Array.from(new Set((ids || []).filter(Boolean)));
+    if (!unicos.length) return {};
+
+    const r = await sb.from('perfis').select('id,nome,email').in('id', unicos);
+    if (r.error || !r.data) return {};
+
+    const mapa = {};
+    r.data.forEach(function (p) {
+      mapa[p.id] = (p.nome && p.nome.trim()) || p.email || 'sem nome';
+    });
+    return mapa;
+  }
+
+
+  /* ------------------------------------------------------------
      Miudezas
      ------------------------------------------------------------ */
 
@@ -389,6 +506,10 @@ window.Campo = (function () {
     bytesDasFotos: bytesDasFotos,
     temServidor: temServidor,
     eu: eu,
+    etiquetaParecer: etiquetaParecer,
+    etiquetaEstado: etiquetaEstado,
+    pintarEtiqueta: pintarEtiqueta,
+    listarDaEquipe: listarDaEquipe,
     mandarParaLixeira: mandarParaLixeira,
     restaurarDaLixeira: restaurarDaLixeira,
     apagarDeVez: apagarDeVez,

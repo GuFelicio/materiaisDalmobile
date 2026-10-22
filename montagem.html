@@ -119,6 +119,19 @@
   .tag.aviso { background: var(--aviso-bg); color: var(--aviso); border-color: var(--aviso-line); }
   .tag.erro  { background: var(--erro-bg);  color: var(--erro);  border-color: var(--erro-line); }
 
+  /* ---------- documentos da equipe ---------- */
+
+  .equipe-titulo { display: flex; align-items: baseline; justify-content: space-between;
+                   gap: 12px; margin: 32px 0 6px; }
+  .equipe-titulo h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+                      text-transform: uppercase; color: var(--muted); }
+  .equipe-sub { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
+
+  .autor { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+           padding: 4px 8px; border-radius: 6px; background: #ebebe8;
+           border: 1px solid var(--line-2); color: var(--ink-2); }
+  .autor.meu { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); }
+
   .vazio-msg { text-align: center; padding: 30px 16px; color: var(--ink-2); font-size: 14.5px; }
 
   /* ---------- blocos e itens ---------- */
@@ -210,6 +223,12 @@
     </div>
 
     <div id="lista"></div>
+
+    <div class="equipe-titulo oculto" id="equipe-titulo">
+      <h2 id="equipe-rotulo"></h2>
+    </div>
+    <p class="equipe-sub oculto" id="equipe-sub"></p>
+    <div id="equipe"></div>
   </section>
 
   <section id="tela-ficha" class="oculto">
@@ -352,6 +371,168 @@
      Lista
      ============================================================ */
 
+  const TIPO_DOC = 'montagem';
+  const ROTULO_EQUIPE = 'Montagens da equipe';
+
+  async function montarPdfDe(doc) {
+    const bytes = await PDFMontagem.montar(doc);
+    return { nome: PDFMontagem.nomeDoArquivo(doc),
+             blob: new Blob([bytes], { type: 'application/pdf' }) };
+  }
+
+  /* ============================================================
+     Documentos da equipe
+     ------------------------------------------------------------
+     A lista de cima é o que está NESTE aparelho, que é o que o
+     medidor edita. Esta é o que está no servidor, que é só
+     consulta — e por isso não tem botão de editar, só de baixar
+     o PDF, que o navegador remonta a partir dos dados.
+
+     Aparece só para gerente e administrador. Para o consultor a
+     seção inteira some: a lista dele já é a de cima.
+
+     E não aparece offline. Sem rede não há o que mostrar, e uma
+     seção vazia com um aviso de erro no meio da tela de campo
+     seria ruído num lugar onde ruído atrapalha.
+     ============================================================ */
+
+  async function desenharEquipe() {
+    const caixa = el('equipe');
+    const titulo = el('equipe-titulo');
+    const sub = el('equipe-sub');
+
+    const eu = await C.eu();
+    const podeVer = eu.admin || eu.gerente;
+
+    if (!podeVer || !C.temServidor()) {
+      titulo.classList.add('oculto');
+      sub.classList.add('oculto');
+      caixa.innerHTML = '';
+      return;
+    }
+
+    titulo.classList.remove('oculto');
+    sub.classList.remove('oculto');
+    el('equipe-rotulo').textContent = ROTULO_EQUIPE;
+    sub.textContent = eu.admin
+      ? 'Todas as lojas. Só consulta — para editar, use o aparelho de quem preencheu.'
+      : 'Da sua loja. Só consulta — para editar, use o aparelho de quem preencheu.';
+
+    caixa.innerHTML = '<p class="vazio-msg">Carregando...</p>';
+
+    const linhas = await C.listarDaEquipe(TIPO_DOC);
+
+    if (linhas === null) {
+      caixa.innerHTML = '<p class="vazio-msg">Não consegui carregar agora.</p>';
+      return;
+    }
+
+    /* O que já está neste aparelho sai da lista: apareceria duas
+       vezes, uma editável e outra não, o que confunde mais do
+       que ajuda. */
+    const meus = (await Armazem.todas())
+      .map(function (m) { return m.remoto; })
+      .filter(Boolean);
+
+    const outros = linhas.filter(function (l) { return meus.indexOf(l.id) === -1; });
+
+    if (!outros.length) {
+      caixa.innerHTML = '<p class="vazio-msg">Nada da equipe por aqui ainda.</p>';
+      return;
+    }
+
+    caixa.innerHTML = '';
+
+    outros.forEach(function (d) {
+      caixa.appendChild(cartaoDaEquipe(d, eu));
+    });
+  }
+
+  function cartaoDaEquipe(d, eu) {
+    const cartao = document.createElement('div');
+    cartao.className = 'ficha';
+
+    const meu = d.autor === eu.id;
+
+    const corpo = document.createElement('div');
+    corpo.style.padding = '15px 16px';
+    corpo.innerHTML =
+      '<h3>' + C.escapar(d.cliente || 'Sem nome') + '</h3>' +
+      '<p>' + C.escapar(d.contrato || 'sem contrato') + ' · ' +
+              (d.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos') + ' · ' +
+              C.dataCurta(d.atualizado_em) + '</p>' +
+      '<div class="tags">' +
+        C.pintarEtiqueta(C.etiquetaParecer(d)) +
+        C.pintarEtiqueta(C.etiquetaEstado(d)) +
+        (d.autorNome
+          ? '<span class="autor' + (meu ? ' meu' : '') + '">' +
+            C.escapar(meu ? 'você' : d.autorNome) + '</span>'
+          : '') +
+      '</div>';
+
+    cartao.appendChild(corpo);
+
+    const acoes = document.createElement('div');
+    acoes.className = 'acoes';
+    acoes.style.paddingTop = '0';
+
+    const baixar = document.createElement('button');
+    baixar.textContent = 'baixar PDF';
+    baixar.style.borderColor = 'var(--line-2)';
+    baixar.style.color = 'var(--ink-2)';
+
+    baixar.onclick = async function () {
+      baixar.disabled = true;
+      baixar.textContent = 'gerando…';
+
+      try {
+        /* As fotos ficam no aparelho de quem preencheu, não no
+           servidor. O PDF sai completo no texto e sem imagem —
+           e diz isso, para ninguém achar que não houve foto. */
+        const pdf = await montarPdfDe({
+          cliente: d.cliente, contrato: d.contrato, loja: d.loja,
+          dados: d.dados, preenchido_em: d.atualizado_em, fotos: {}
+        });
+        await C.entregar(null, pdf.blob, pdf.nome);
+      } catch (erro) {
+        console.error(erro);
+        alert('Não consegui gerar o PDF. ' + (erro.message || ''));
+      } finally {
+        baixar.disabled = false;
+        baixar.textContent = 'baixar PDF';
+      }
+    };
+
+    acoes.appendChild(baixar);
+
+    if (eu.admin) {
+      const apagar = document.createElement('button');
+      apagar.textContent = 'apagar do sistema';
+
+      apagar.onclick = async function () {
+        if (!confirm('Mandar o documento de ' + (d.cliente || 'sem nome') +
+                     ' para a lixeira?\n\nDá para restaurar na aba Contas.')) return;
+
+        apagar.disabled = true;
+        apagar.textContent = 'apagando…';
+
+        try {
+          await C.mandarParaLixeira(d.id);
+          desenharEquipe();
+        } catch (erro) {
+          alert(erro.message);
+          apagar.disabled = false;
+          apagar.textContent = 'apagar do sistema';
+        }
+      };
+
+      acoes.appendChild(apagar);
+    }
+
+    cartao.appendChild(acoes);
+    return cartao;
+  }
+
   async function mostrarLista() {
     el('tela-ficha').classList.add('oculto');
     el('tela-lista').classList.remove('oculto');
@@ -360,6 +541,7 @@
     limparPrevias();
 
     await pintarRede();
+    desenharEquipe();
 
     const todas = (await Armazem.todas()).sort(function (a, b) {
       return String(b.atualizado_em).localeCompare(String(a.atualizado_em));
@@ -395,6 +577,7 @@
                 C.dataCurta(m.atualizado_em) + '</p>' +
         '<div class="tags">' +
           etiquetaDoEnvio(m) +
+          C.pintarEtiqueta(C.etiquetaParecer({ tipo: TIPO_DOC, dados: m.dados })) +
           (c.faltam ? '<span class="tag">' + c.faltam + ' sem resposta</span>' : '') +
           (c.nao ? '<span class="tag erro">' + c.nao + ' não conforme</span>' : '') +
           (!c.faltam && !c.nao ? '<span class="tag ok">tudo conforme</span>' : '') +
