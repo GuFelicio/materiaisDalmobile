@@ -577,6 +577,9 @@
                 C.dataCurta(m.atualizado_em) + '</p>' +
         '<div class="tags">' +
           etiquetaDoEnvio(m) +
+          (m.versao ? '<span class="tag">versão ' + m.versao + '</span>' : '') +
+          ((m.marcos || []).length
+            ? '<span class="tag aviso">' + m.marcos.length + ' versão a subir</span>' : '') +
           C.pintarEtiqueta(C.etiquetaParecer({ tipo: TIPO_DOC, dados: m.dados })) +
           (c.faltam ? '<span class="tag">' + c.faltam + ' sem resposta</span>' : '') +
           (c.nao ? '<span class="tag erro">' + c.nao + ' não conforme</span>' : '') +
@@ -866,7 +869,13 @@
     pintarEstado();
 
     clearTimeout(salvando);
-    salvando = setTimeout(function () { sincronizar(atual); }, 4000);
+
+    /* Guarda a ficha, não a variável. Quando o atraso vence, o
+       medidor já pode ter voltado para a lista — e aí 'atual' é
+       nulo, a sincronia dispara contra nada e o que estava para
+       subir fica parado no aparelho sem ninguém perceber. */
+    const pendente = atual;
+    salvando = setTimeout(function () { sincronizar(pendente); }, 4000);
   }
 
   ['f-cliente','f-contrato','f-ambiente','f-responsavel','f-observacoes'].forEach(function (id) {
@@ -911,9 +920,16 @@
     };
 
     try {
+      /* A ficha criada em obra pode subir dias depois. Sem mandar
+         a data de abertura no insert, ela viraria a data da
+         SINCRONIA — e com ela o prazo contratual escorregaria
+         para frente sozinho. No update ela nem vai: o banco a
+         tranca, e é essa a intenção. */
       const r = m.remoto
         ? await sb.from('formularios').update(linha).eq('id', m.remoto).select('id,status').single()
-        : await sb.from('formularios').insert(linha).select('id,status').single();
+        : await sb.from('formularios')
+                  .insert(Object.assign({ pedido_em: m.criado_em }, linha))
+                  .select('id,status').single();
 
       if (r.error) throw r.error;
 
@@ -925,6 +941,9 @@
          lixeira: o conteúdo foi gravado, mas ela não revive. É
          assim que este aparelho fica sabendo. */
       m.removido = r.data.status === 'apagado';
+
+      await Armazem.salvar(m);
+      await C.enviarMarcos(m, Armazem);
       await Armazem.salvar(m);
 
       pintarEstado();
@@ -965,6 +984,13 @@
       preenchido_em: atual.atualizado_em,
       fotos: fotos
     });
+
+    /* Gerar o PDF é o evento que vira versão: foi este arquivo
+       que alguém imprimiu ou mandou. O marco fica no aparelho e
+       sobe na próxima sincronia, com a data de hoje — não a de
+       quando houver sinal. */
+    C.anotarMarco(atual, 'pdf', await C.hashDoPdf(bytes));
+    await guardar();
 
     return {
       nome: PDFMontagem.nomeDoArquivo(atual),

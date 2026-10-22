@@ -297,6 +297,83 @@ window.Campo = (function () {
 
 
   /* ------------------------------------------------------------
+     Versões
+     ------------------------------------------------------------
+     Versão nasce em EVENTO, não a cada tecla digitada: PDF
+     gerado, documento assinado, correção depois de assinado.
+     Guardar autosave encheria o banco de lixo e não responderia
+     pergunta nenhuma.
+
+     O POR QUÊ DA FILA: o PDF é gerado em obra, sem sinal. Se a
+     versão só existisse quando há rede, perderíamos justamente
+     a do momento em que o cliente viu o documento. Então o
+     marco é anotado no aparelho na hora e sobe depois, com a
+     data em que aconteceu — não a da sincronia.
+     ------------------------------------------------------------ */
+
+  /* Impressão digital do PDF. É o que permite provar, depois,
+     que o papel na mão de alguém é esta versão e não outra. */
+  async function hashDoPdf(bytes) {
+    try {
+      const resumo = await crypto.subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(resumo))
+        .map(function (b) { return b.toString(16).padStart(2, '0'); })
+        .join('');
+    } catch (e) {
+      console.warn('Não calculei o hash do PDF.', e);
+      return null;
+    }
+  }
+
+  /** Anota no aparelho que algo aconteceu. Não fala com servidor. */
+  function anotarMarco(ficha, motivo, hash) {
+    ficha.marcos = ficha.marcos || [];
+    ficha.marcos.push({
+      em: agora(),
+      motivo: motivo,
+      hash: hash || null,
+      /* Cópia do estado NAQUELE instante. Sem a cópia, a versão
+         subiria com o conteúdo de hoje e a história seria falsa. */
+      dados: JSON.parse(JSON.stringify(ficha.dados || {}))
+    });
+  }
+
+  /* Sobe os marcos pendentes, em ordem. Um que falhe interrompe
+     a fila e fica para a próxima: versão fora de ordem conta a
+     história errada, e é melhor esperar do que mentir. */
+  async function enviarMarcos(ficha, armazem) {
+    const sb = temServidor();
+    if (!sb || !ficha.remoto || !(ficha.marcos || []).length) return;
+
+    while (ficha.marcos.length) {
+      const marco = ficha.marcos[0];
+
+      const r = await sb.rpc('registrar_versao', {
+        alvo: ficha.remoto,
+        motivo: marco.motivo,
+        dados: marco.dados,
+        hash: marco.hash
+      });
+
+      if (r.error) {
+        console.warn('Marco não subiu agora; fica para a próxima.', r.error);
+        return;
+      }
+
+      ficha.versao = r.data;
+      ficha.marcos.shift();
+      await armazem.salvar(ficha);
+    }
+  }
+
+  async function reabrirMedicao(remoto, motivo) {
+    const r = await exigeServidor().rpc('reabrir_medicao', { anterior: remoto, motivo: motivo || null });
+    if (r.error) throw new Error(r.error.message || 'Não consegui reabrir a medição.');
+    return r.data;
+  }
+
+
+  /* ------------------------------------------------------------
      Etiquetas
      ------------------------------------------------------------
      DOIS EIXOS, NÃO UM. O parecer e o estado não se excluem —
@@ -506,6 +583,10 @@ window.Campo = (function () {
     bytesDasFotos: bytesDasFotos,
     temServidor: temServidor,
     eu: eu,
+    hashDoPdf: hashDoPdf,
+    anotarMarco: anotarMarco,
+    enviarMarcos: enviarMarcos,
+    reabrirMedicao: reabrirMedicao,
     etiquetaParecer: etiquetaParecer,
     etiquetaEstado: etiquetaEstado,
     pintarEtiqueta: pintarEtiqueta,

@@ -373,6 +373,14 @@
       <p class="nota" id="nota-termo"></p>
     </div>
 
+    <div id="caixa-reabrir" class="painel oculto" style="margin-top:18px">
+      <h2>Nova medição</h2>
+      <p id="reabrir-porque"></p>
+      <button class="btn largo" id="reabrir">Reabrir medição para nova visita</button>
+    </div>
+
+    <p class="nota oculto" id="veio-de" style="margin-bottom:14px"></p>
+
     <button class="btn vazio largo" id="apagar" style="margin-top:6px;border-color:var(--erro-line);color:var(--erro)">
       Apagar esta medição
     </button>
@@ -425,6 +433,9 @@
       id: C.novoId('med'),
       remoto: null,
       enviado: false,
+      versao: 0,
+      marcos: [],
+      origem: null,
       autor: eu ? eu.id : null,
       cliente: '', contrato: '',
       loja: (window.EU && window.EU.loja) || 'sjc',
@@ -690,6 +701,9 @@
                 C.dataCurta(m.atualizado_em) + '</p>' +
         '<div class="tags">' +
           etiquetaDoEnvio(m) +
+          (m.versao ? '<span class="tag">versão ' + m.versao + '</span>' : '') +
+          ((m.marcos || []).length
+            ? '<span class="tag aviso">' + m.marcos.length + ' versão a subir</span>' : '') +
           C.pintarEtiqueta(C.etiquetaParecer({ tipo: TIPO_DOC, dados: m.dados })) +
           (resumo.faltam ? '<span class="tag">' + resumo.faltam + ' sem resposta</span>' : '') +
           (resumo.reprovados ? '<span class="tag erro">' + resumo.reprovados + ' não apto</span>' : '') +
@@ -794,6 +808,7 @@
     desenharChecklist();
     pintarParecerFinal();
     pintarEstado();
+    pintarReabertura();
 
     sincronizar(m);
   }
@@ -1011,6 +1026,87 @@
      traseira direto no celular; no computador abre o seletor de
      arquivos. Um controle só, nos dois lugares. */
 
+  /* ============================================================
+     Reabertura — é aqui que a data de abertura reseta
+     ------------------------------------------------------------
+     E ela não é alterada em lugar nenhum: nasce uma ficha nova,
+     com data nova, apontando para a que reprovou. A anterior
+     fica intacta, com o parecer, as fotos e o técnico.
+
+     Quem perguntar depois "por que o prazo deste contrato
+     começa em novembro se ele fechou em setembro?" segue o elo
+     e encontra um parecer de inaptidão assinado — em vez de uma
+     data que alguém poderia ter mudado à mão.
+
+     Só aparece quando faz sentido: medição reprovada, cliente
+     indo corrigir, e documento já no sistema. Reabrir o que
+     ainda não subiu não teria o que encadear.
+     ============================================================ */
+
+  function pintarReabertura() {
+    const d = atual.dados;
+    const caixa = el('caixa-reabrir');
+    const veioDe = el('veio-de');
+
+    const cabe = atual.remoto &&
+                 d.parecerFinal === 'nao-aptos' &&
+                 d.caminhoInapto === 'corrigir';
+
+    caixa.classList.toggle('oculto', !cabe);
+
+    if (cabe) {
+      el('reabrir-porque').textContent =
+        'Quando o cliente ajustar o que foi reprovado, abra a nova medição por aqui. ' +
+        'Esta ficha continua guardada como está, e a nova nasce com data de abertura ' +
+        'nova — é ela que passa a valer para o prazo.';
+    }
+
+    veioDe.classList.toggle('oculto', !atual.origem);
+    if (atual.origem) {
+      veioDe.innerHTML = '<b>Esta medição substitui uma anterior</b>, reprovada na visita passada. ' +
+        'O prazo do contrato conta a partir da abertura desta.';
+    }
+  }
+
+  el('reabrir').onclick = async function () {
+    if (!atual || !atual.remoto) return;
+
+    if (!confirm('Abrir uma nova medição para ' + (atual.cliente || 'este cliente') + '?\n\n' +
+                 'Esta ficha fica guardada como está. A nova começa com o checklist em ' +
+                 'branco e com data de abertura nova.')) return;
+
+    const botao = this;
+    botao.disabled = true;
+    botao.textContent = 'Abrindo…';
+
+    try {
+      const novoRemoto = await C.reabrirMedicao(atual.remoto);
+
+      /* A ficha nasceu no servidor. Aqui no aparelho nasce a
+         cópia que o medidor vai preencher na próxima visita,
+         já amarrada àquela. */
+      const nova = medicaoNova();
+      nova.remoto = novoRemoto;
+      nova.enviado = true;
+      nova.origem = atual.remoto;
+      nova.cliente = atual.cliente;
+      nova.contrato = atual.contrato;
+      nova.loja = atual.loja;
+      nova.dados.tecnico = atual.dados.tecnico;
+      nova.dados.tipoContrato = atual.dados.tipoContrato;
+      nova.dados.ambientes = JSON.parse(JSON.stringify(atual.dados.ambientes || []));
+
+      await Armazem.salvar(nova);
+      await abrirFicha(nova.id);
+
+    } catch (erro) {
+      alert(erro.message);
+      botao.disabled = false;
+      botao.textContent = 'Reabrir medição para nova visita';
+    }
+  };
+
+
   /* ---------- parecer final ---------- */
 
   function pintarParecerFinal() {
@@ -1049,6 +1145,7 @@
     });
 
     pintarNotaDoTermo();
+    pintarReabertura();
   }
 
   /* O medidor precisa saber, ANTES de gerar, o que vai sair no
@@ -1114,7 +1211,13 @@
     pintarNotaDoTermo();
 
     clearTimeout(salvando);
-    salvando = setTimeout(function () { sincronizar(atual); }, 4000);
+
+    /* Guarda a ficha, não a variável. Quando o atraso vence, o
+       medidor já pode ter voltado para a lista — e aí 'atual' é
+       nulo, a sincronia dispara contra nada e o que estava para
+       subir fica parado no aparelho sem ninguém perceber. */
+    const pendente = atual;
+    salvando = setTimeout(function () { sincronizar(pendente); }, 4000);
   }
 
   ['f-cliente','f-contrato','f-tecnico','f-obs','f-outros','f-nao-aptos'].forEach(function (id) {
@@ -1169,9 +1272,16 @@
     };
 
     try {
+      /* A ficha criada em obra pode subir dias depois. Sem mandar
+         a data de abertura no insert, ela viraria a data da
+         SINCRONIA — e com ela o prazo contratual escorregaria
+         para frente sozinho. No update ela nem vai: o banco a
+         tranca, e é essa a intenção. */
       const r = m.remoto
         ? await sb.from('formularios').update(linha).eq('id', m.remoto).select('id,status').single()
-        : await sb.from('formularios').insert(linha).select('id,status').single();
+        : await sb.from('formularios')
+                  .insert(Object.assign({ pedido_em: m.criado_em }, linha))
+                  .select('id,status').single();
 
       if (r.error) throw r.error;
 
@@ -1183,6 +1293,9 @@
          lixeira: o conteúdo foi gravado, mas ela não revive. É
          assim que este aparelho fica sabendo. */
       m.removido = r.data.status === 'apagado';
+
+      await Armazem.salvar(m);
+      await C.enviarMarcos(m, Armazem);
       await Armazem.salvar(m);
 
       pintarEstado();
@@ -1239,6 +1352,13 @@
         preenchido_em: atual.atualizado_em,
         fotos: fotos
       });
+
+    /* Gerar o PDF é o evento que vira versão: foi este arquivo
+       que alguém imprimiu ou mandou. O marco fica no aparelho e
+       sobe na próxima sincronia, com a data de hoje — não a de
+       quando houver sinal. */
+    C.anotarMarco(atual, 'pdf', await C.hashDoPdf(bytes));
+    await guardar();
 
     return {
       nome: PDF101.nomeDoArquivo(atual),
