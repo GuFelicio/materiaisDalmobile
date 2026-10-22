@@ -407,6 +407,9 @@ function lerEstado(doc) {
 function idDoDocumento(evento) {
   const d = evento.data || {};
 
+  /* A ORDEM IMPORTA: do mais específico para o mais genérico.
+     'd.id' fica por último porque, em evento de assinatura, ele
+     pode ser o id do EVENTO e não o do documento. */
   const candidatos = [
     d.object && d.object.id,
     d.document && d.document.id,
@@ -416,11 +419,31 @@ function idDoDocumento(evento) {
   ];
 
   for (const c of candidatos) {
-    if (typeof c === 'string' && /^[0-9a-f-]{36}$/i.test(c)) return c;
+    if (pareceId(c)) return c;
   }
 
-  console.warn('[autentique] não achei o id do documento no aviso');
+  console.warn('[autentique] não achei o id do documento no aviso; '
+    + 'chaves em data: ' + Object.keys(d).join(', '));
   return null;
+}
+
+/* ⚠️ DE PROPÓSITO FROUXO — e isto já custou caro uma vez.
+   A API tipa o id como 'UUID!', e eu li isso como UUID com
+   traços, 36 caracteres. Não é: a Autentique devolve uma string
+   hexadecimal longa e SEM traços
+   (0f3a7a1c3493c0dbf04a10716dc7fbbe73f06922eaff42e58).
+
+   Com a conferência estrita, todo aviso era descartado em
+   silêncio: a rota devolvia 200, o painel marcava 100% de
+   entrega, o Error Logs ficava limpo — e nenhuma assinatura
+   chegava ao banco. Falha invisível dos dois lados.
+
+   Rigor aqui não comprava nada, porque o id não é usado para
+   decidir coisa alguma: ele serve só para PERGUNTAR à Autentique.
+   Id errado devolve documento nulo e o aviso morre com 200. Quem
+   valida de verdade é a resposta dela, não este teste. */
+function pareceId(c) {
+  return typeof c === 'string' && /^[A-Za-z0-9_-]{16,128}$/.test(c);
 }
 
 

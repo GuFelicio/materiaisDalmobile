@@ -747,6 +747,7 @@
           ((m.marcos || []).length
             ? '<span class="tag aviso">' + m.marcos.length + ' versão a subir</span>' : '') +
           C.pintarEtiqueta(C.etiquetaParecer({ tipo: TIPO_DOC, dados: m.dados })) +
+          etiquetaDaAssinatura(m) +
           (resumo.faltam ? '<span class="tag">' + resumo.faltam + ' sem resposta</span>' : '') +
           (resumo.reprovados ? '<span class="tag erro">' + resumo.reprovados + ' não apto</span>' : '') +
           (!resumo.faltam && !resumo.reprovados ? '<span class="tag ok">checklist completo</span>' : '') +
@@ -771,6 +772,30 @@
     if (m.removido) return '<span class="tag erro">removido pelo administrador</span>';
     return m.enviado ? '<span class="tag ok">no sistema</span>'
                      : '<span class="tag aviso">só neste aparelho</span>';
+  }
+
+
+  /* O estado da assinatura, na LISTA.
+     ------------------------------------------------------------
+     Faltava, e a falta era pior do que parece: o cartão ficava
+     exatamente igual tendo o cliente assinado ou não. Para saber,
+     era preciso abrir a medição — ou seja, a informação que decide
+     se o prazo começou estava escondida atrás de um toque.
+
+     Só aparece quando há o que dizer: medição que nunca foi para
+     assinatura não ganha etiqueta, senão a lista vira um muro de
+     'não assinado' sem significado. */
+  function etiquetaDaAssinatura(m) {
+    const estado = m.estadoRemoto;
+    const pediu = !!(m.dados && m.dados.assinatura);
+
+    if (estado === 'assinado' || estado === 'recusado') {
+      return C.pintarEtiqueta(C.etiquetaEstado({ status: estado }));
+    }
+    if (pediu) {
+      return '<span class="tag aviso">aguardando assinatura</span>';
+    }
+    return '';
   }
 
   /* Só para administrador, e só no que já subiu: o que ainda está
