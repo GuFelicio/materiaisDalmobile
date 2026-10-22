@@ -111,7 +111,8 @@ export async function onRequest(context) {
       nome: plano.nome,
       recado: plano.recado,
       pdf: pedido.pdf,
-      signatarios: signatarios
+      signatarios: signatarios,
+      copiaPara: plano.copiaPara
     });
 
     /* Gravar primeiro. Se outra requisição chegou antes, é aqui
@@ -237,20 +238,31 @@ function planoDeAssinatura(ficha, pedido) {
             + ' · ' + cliente + contrato,
       recado: 'Olá! Segue o termo da medição do seu projeto Dalmóbile. '
             + 'A assinatura é o que dá início aos prazos de produção, entrega e montagem.',
-      cliente: { nome: cliente, telefone: fone }
+      cliente: { nome: cliente, telefone: fone },
+      /* Opcional aqui: o cliente assina pelo WhatsApp, e o
+         e-mail serve só para ele receber a via assinada depois.
+         Se não deu e-mail, ele ainda assina normalmente. */
+      copiaPara: emailValido(pedido.email) ? pedido.email : null
     };
   }
 
   /* Inapto com nova data marcada: aqui o cliente NÃO assina. O
      documento é um parecer da Dalmóbile, assinado por nós, que
-     vai por e-mail para registrar a conversa e a nova data. */
+     vai por e-mail para registrar a conversa e a nova data.
+
+     O e-mail é obrigatório justamente por isso: sem ele o
+     parecer nasce assinado e não chega a ninguém, que é o pior
+     dos mundos — custou e não documentou nada. */
   if (parecer === 'nao-aptos' && caminho === 'corrigir') {
+    if (!emailValido(pedido.email)) {
+      throw falha('Informe o e-mail do cliente: é por ele que o parecer é entregue.', 422);
+    }
     return {
       clienteAssina: false,
       canal: 'email',
       nome: 'Parecer de suspensão — medição · ' + cliente + contrato,
       recado: 'Segue o parecer da medição, com os pontos a corrigir e a nova data.',
-      copiaPara: pedido.email || null
+      copiaPara: pedido.email
     };
   }
 
@@ -274,6 +286,11 @@ function normalizarWhatsapp(bruto) {
   if (so.length === 11) return '+55' + so;
 
   return null;
+}
+
+
+function emailValido(bruto) {
+  return /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(String(bruto || '').trim());
 }
 
 
@@ -339,6 +356,11 @@ async function criarDocumento(token, p) {
     signers: p.signatarios,
     file: null
   };
+
+  /* Cópia: recebe o documento pronto sem precisar assinar. É
+     como o parecer de suspensão chega ao cliente — e, nos outros
+     dois casos, como ele recebe a via assinada depois. */
+  if (p.copiaPara) variables.document.cc = [{ email: p.copiaPara }];
 
   const corpo = new FormData();
   corpo.append('operations', JSON.stringify({ query: query, variables: variables }));

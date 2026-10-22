@@ -90,6 +90,14 @@
   .btn.vazio { background: #fff; color: var(--ink); }
   .btn.largo { width: 100%; }
   .btn:disabled { opacity: .45; cursor: default; }
+  /* ⚠️ ISTO NÃO É ENFEITE.
+     A regra .btn traz display:inline-flex, e classe vence o
+     estilo que o navegador dá a [hidden]. Sem esta linha,
+     'botao.hidden = true' não esconde nada: o botão "Enviar"
+     vinha aparecendo em quem NÃO sabe compartilhar arquivo —
+     ou seja, justamente o botão que não fazia nada, que é o
+     que o código tentava evitar. */
+  .btn[hidden] { display: none !important; }
 
   /* O cartão é um contêiner, não um botão: dentro dele vive o
      botão de abrir e, para o administrador, o de apagar. Botão

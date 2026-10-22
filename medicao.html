@@ -108,6 +108,14 @@
   .btn.vazio { background: #fff; color: var(--ink); }
   .btn.largo { width: 100%; }
   .btn:disabled { opacity: .45; cursor: default; }
+  /* ⚠️ ISTO NÃO É ENFEITE.
+     A regra .btn traz display:inline-flex, e classe vence o
+     estilo que o navegador dá a [hidden]. Sem esta linha,
+     'botao.hidden = true' não esconde nada: o botão "Enviar"
+     vinha aparecendo em quem NÃO sabe compartilhar arquivo —
+     ou seja, justamente o botão que não fazia nada, que é o
+     que o código tentava evitar. */
+  .btn[hidden] { display: none !important; }
   .btn.some { border: 0; background: none; color: var(--ink-2); padding: 10px 2px; min-height: 0; font-size: 14px; }
 
   /* ---------- lista de medições ---------- */
@@ -329,6 +337,31 @@
       </div>
     </div>
 
+    <!-- Painel próprio, e não mais dois campos no meio dos
+         outros: o medidor vai PEDIR estes dados ao cliente na
+         hora, e precisa saber para quê antes de pedir. -->
+    <div class="painel">
+      <h2>Contato do cliente</h2>
+      <p class="nota" style="margin:-6px 0 14px">
+        É por aqui que o termo chega para assinatura. Confira com o cliente na hora:
+        número errado manda o documento para o vazio.
+      </p>
+
+      <div class="campo">
+        <label class="rot" for="f-whatsapp">WhatsApp</label>
+        <input type="tel" id="f-whatsapp" inputmode="numeric" autocomplete="off"
+               placeholder="(12) 99999-8888" maxlength="16">
+        <p class="nota" id="nota-whatsapp" style="margin:6px 0 0"></p>
+      </div>
+
+      <div class="campo" style="margin-bottom:0">
+        <label class="rot" for="f-email">E-mail</label>
+        <input type="email" id="f-email" inputmode="email" autocomplete="off"
+               autocapitalize="off" spellcheck="false" placeholder="cliente@exemplo.com">
+        <p class="nota" id="nota-email" style="margin:6px 0 0"></p>
+      </div>
+    </div>
+
     <h2 class="secao">Ambientes a serem liberados</h2>
     <div id="ambientes"></div>
     <button class="btn vazio largo" id="add-ambiente">+ Ambiente</button>
@@ -379,6 +412,11 @@
       <button class="btn largo" id="reabrir">Reabrir medição para nova visita</button>
     </div>
 
+    <div id="caixa-assinatura" class="painel oculto" style="margin-top:18px">
+      <h2>Assinatura</h2>
+      <div id="resumo-assinatura"></div>
+    </div>
+
     <p class="nota oculto" id="veio-de" style="margin-bottom:14px"></p>
 
     <button class="btn vazio largo" id="apagar" style="margin-top:6px;border-color:var(--erro-line);color:var(--erro)">
@@ -392,7 +430,8 @@
   <div class="dentro">
     <div class="estado" id="estado"></div>
     <button class="btn vazio" id="enviar" hidden>Enviar</button>
-    <button class="btn" id="salvar">Salvar PDF</button>
+    <button class="btn vazio" id="salvar">Salvar PDF</button>
+    <button class="btn" id="assinar" hidden>Enviar para assinatura</button>
   </div>
 </div>
 
@@ -450,6 +489,9 @@
         parecerFinal: '',
         caminhoInapto: '',
         ambientesNaoAptos: '',
+        whatsapp: '',
+        email: '',
+        assinatura: null,
         tecnico: (eu && eu.user_metadata && eu.user_metadata.nome) || ''
       }
     };
@@ -803,6 +845,8 @@
     el('f-obs').value       = m.dados.observacao || '';
     el('f-outros').value    = m.dados.outros || '';
     el('f-nao-aptos').value = m.dados.ambientesNaoAptos || '';
+    el('f-whatsapp').value  = C.mascararWhatsapp(m.dados.whatsapp || '');
+    el('f-email').value     = m.dados.email || '';
 
     desenharAmbientes();
     desenharChecklist();
@@ -1199,6 +1243,12 @@
     atual.dados.observacao        = el('f-obs').value;
     atual.dados.outros            = el('f-outros').value;
     atual.dados.ambientesNaoAptos = el('f-nao-aptos').value;
+
+    /* Guardado já normalizado, em E.164. Se ficasse só a máscara,
+       a Function teria de adivinhar de novo e o que está salvo no
+       banco não seria o número que de fato foi discado. */
+    atual.dados.whatsapp = C.normalizarWhatsapp(el('f-whatsapp').value) || '';
+    atual.dados.email    = el('f-email').value.trim().toLowerCase();
   }
 
   async function guardar() {
@@ -1220,8 +1270,23 @@
     salvando = setTimeout(function () { sincronizar(pendente); }, 4000);
   }
 
-  ['f-cliente','f-contrato','f-tecnico','f-obs','f-outros','f-nao-aptos'].forEach(function (id) {
-    el(id).addEventListener('input', guardar);
+  ['f-cliente','f-contrato','f-tecnico','f-obs','f-outros','f-nao-aptos','f-email']
+    .forEach(function (id) {
+      el(id).addEventListener('input', guardar);
+    });
+
+  /* A máscara é aplicada ao vivo. Reposicionar o cursor não vale
+     a pena aqui: o campo é curto e o preenchimento é da esquerda
+     para a direita, então mandar o cursor para o fim é o que o
+     dedo espera. */
+  el('f-whatsapp').addEventListener('input', function () {
+    const antes = this.value;
+    const depois = C.mascararWhatsapp(antes);
+    if (depois !== antes) {
+      this.value = depois;
+      this.setSelectionRange(depois.length, depois.length);
+    }
+    guardar();
   });
   ['f-loja','f-tipo'].forEach(function (id) {
     el(id).addEventListener('change', guardar);
@@ -1234,6 +1299,166 @@
     el('estado').innerHTML = r.faltam
       ? '<b>' + r.faltam + '</b> ite' + (r.faltam > 1 ? 'ns' : 'm') + ' sem resposta'
       : (atual.enviado ? 'Salvo e no sistema' : 'Salvo neste aparelho');
+
+    pintarAssinatura();
+  }
+
+
+  /* ============================================================
+     8-A. Assinatura
+     ------------------------------------------------------------
+     O botão principal muda conforme o que falta. A ideia é que o
+     medidor nunca aperte um botão para descobrir que não podia:
+     ou ele está aceso e funciona, ou está apagado com o motivo
+     escrito do lado.
+
+     'Salvar PDF' nunca some. Sinal cai, Autentique fica fora do
+     ar, cliente sem WhatsApp — em qualquer desses, o medidor
+     ainda tem de conseguir sair da obra com o documento.
+     ============================================================ */
+
+  function faseDaAssinatura() {
+    const d = atual.dados;
+
+    if (d.assinatura) return { fase: 'enviada' };
+
+    const r = contar(atual);
+    if (r.faltam) {
+      return { fase: 'falta', porque: 'Responda os ' + r.faltam + ' itens que faltam no checklist.' };
+    }
+
+    const parecer = d.parecerFinal;
+    const caminho = d.caminhoInapto;
+
+    if (!parecer) return { fase: 'falta', porque: 'Marque o parecer final.' };
+    if (parecer === 'nao-aptos' && !caminho) {
+      return { fase: 'falta', porque: 'Diga o que o cliente decidiu.' };
+    }
+
+    const clienteAssina = parecer === 'aptos' || caminho === 'prosseguir';
+
+    if (clienteAssina && !C.normalizarWhatsapp(d.whatsapp)) {
+      return { fase: 'falta', porque: 'Falta o WhatsApp do cliente, com DDD — é por ele que o termo vai.' };
+    }
+    if (!clienteAssina && !C.emailValido(d.email)) {
+      return { fase: 'falta', porque: 'Falta o e-mail do cliente — é por ele que o parecer é entregue.' };
+    }
+
+    /* Por último de propósito: é o único que não depende do
+       medidor. Deixar à frente dos outros faria ele culpar o
+       sinal por algo que ele ainda tinha de preencher. */
+    if (!atual.remoto) {
+      return { fase: 'falta', esperando: true,
+               porque: !C.temServidor()
+                 ? 'Sem internet. Assim que houver sinal, esta medição sobe e o botão libera.'
+                 : 'Esta medição ainda está subindo. Aguarde um instante.' };
+    }
+
+    return { fase: 'pronta', clienteAssina: clienteAssina };
+  }
+
+
+  function pintarAssinatura() {
+    const d = atual.dados;
+    const e = faseDaAssinatura();
+    const botao = el('assinar');
+    const caixa = el('caixa-assinatura');
+
+    pintarNotasDeContato();
+
+    /* Já foi: some o botão e entra o resumo. Reenviar daqui só
+       criaria documento repetido e cobrado de novo. */
+    if (e.fase === 'enviada') {
+      botao.hidden = true;
+      el('salvar').className = 'btn';
+      el('enviar').hidden = !C.podeCompartilharArquivo();
+      caixa.classList.remove('oculto');
+      el('resumo-assinatura').innerHTML = resumoDaAssinatura(d.assinatura);
+      return;
+    }
+
+    caixa.classList.add('oculto');
+
+    if (e.fase === 'pronta') {
+      botao.hidden = false;
+      botao.disabled = false;
+      botao.title = '';
+      botao.textContent = e.clienteAssina ? 'Enviar para assinatura' : 'Assinar e enviar';
+      /* Virou o secundário: o principal agora é a assinatura. */
+      el('salvar').className = 'btn vazio';
+      el('enviar').hidden = true;
+      return;
+    }
+
+    /* Falta alguma coisa. O botão aparece apagado — ver que ele
+       existe e por que não dá ainda vale mais que não vê-lo. */
+    botao.hidden = false;
+    botao.disabled = true;
+    botao.textContent = e.esperando ? 'Aguardando sinal' : 'Falta preencher';
+    botao.title = e.porque;
+    el('salvar').className = 'btn';
+    el('enviar').hidden = !C.podeCompartilharArquivo();
+  }
+
+
+  /* As duas linhas embaixo dos campos de contato. Mudam com o
+     parecer porque o que é obrigatório muda com ele — e o
+     medidor precisa saber o que pedir ao cliente ANTES de pedir. */
+  function pintarNotasDeContato() {
+    const d = atual.dados;
+    const decidiu = d.parecerFinal === 'aptos'
+                 || (d.parecerFinal === 'nao-aptos' && d.caminhoInapto);
+
+    const nw = el('nota-whatsapp');
+    const ne = el('nota-email');
+
+    if (!decidiu) {
+      nw.textContent = 'Peça os dois. Qual deles é obrigatório depende do parecer final.';
+      ne.textContent = '';
+      return;
+    }
+
+    if (d.parecerFinal === 'nao-aptos' && d.caminhoInapto === 'corrigir') {
+      nw.textContent = 'Neste caso o cliente não assina — o WhatsApp não é usado.';
+      ne.innerHTML = '<b>Obrigatório.</b> É por ele que o parecer assinado pela Dalmóbile é entregue.';
+      return;
+    }
+
+    const bom = !!C.normalizarWhatsapp(d.whatsapp);
+    nw.innerHTML = '<b>Obrigatório.</b> É por ele que o termo vai para assinatura.'
+                 + (d.whatsapp || el('f-whatsapp').value ?
+                     (bom ? ' Número completo.' : ' <b>Faltam dígitos — precisa de DDD + 9 dígitos.</b>')
+                   : '');
+    ne.textContent = 'Opcional. Com ele, o cliente recebe a via assinada depois.';
+  }
+
+
+  function resumoDaAssinatura(a) {
+    const partes = [];
+
+    partes.push(a.clienteAssina
+      ? '<p><b>Enviado para o cliente assinar</b>, por WhatsApp.</p>'
+      : '<p><b>Assinado pela Dalmóbile e enviado por e-mail</b> ao cliente. '
+        + 'O cliente não precisa assinar este documento.</p>');
+
+    if (a.assinadoPor) {
+      partes.push('<p class="nota">Assinado em nome de <b>' + C.escapar(a.assinadoPor) + '</b>.</p>');
+    }
+    if (a.aviso) {
+      partes.push('<p class="nota"><b>Atenção:</b> ' + C.escapar(a.aviso)
+                + ' O documento vale; falta só a assinatura da Dalmóbile, que pode ser feita '
+                + 'no painel da Autentique.</p>');
+    }
+    if (a.link) {
+      partes.push('<p class="nota">Link do cliente, se precisar reenviar:<br>'
+                + '<a href="' + C.escapar(a.link) + '" target="_blank" rel="noopener">'
+                + C.escapar(a.link) + '</a></p>');
+    }
+
+    partes.push('<p class="nota">Documento <code>' + C.escapar(a.documento) + '</code> · '
+              + C.dataCurta(a.em) + '</p>');
+
+    return partes.join('');
   }
 
 
@@ -1261,14 +1486,27 @@
        PDF, que é o documento de valor. Subir imagem pede o
        Storage do Supabase e uma política própria — fica para
        quando a assinatura entrar. */
-    const linha = {
+    const conteudo = {
       tipo: 'medicao',
       cliente: m.cliente || '',
       contrato: m.contrato || '',
       loja: m.loja,
-      dados: m.dados,
+      dados: m.dados
+    };
+
+    /* ⚠️ O ESTADO SÓ VAI NO INSERT.
+       Depois que o documento existe, quem manda no estado é o
+       servidor: é ele que marca 'assinado' quando o cliente
+       assina. Se a tela continuasse mandando 'preenchido' em
+       toda sincronia, bastava o medidor abrir a medição no dia
+       seguinte para APAGAR a assinatura que o cliente tinha
+       acabado de dar — e o prazo contratual voltaria a não ter
+       começado. A política de RLS deixa ele atualizar a própria
+       ficha, então nada no banco barraria isso. */
+    const aoNascer = {
       status: 'preenchido',
-      preenchido_em: m.atualizado_em
+      preenchido_em: m.atualizado_em,
+      pedido_em: m.criado_em
     };
 
     try {
@@ -1278,9 +1516,10 @@
          para frente sozinho. No update ela nem vai: o banco a
          tranca, e é essa a intenção. */
       const r = m.remoto
-        ? await sb.from('formularios').update(linha).eq('id', m.remoto).select('id,status').single()
+        ? await sb.from('formularios').update(conteudo).eq('id', m.remoto)
+                  .select('id,status').single()
         : await sb.from('formularios')
-                  .insert(Object.assign({ pedido_em: m.criado_em }, linha))
+                  .insert(Object.assign({}, conteudo, aoNascer))
                   .select('id,status').single();
 
       if (r.error) throw r.error;
@@ -1433,6 +1672,93 @@
   el('enviar').onclick = comPdf(el('enviar'), 'Enviar', function (pdf) {
     return C.compartilhar(pdf.blob, pdf.nome);
   });
+
+
+  /* ENVIAR PARA ASSINATURA
+     ------------------------------------------------------------
+     A ORDEM AQUI TAMBÉM NÃO É ARBITRÁRIA, e por um motivo que
+     não é óbvio: a Function decide QUEM ASSINA lendo o parecer
+     GRAVADO NO BANCO, não o que o navegador manda. Isso é
+     deliberado — senão bastaria mexer no pedido para trocar um
+     termo de responsabilidade por um aviso sem assinatura.
+
+     Consequência prática: se a ficha não subiu ainda, ou subiu
+     antes do medidor marcar o parecer, a Function trabalharia
+     com um parecer velho. Por isso a sincronia vem ANTES de
+     gerar o PDF, e não depois. */
+
+  el('assinar').onclick = async function () {
+    if (!atual) return;
+
+    const e = faseDaAssinatura();
+    if (e.fase !== 'pronta') return avisar(e.porque || 'Ainda não dá para enviar.');
+
+    const botao = this;
+    const d = atual.dados;
+
+    const pergunta = d.assinatura ? null : (
+      e.clienteAssina
+        ? 'Enviar o termo para ' + (atual.cliente || 'o cliente') + ' assinar, '
+          + 'no WhatsApp ' + C.mascararWhatsapp(d.whatsapp) + '?'
+        : 'Assinar o parecer pela Dalmóbile e enviar para ' + d.email + '?'
+    );
+
+    /* Confirmação de uma linha só, com o número à mostra. Depois
+       de enviado não tem como desfazer sem custo: o documento foi
+       criado e cobrado, e o cliente já recebeu o aviso. */
+    if (pergunta && !confirm(pergunta)) return;
+
+    botao.disabled = true;
+    botao.textContent = 'Subindo a ficha…';
+
+    try {
+      colher();
+      await guardar();
+      await sincronizar(atual);
+
+      if (!atual.remoto) {
+        throw new Error('A medição não subiu para o sistema. Confira o sinal e tente de novo.');
+      }
+
+      botao.textContent = 'Gerando o PDF…';
+      const pdf = await montarPdf();
+
+      botao.textContent = 'Enviando…';
+      const r = await C.pedirAssinatura({
+        remoto: atual.remoto,
+        blob: pdf.blob,
+        nome: pdf.nome,
+        whatsapp: d.whatsapp,
+        email: d.email
+      });
+
+      atual.dados.assinatura = {
+        documento: r.documento,
+        em: C.agora(),
+        canal: r.canal,
+        clienteAssina: r.clienteAssina,
+        link: r.linkDoCliente || null,
+        assinadoPor: r.assinadoPor || null,
+        conta: r.contaDaAssinatura || null,
+        aviso: r.aviso || null
+      };
+
+      await guardar();
+      await sincronizar(atual);
+      pintarEstado();
+
+      avisar(r.clienteAssina
+        ? 'Pronto. O cliente recebeu o pedido de assinatura no WhatsApp.'
+        : 'Pronto. O parecer foi assinado pela Dalmóbile e enviado por e-mail.');
+
+    } catch (erro) {
+      console.error(erro);
+      avisar(erro.message || 'Não consegui enviar para assinatura.');
+    } finally {
+      botao.disabled = false;
+      pintarAssinatura();
+    }
+  };
 
   /* "Enviar" só aparece onde o aparelho sabe mandar arquivo.
      Botão que não faz nada é pior que botão que não existe. */

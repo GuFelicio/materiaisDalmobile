@@ -575,6 +575,85 @@ window.Campo = (function () {
   }
 
 
+  /* ------------------------------------------------------------
+     Assinatura eletrônica
+     ------------------------------------------------------------
+     A chamada mora aqui, e não na tela, porque o Documento 102 e
+     o checklist de montagem vão pedir a mesma coisa. O token da
+     Autentique não encosta no navegador em momento nenhum: quem
+     fala com eles é a Function no Cloudflare.
+     ------------------------------------------------------------ */
+
+  /* O mesmo recorte que a Function faz, repetido aqui de
+     propósito: o medidor precisa saber que o número está torto
+     ANTES de apertar o botão, na obra, com o cliente do lado.
+     Quem decide continua sendo a Function — esta cópia só
+     adianta o aviso. */
+  function normalizarWhatsapp(bruto) {
+    const so = String(bruto || '').replace(/\D+/g, '');
+    if (so.length === 13 && so.slice(0, 2) === '55') return '+' + so;
+    if (so.length === 11) return '+55' + so;
+    return null;
+  }
+
+  /* (12) 99999-8888 enquanto digita. Telefone sem máscara em
+     tela de celular é onde o dedo erra. */
+  function mascararWhatsapp(bruto) {
+    let so = String(bruto || '').replace(/\D+/g, '');
+    if (so.slice(0, 2) === '55' && so.length > 11) so = so.slice(2);
+    so = so.slice(0, 11);
+
+    if (so.length <= 2) return so.length ? '(' + so : '';
+    if (so.length <= 7) return '(' + so.slice(0, 2) + ') ' + so.slice(2);
+    return '(' + so.slice(0, 2) + ') ' + so.slice(2, 7) + '-' + so.slice(7);
+  }
+
+  function emailValido(bruto) {
+    return /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(String(bruto || '').trim());
+  }
+
+  /* Manda o PDF para a Function. Devolve o que ela respondeu ou
+     estoura com a mensagem de gente que veio de lá — a tela
+     precisa das duas coisas inteiras. */
+  async function pedirAssinatura(p) {
+    const sb = temServidor();
+    if (!sb) {
+      throw new Error('Sem internet. A assinatura precisa de conexão — '
+                    + 'salve o PDF agora e envie quando tiver sinal.');
+    }
+
+    const s = await sb.auth.getSession();
+    const sessao = s && s.data && s.data.session && s.data.session.access_token;
+    if (!sessao) throw new Error('Sua sessão expirou. Entre de novo.');
+
+    const corpo = new FormData();
+    corpo.append('formulario', p.remoto);
+    corpo.append('pdf', p.blob, p.nome || 'termo.pdf');
+    if (p.whatsapp) corpo.append('whatsapp', p.whatsapp);
+    if (p.email)    corpo.append('email', p.email);
+
+    let r;
+    try {
+      r = await fetch('/api/assinatura', {
+        method: 'POST',
+        headers: { authorization: 'Bearer ' + sessao },
+        body: corpo
+      });
+    } catch (e) {
+      throw new Error('Não consegui falar com o servidor. Tente de novo.');
+    }
+
+    let dados = null;
+    try { dados = await r.json(); } catch (e) { dados = null; }
+
+    if (!r.ok || !dados || !dados.ok) {
+      throw new Error((dados && dados.erro) || 'Não consegui enviar para assinatura.');
+    }
+
+    return dados;
+  }
+
+
   return {
     armazem: armazem,
     fotos: fotos,
@@ -601,6 +680,10 @@ window.Campo = (function () {
     escolherPasta: escolherPasta,
     entregar: entregar,
     podeCompartilharArquivo: podeCompartilharArquivo,
-    compartilhar: compartilhar
+    compartilhar: compartilhar,
+    normalizarWhatsapp: normalizarWhatsapp,
+    mascararWhatsapp: mascararWhatsapp,
+    emailValido: emailValido,
+    pedirAssinatura: pedirAssinatura
   };
 })();
