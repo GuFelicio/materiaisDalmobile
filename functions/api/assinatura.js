@@ -13,6 +13,8 @@
        SUPABASE_SECRET     a secret key (sb_secret_...)
        AUTENTIQUE_TOKEN    o token da conta da Autentique   ⚠️ Secret
        AUTENTIQUE_TETO_MB  opcional: 5 no plano grátis (padrão), 20 no pago
+       AUTENTIQUE_SANDBOX  '1' para criar documento de teste, que NÃO gasta
+                           crédito. Apague a variável para valer de verdade.
 
    ⚠️ Variável nova só vale para deploy NOVO. Depois de salvar,
    refaça o deploy, senão a rota continua sem ver o token.
@@ -67,6 +69,12 @@ export async function onRequest(context) {
   const token    = String(env.AUTENTIQUE_TOKEN || '').trim();
   const tetoMB   = Number(env.AUTENTIQUE_TETO_MB || TETO_PADRAO_MB) || TETO_PADRAO_MB;
 
+  /* Documento de teste: não gasta crédito do plano e a Autentique
+     o apaga em alguns dias. Vai ADIANTE em toda resposta, e a tela
+     mostra isso em letra grande — um termo de sandbox não pode ser
+     confundido com um termo de verdade meses depois. */
+  const sandbox  = String(env.AUTENTIQUE_SANDBOX || '') === '1';
+
   if (!url || !secreta) {
     return responder({ erro: 'Assinatura fora do ar. Avise o escritório.' }, 500);
   }
@@ -108,11 +116,12 @@ export async function onRequest(context) {
     const signatarios = montarSignatarios(conta, plano);
 
     const documento = await criarDocumento(token, {
-      nome: plano.nome,
+      nome: (sandbox ? '[TESTE] ' : '') + plano.nome,
       recado: plano.recado,
       pdf: pedido.pdf,
       signatarios: signatarios,
-      copiaPara: plano.copiaPara
+      copiaPara: plano.copiaPara,
+      sandbox: sandbox
     });
 
     /* Gravar primeiro. Se outra requisição chegou antes, é aqui
@@ -143,6 +152,7 @@ export async function onRequest(context) {
       contaDaAssinatura: { nome: conta.nome, email: conta.email },
       clienteAssina: plano.clienteAssina,
       canal: plano.canal,
+      sandbox: sandbox,
       linkDoCliente: documento.linkDoCliente || null,
       aviso: avisoDaAssinatura
     });
@@ -330,8 +340,10 @@ async function contaDaAutentique(token) {
 
 async function criarDocumento(token, p) {
   const query = `
-    mutation Criar($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) {
-      createDocument(document: $document, signers: $signers, file: $file) {
+    mutation Criar($document: DocumentInput!, $signers: [SignerInput!]!,
+                   $file: Upload!, $sandbox: Boolean) {
+      createDocument(document: $document, signers: $signers, file: $file,
+                     sandbox: $sandbox) {
         id
         name
         signatures { public_id name email link { short_link } }
@@ -354,7 +366,8 @@ async function criarDocumento(token, p) {
       sortable: false
     },
     signers: p.signatarios,
-    file: null
+    file: null,
+    sandbox: !!p.sandbox
   };
 
   /* Cópia: recebe o documento pronto sem precisar assinar. É

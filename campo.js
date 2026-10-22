@@ -425,6 +425,10 @@ window.Campo = (function () {
 
   function etiquetaEstado(doc) {
     if (doc.status === 'assinado')   return { texto: 'assinado',       classe: 'ok' };
+    /* Recusa é o estado mais urgente da lista: significa que o
+       documento foi entregue, lido, e a resposta foi não — e que
+       o prazo contratual NÃO começou. Vai em vermelho. */
+    if (doc.status === 'recusado')   return { texto: 'recusado',       classe: 'erro' };
     if (doc.status === 'cancelado')  return { texto: 'cancelado',      classe: '' };
     if (doc.status === 'preenchido') return { texto: 'não assinado',   classe: 'aviso' };
     return { texto: 'não preenchido', classe: '' };

@@ -1436,6 +1436,33 @@
   function resumoDaAssinatura(a) {
     const partes = [];
 
+    /* ⚠️ PRIMEIRA COISA, EM VERMELHO.
+       Documento de sandbox não gasta crédito e a Autentique o
+       apaga em poucos dias. Se isso não estiver gritando na tela,
+       meses depois alguém abre a medição, vê "enviado para
+       assinatura" e acredita que existe um termo assinado. */
+    if (a.sandbox) {
+      partes.push('<p style="color:var(--erro)"><b>DOCUMENTO DE TESTE.</b> '
+        + 'Não vale como assinatura e a Autentique vai apagá-lo em alguns dias. '
+        + 'Para valer de verdade, tire a variável AUTENTIQUE_SANDBOX do Cloudflare '
+        + 'e envie de novo.</p>');
+    }
+
+    /* O que o servidor diz, que é o que vale. O resto deste
+       resumo conta o que NÓS fizemos; esta linha conta o que o
+       cliente respondeu. */
+    const r = atual.estadoRemoto;
+    if (r === 'assinado') {
+      partes.push('<p style="color:var(--ok)"><b>Assinado pelo cliente.</b> '
+        + 'Os prazos de produção, entrega e montagem começaram a contar.</p>');
+    } else if (r === 'recusado') {
+      partes.push('<p style="color:var(--erro)"><b>O cliente RECUSOU a assinatura.</b> '
+        + 'Os prazos não começaram. Avise a loja antes de qualquer produção.</p>');
+    } else if (a.clienteAssina) {
+      partes.push('<p class="nota">Aguardando a assinatura do cliente. '
+        + 'Esta tela atualiza quando a medição sincronizar.</p>');
+    }
+
     partes.push(a.clienteAssina
       ? '<p><b>Enviado para o cliente assinar</b>, por WhatsApp.</p>'
       : '<p><b>Assinado pela Dalmóbile e enviado por e-mail</b> ao cliente. '
@@ -1453,6 +1480,11 @@
       partes.push('<p class="nota">Link do cliente, se precisar reenviar:<br>'
                 + '<a href="' + C.escapar(a.link) + '" target="_blank" rel="noopener">'
                 + C.escapar(a.link) + '</a></p>');
+    }
+
+    if (a.pdfAssinado) {
+      partes.push('<p class="nota"><a href="' + C.escapar(a.pdfAssinado)
+                + '" target="_blank" rel="noopener"><b>Abrir o PDF assinado</b></a></p>');
     }
 
     partes.push('<p class="nota">Documento <code>' + C.escapar(a.documento) + '</code> · '
@@ -1532,6 +1564,25 @@
          lixeira: o conteúdo foi gravado, mas ela não revive. É
          assim que este aparelho fica sabendo. */
       m.removido = r.data.status === 'apagado';
+
+      /* O estado que o SERVIDOR diz. É por aqui que o medidor
+         descobre, abrindo a medição, que o cliente assinou (ou
+         recusou) — sem ter de entrar na Central. */
+      m.estadoRemoto = r.data.status;
+
+      /* ⚠️ O webhook escreve DENTRO de dados.assinatura (o
+         endereço do PDF assinado). O update acima manda os dados
+         LOCAIS, então o que o servidor acrescentou se perderia na
+         próxima sincronia. Quando o documento já foi para
+         assinatura, a tela relê a parte que não é dela. */
+      if (m.dados.assinatura && !m.dados.assinatura.pdfAssinado) {
+        const v = await sb.from('formularios')
+                          .select('dados').eq('id', m.remoto).single();
+        const doServidor = v.data && v.data.dados && v.data.dados.assinatura;
+        if (doServidor && doServidor.pdfAssinado) {
+          m.dados.assinatura.pdfAssinado = doServidor.pdfAssinado;
+        }
+      }
 
       await Armazem.salvar(m);
       await C.enviarMarcos(m, Armazem);
@@ -1740,7 +1791,8 @@
         link: r.linkDoCliente || null,
         assinadoPor: r.assinadoPor || null,
         conta: r.contaDaAssinatura || null,
-        aviso: r.aviso || null
+        aviso: r.aviso || null,
+        sandbox: !!r.sandbox
       };
 
       await guardar();
