@@ -1399,6 +1399,7 @@
       el('enviar').hidden = !C.podeCompartilharArquivo();
       caixa.classList.remove('oculto');
       el('resumo-assinatura').innerHTML = resumoDaAssinatura(d.assinatura);
+      ligarBotaoDoAssinado();
       return;
     }
 
@@ -1458,6 +1459,28 @@
   }
 
 
+  /* O botão nasce dentro de um innerHTML, então o ouvinte é
+     ligado depois de cada repintura. */
+  function ligarBotaoDoAssinado() {
+    const botao = el('baixar-assinado');
+    if (!botao) return;
+
+    botao.onclick = async function () {
+      botao.disabled = true;
+      botao.textContent = 'Buscando…';
+      try {
+        const pdf = await C.baixarAssinado(atual.remoto);
+        await C.entregar(null, pdf.blob, pdf.nome);
+      } catch (erro) {
+        avisar(erro.message || 'Não consegui trazer o documento.');
+      } finally {
+        botao.disabled = false;
+        botao.textContent = 'Abrir o documento assinado';
+      }
+    };
+  }
+
+
   function resumoDaAssinatura(a) {
     const partes = [];
 
@@ -1507,9 +1530,14 @@
                 + C.escapar(a.link) + '</a></p>');
     }
 
-    if (a.pdfAssinado) {
-      partes.push('<p class="nota"><a href="' + C.escapar(a.pdfAssinado)
-                + '" target="_blank" rel="noopener"><b>Abrir o PDF assinado</b></a></p>');
+    /* O botão só existe quando há documento assinado para trazer.
+       Ele NÃO usa endereço guardado: pede à nossa rota, que
+       pergunta à Autentique na hora. Endereço guardado envelhece
+       e vira botão quebrado meses depois, bem quando alguém
+       precisa do documento para resolver uma discussão de prazo. */
+    if (atual.estadoRemoto === 'assinado' && atual.remoto) {
+      partes.push('<button class="btn largo" id="baixar-assinado" '
+                + 'style="margin-top:12px">Abrir o documento assinado</button>');
     }
 
     partes.push('<p class="nota">Documento <code>' + C.escapar(a.documento) + '</code> · '

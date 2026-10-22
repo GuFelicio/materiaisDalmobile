@@ -658,6 +658,35 @@ window.Campo = (function () {
   }
 
 
+  /* Baixa o PDF assinado, pela nossa rota. Devolve o Blob — a
+     tela decide se abre ou salva. */
+  async function baixarAssinado(remoto) {
+    const sb = temServidor();
+    if (!sb) throw new Error('Sem internet. O documento assinado está no servidor.');
+
+    const se = await sb.auth.getSession();
+    const sessao = se && se.data && se.data.session && se.data.session.access_token;
+    if (!sessao) throw new Error('Sua sessão expirou. Entre de novo.');
+
+    const r = await fetch('/api/documento', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + sessao, 'content-type': 'application/json' },
+      body: JSON.stringify({ formulario: remoto })
+    });
+
+    if (!r.ok) {
+      let recado = 'Não consegui trazer o documento assinado.';
+      try { const j = await r.json(); if (j && j.erro) recado = j.erro; } catch (e) {}
+      throw new Error(recado);
+    }
+
+    const nome = (r.headers.get('content-disposition') || '')
+      .replace(/.*filename="?([^"]+)"?.*/, '$1') || 'termo-assinado.pdf';
+
+    return { blob: await r.blob(), nome: nome };
+  }
+
+
   return {
     armazem: armazem,
     fotos: fotos,
@@ -688,6 +717,7 @@ window.Campo = (function () {
     normalizarWhatsapp: normalizarWhatsapp,
     mascararWhatsapp: mascararWhatsapp,
     emailValido: emailValido,
-    pedirAssinatura: pedirAssinatura
+    pedirAssinatura: pedirAssinatura,
+    baixarAssinado: baixarAssinado
   };
 })();
