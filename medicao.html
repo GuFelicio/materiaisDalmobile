@@ -1530,6 +1530,19 @@
                 + C.escapar(a.link) + '</a></p>');
     }
 
+    /* O aviso para a equipe. Só aparece depois de assinado,
+       porque é a assinatura que o dispara — e aparece mesmo
+       quando ainda não saiu, porque "não sei se saiu" é a
+       pergunta que gera o telefonema que este sistema existe
+       para evitar. */
+    if (atual.estadoRemoto === 'assinado') {
+      partes.push(atual.avisadoEm
+        ? '<p class="nota">Equipe avisada por e-mail em '
+          + C.dataCurta(atual.avisadoEm) + '.</p>'
+        : '<p class="nota">A equipe ainda não foi avisada. O aviso sai sozinho '
+          + 'em instantes; se continuar assim, avise o escritório.</p>');
+    }
+
     /* O botão só existe quando há documento assinado para trazer.
        Ele NÃO usa endereço guardado: pede à nossa rota, que
        pergunta à Autentique na hora. Endereço guardado envelhece
@@ -1602,10 +1615,10 @@
          tranca, e é essa a intenção. */
       const r = m.remoto
         ? await sb.from('formularios').update(conteudo).eq('id', m.remoto)
-                  .select('id,status').single()
+                  .select('id,status,avisado_em').single()
         : await sb.from('formularios')
                   .insert(Object.assign({}, conteudo, aoNascer))
-                  .select('id,status').single();
+                  .select('id,status,avisado_em').single();
 
       if (r.error) throw r.error;
 
@@ -1622,6 +1635,12 @@
          descobre, abrindo a medição, que o cliente assinou (ou
          recusou) — sem ter de entrar na Central. */
       m.estadoRemoto = r.data.status;
+
+      /* Quando o aviso para a equipe saiu. Sem isto, quem enviou
+         não tem como saber se o financeiro e o gerente foram
+         avisados — e liga para perguntar, que é exatamente o
+         telefonema que este sistema existe para evitar. */
+      m.avisadoEm = r.data.avisado_em || null;
 
       /* ⚠️ O webhook escreve DENTRO de dados.assinatura (o
          endereço do PDF assinado). O update acima manda os dados

@@ -611,7 +611,12 @@ async function mandarEmail(env, chave, ficha, gente, assinadoEm) {
       from: remetente,
       to: para,
       subject: assunto(ficha),
-      html: corpoDoEmail(ficha, gente, assinadoEm, teste)
+      html: corpoDoEmail(ficha, gente, assinadoEm, teste),
+      /* A versão em texto não é enfeite de acessibilidade: e-mail
+         só-HTML é sinal de spam para a maioria dos filtros, e
+         estes avisos já saem de um domínio compartilhado. Mandar
+         as duas partes é o jeito barato de não cair na lixeira. */
+      text: corpoEmTexto(ficha, gente, assinadoEm, teste)
     })
   });
 
@@ -673,6 +678,44 @@ function corpoDoEmail(ficha, gente, assinadoEm, teste) {
     + 'Você recebeu porque é ' + escapar((gente[0] || {}).papel || 'da equipe')
     + ' na Central de Peças. Este aviso é automático.</p>'
     + '</div>';
+}
+
+/* O mesmo conteúdo, sem marcação. Quem lê em texto tem de
+   receber a informação inteira, não um "abra no navegador". */
+function corpoEmTexto(ficha, gente, assinadoEm, teste) {
+  const d = ficha.dados || {};
+  const apto = d.parecerFinal === 'aptos';
+
+  const quando = assinadoEm
+    ? new Date(assinadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    : 'hoje';
+
+  const linhas = [];
+
+  if (teste) {
+    linhas.push('*** ENVIO DE TESTE ***');
+    linhas.push('Na produção este aviso iria para: '
+      + gente.map(function (p) { return p.nome + ' (' + p.email + ')'; }).join(', '));
+    linhas.push('');
+  }
+
+  linhas.push((ficha.cliente || 'Cliente')
+    + ' — ' + (ficha.contrato || 'sem contrato')
+    + ' — ' + (ficha.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos'));
+  linhas.push('');
+  linhas.push('Os prazos de produção, entrega e montagem começaram a contar em '
+    + quando + '.');
+  linhas.push('');
+  linhas.push(apto
+    ? 'Os ambientes foram considerados aptos e o cliente assinou o termo de ciência.'
+    : 'Os ambientes foram considerados não aptos, e o cliente assinou o termo de '
+      + 'responsabilidade para prosseguir assumindo os riscos.');
+  linhas.push('');
+  linhas.push('Abrir na Central de Peças: https://materiais.luminamkt.co/medicao');
+  linhas.push('');
+  linhas.push('Aviso automático da Central de Peças.');
+
+  return linhas.join('\n');
 }
 
 function escapar(t) {
