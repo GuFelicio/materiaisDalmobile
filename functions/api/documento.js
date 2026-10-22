@@ -81,8 +81,7 @@ export async function onRequest(context) {
 
     /* Baixa aqui e repassa. O endereço da Autentique não chega
        ao navegador — ele é público para quem o tiver. */
-    const r = await fetch(arquivo.endereco);
-    if (!r.ok) throw falha('Não consegui baixar o documento agora. Tente de novo.', 502);
+    const r = await baixar(arquivo.endereco, token);
 
     return new Response(r.body, {
       status: 200,
@@ -150,6 +149,52 @@ async function enderecoDoAssinado(token, docId) {
   if (doc.files.signed) return { endereco: doc.files.signed, tipo: 'signed' };
 
   return null;
+}
+
+
+/* DUAS TENTATIVAS, NESTA ORDEM, E A ORDEM NÃO É ARBITRÁRIA.
+
+   O endereço que a Autentique devolve pode ser de dois tipos, e
+   eles se excluem:
+
+     1. Link assinado de armazenamento (o caso comum). A
+        credencial já está na própria URL — e mandar um cabeçalho
+        'authorization' junto FAZ a S3 recusar com 400. Por isso
+        a primeira tentativa é limpa.
+
+     2. Endereço da própria Autentique, que exige o token. Aí a
+        primeira tentativa volta 401/403 e a segunda resolve.
+
+   Se as duas falharem, o recado leva os códigos — sem isso, "não
+   consegui baixar" não diz se é permissão, se o arquivo não
+   existe, ou se foi um documento de teste já apagado. */
+async function baixar(endereco, token) {
+  let primeira = 0;
+
+  try {
+    const r = await fetch(endereco);
+    if (r.ok) return r;
+    primeira = r.status;
+  } catch (e) {
+    primeira = -1;
+  }
+
+  let segunda = 0;
+  try {
+    const r = await fetch(endereco, { headers: { authorization: 'Bearer ' + token } });
+    if (r.ok) return r;
+    segunda = r.status;
+  } catch (e) {
+    segunda = -1;
+  }
+
+  if (primeira === 404 && segunda === 404) {
+    throw falha('O arquivo assinado não está mais disponível na Autentique. '
+      + 'Documento de teste é apagado por lá depois de alguns dias.', 404);
+  }
+
+  throw falha('Não consegui baixar o documento (códigos ' + primeira + ' e '
+    + segunda + '). Me mande esses números.', 502);
 }
 
 
