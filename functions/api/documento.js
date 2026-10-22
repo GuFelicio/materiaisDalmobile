@@ -71,9 +71,9 @@ export async function onRequest(context) {
       throw falha('Esta medição ainda não foi enviada para assinatura.', 409);
     }
 
-    const arquivo = await enderecoDoAssinado(token, ficha.autentique_id);
+    const candidatos = await enderecosDoAssinado(token, ficha.autentique_id);
 
-    if (!arquivo) {
+    if (!candidatos.length) {
       throw falha(ficha.status === 'assinado'
         ? 'A Autentique ainda está gerando o documento assinado. Tente de novo em instantes.'
         : 'O documento ainda não foi assinado por todos.', 409);
@@ -81,13 +81,13 @@ export async function onRequest(context) {
 
     /* Baixa aqui e repassa. O endereço da Autentique não chega
        ao navegador — ele é público para quem o tiver. */
-    const r = await baixar(arquivo.endereco, token);
+    const baixado = await baixar(candidatos, token);
 
-    return new Response(r.body, {
+    return new Response(baixado.resposta.body, {
       status: 200,
       headers: {
         'content-type': 'application/pdf',
-        'content-disposition': 'inline; filename="' + nomeDoArquivo(ficha, arquivo.tipo) + '"',
+        'content-disposition': 'inline; filename="' + nomeDoArquivo(ficha, baixado.tipo) + '"',
         'cache-control': 'no-store',
         'x-content-type-options': 'nosniff'
       }
@@ -104,7 +104,7 @@ export async function onRequest(context) {
    Onde está o arquivo
    ------------------------------------------------------------ */
 
-async function enderecoDoAssinado(token, docId) {
+async function enderecosDoAssinado(token, docId) {
   const query = `
     query Arquivo($id: UUID!) {
       document(id: $id) {
@@ -140,15 +140,33 @@ async function enderecoDoAssinado(token, docId) {
   }
 
   const doc = json.data && json.data.document;
-  if (!doc || !doc.files) return null;
+  if (!doc || !doc.files) return [];
 
-  /* PAdES primeiro: é o PDF que carrega a assinatura digital
-     dentro dele, que qualquer leitor reconhece sem depender da
-     Autentique continuar no ar. */
-  if (doc.files.pades)  return { endereco: doc.files.pades,  tipo: 'pades' };
-  if (doc.files.signed) return { endereco: doc.files.signed, tipo: 'signed' };
+  /* TODOS os endereços, em ordem de preferência — e não só o
+     primeiro. Isto já quebrou: a Autentique devolve um endereço
+     de PAdES mesmo quando esse arquivo não foi gerado, e ele dá
+     404. Escolher um e desistir fazia o documento parecer
+     inexistente, enquanto o 'signed' estava lá do lado.
 
-  return null;
+     PAdES primeiro porque é o PDF que carrega a assinatura
+     digital dentro dele, que qualquer leitor reconhece sem
+     depender da Autentique continuar no ar. Mas se ele não vier,
+     o assinado comum serve. */
+  const lista = [];
+  if (doc.files.pades)    lista.push({ tipo: 'pades',    endereco: doc.files.pades });
+  if (doc.files.signed)   lista.push({ tipo: 'signed',   endereco: doc.files.signed });
+  if (doc.files.original) lista.push({ tipo: 'original', endereco: doc.files.original });
+
+  return lista.filter(function (c) {
+    /* Endereço relativo não dá para buscar daqui, e fetch com
+       ele estoura de um jeito que não ajuda ninguém. Melhor
+       saber que veio assim. */
+    if (!/^https?:\/\//i.test(c.endereco)) {
+      console.warn('[documento] endereço não absoluto em ' + c.tipo + ': ' + c.endereco);
+      return false;
+    }
+    return true;
+  });
 }
 
 
@@ -168,33 +186,38 @@ async function enderecoDoAssinado(token, docId) {
    Se as duas falharem, o recado leva os códigos — sem isso, "não
    consegui baixar" não diz se é permissão, se o arquivo não
    existe, ou se foi um documento de teste já apagado. */
-async function baixar(endereco, token) {
-  let primeira = 0;
+async function baixar(candidatos, token) {
+  const tentativas = [];
 
-  try {
-    const r = await fetch(endereco);
-    if (r.ok) return r;
-    primeira = r.status;
-  } catch (e) {
-    primeira = -1;
+  for (const c of candidatos) {
+    for (const comToken of [false, true]) {
+      try {
+        const r = await fetch(c.endereco,
+          comToken ? { headers: { authorization: 'Bearer ' + token } } : undefined);
+
+        if (r.ok) return { resposta: r, tipo: c.tipo };
+
+        tentativas.push(c.tipo + (comToken ? '+token' : '') + ':' + r.status);
+      } catch (e) {
+        tentativas.push(c.tipo + (comToken ? '+token' : '') + ':erro');
+      }
+    }
   }
 
-  let segunda = 0;
-  try {
-    const r = await fetch(endereco, { headers: { authorization: 'Bearer ' + token } });
-    if (r.ok) return r;
-    segunda = r.status;
-  } catch (e) {
-    segunda = -1;
-  }
+  /* Tudo 404 em todos os arquivos: o documento realmente não
+     está mais lá. Qualquer outra combinação é outra coisa, e o
+     recado leva o mapa inteiro das tentativas — sem ele,
+     'não consegui baixar' não distingue permissão de arquivo
+     inexistente de endereço errado. */
+  const soQuatroCentoQuatro = tentativas.every(function (t) { return t.endsWith(':404'); });
 
-  if (primeira === 404 && segunda === 404) {
+  if (soQuatroCentoQuatro) {
     throw falha('O arquivo assinado não está mais disponível na Autentique. '
       + 'Documento de teste é apagado por lá depois de alguns dias.', 404);
   }
 
-  throw falha('Não consegui baixar o documento (códigos ' + primeira + ' e '
-    + segunda + '). Me mande esses números.', 502);
+  throw falha('Não consegui baixar o documento. Tentativas: '
+    + tentativas.join(', ') + '. Me mande isso.', 502);
 }
 
 
