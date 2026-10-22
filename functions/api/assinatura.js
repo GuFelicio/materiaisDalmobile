@@ -73,7 +73,7 @@ export async function onRequest(context) {
      o apaga em alguns dias. Vai ADIANTE em toda resposta, e a tela
      mostra isso em letra grande — um termo de sandbox não pode ser
      confundido com um termo de verdade meses depois. */
-  const sandbox  = String(env.AUTENTIQUE_SANDBOX || '') === '1';
+  const sandbox = querSandbox(env.AUTENTIQUE_SANDBOX);
 
   if (!url || !secreta) {
     return responder({ erro: 'Assinatura fora do ar. Avise o escritório.' }, 500);
@@ -301,6 +301,32 @@ function normalizarWhatsapp(bruto) {
 
 function emailValido(bruto) {
   return /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(String(bruto || '').trim());
+}
+
+
+/* ⚠️ TOLERANTE DE PROPÓSITO, E SÓ ESTA.
+   Errar para "ligado" custa um documento de teste. Errar para
+   "desligado" custa dinheiro de verdade, um dos dez documentos do
+   plano grátis, e um termo real indo para um cliente real. Os dois
+   erros não têm o mesmo preço, então a leitura não pode ser
+   literal demais.
+
+   Aconteceu: a variável foi salva como '=1', porque no Cloudflare
+   o campo é só o valor e é natural digitar o formato NOME=valor.
+   Com a comparação estrita, isso desligava o sandbox em silêncio.
+
+   Valor presente que não dá para entender vira aviso no log, não
+   suposição: nesse caso fica DESLIGADO, porque adivinhar "ligado"
+   a partir de lixo seria pior. */
+function querSandbox(bruto) {
+  const v = String(bruto == null ? '' : bruto).trim().replace(/^=+/, '').toLowerCase();
+  if (!v) return false;
+  if (['1', 'true', 'sim', 'on', 'yes', 'y', 's'].indexOf(v) !== -1) return true;
+  if (['0', 'false', 'nao', 'não', 'off', 'no', 'n'].indexOf(v) !== -1) return false;
+
+  console.warn('[assinatura] AUTENTIQUE_SANDBOX com valor que não entendi ('
+    + v + '); tratando como DESLIGADO — os documentos vão valer de verdade.');
+  return false;
 }
 
 

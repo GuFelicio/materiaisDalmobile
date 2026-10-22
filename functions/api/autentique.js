@@ -62,7 +62,21 @@ export async function onRequest(context) {
     return new Response('método não permitido', { status: 405 });
   }
 
-  const segredo = String(env.AUTENTIQUE_WEBHOOK_SECRET || '').trim();
+  /* UMA VARIÁVEL, VÁRIOS SEGREDOS.
+     A Autentique gera um segredo POR ENDPOINT, e aqui são dois
+     (um para os eventos de documento, outro para os de
+     assinatura). Com um valor só, no máximo um dos dois poderia
+     conferir por HMAC — e o outro dependeria do token na URL.
+
+     Então a variável aceita lista: separe por vírgula, ponto e
+     vírgula ou quebra de linha. Cabem os dois segredos da
+     Autentique e o token que você pôs no ?k=, todos juntos.
+     Qualquer um que bata serve.
+
+     Não cria variável nova para cada endpoint: só esta é lida, e
+     segredo guardado em variável que ninguém lê é pegadinha
+     esperando daqui a seis meses. */
+  const segredos = separarSegredos(env.AUTENTIQUE_WEBHOOK_SECRET);
   const token   = String(env.AUTENTIQUE_TOKEN || '').trim();
   const url     = String(env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
   const secreta = String(env.SUPABASE_SECRET || '').trim();
@@ -71,7 +85,7 @@ export async function onRequest(context) {
      503 faz a Autentique tentar de novo mais tarde, então o aviso
      não se perde enquanto a variável não estiver no lugar. Um 200
      aqui jogaria a assinatura do cliente no lixo em silêncio. */
-  if (!segredo || !token || !url || !secreta) {
+  if (!segredos.length || !token || !url || !secreta) {
     return new Response('rota ainda não configurada', { status: 503 });
   }
 
@@ -116,8 +130,19 @@ export async function onRequest(context) {
      de assinatura que não bate (conta Free, com Authentication
      desligado), TODO aviso seria recusado apesar do token certo
      no endereço, e o prazo contratual nunca começaria. */
-  const porHmac  = !!cabecalho && await assinaturaConfere(segredo, cru, cabecalho);
-  const porToken = !!naUrl && igualNoTempo(naUrl, segredo);
+  let porHmac = false;
+  if (cabecalho) {
+    for (const s of segredos) {
+      if (await assinaturaConfere(s, cru, cabecalho)) { porHmac = true; break; }
+    }
+  }
+
+  let porToken = false;
+  if (naUrl) {
+    for (const s of segredos) {
+      if (igualNoTempo(naUrl, s)) { porToken = true; break; }
+    }
+  }
 
   if (!porHmac && !porToken) {
     /* Fica no log para você saber QUAL porta falhou: cabeçalho
@@ -125,7 +150,8 @@ export async function onRequest(context) {
        ausentes é webhook cadastrado sem nenhum dos dois. */
     console.warn('[autentique] recusado — cabeçalho: '
       + (cabecalho ? 'presente e inválido' : 'ausente')
-      + ' · token na url: ' + (naUrl ? 'presente e inválido' : 'ausente'));
+      + ' · token na url: ' + (naUrl ? 'presente e inválido' : 'ausente')
+      + ' · segredos configurados: ' + segredos.length);
     return new Response('assinatura inválida', { status: 401 });
   }
 
@@ -186,6 +212,17 @@ async function assinaturaConfere(segredo, cru, veio) {
   const limpo = veio.replace(/^sha256=/i, '').trim().toLowerCase();
 
   return igualNoTempo(hex, limpo);
+}
+
+/* A variável pode trazer vários segredos. Separadores: vírgula,
+   ponto e vírgula, espaço ou quebra de linha — nenhum deles
+   aparece dentro de um segredo hexadecimal, que é o formato que
+   a Autentique gera e o que o 'openssl rand -hex' produz. */
+function separarSegredos(bruto) {
+  return String(bruto || '')
+    .split(/[,;\s]+/)
+    .map(function (s) { return s.trim(); })
+    .filter(Boolean);
 }
 
 /* Comparação de tempo constante. Comparar com === vaza, pelo
