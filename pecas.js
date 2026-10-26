@@ -128,6 +128,146 @@ window.Pecas = (function () {
   };
 
 
+
+  /* ========================================================
+     PÓS-VISITA — card 1080x1350 para o WhatsApp
+     --------------------------------------------------------
+     Medido no PNG original, em PIXELS da peça final. Aqui não
+     há milímetro: a peça nasce e morre em tela.
+
+     O título NÃO pôde ficar na arte de fundo: a palavra
+     você/vocês mora dentro dele, e a última linha é o nome da
+     cidade. Então as quatro linhas são desenhadas, com os pesos
+     alternando.
+     ======================================================== */
+
+  const POS_VISITA = {
+    largura: 1080, altura: 1350,
+
+    /* Desenha em 2x e reduz. Texto desenhado direto em 1080 fica
+       com a borda mais dura; passar por 2160 e reduzir com
+       suavização dá o contorno limpo que a peça do Slides tinha
+       por acidente de escala. */
+    escala: 2,
+
+    nome:   { x: 95, base: 153.5, corpo: 45.6, peso: 'bold' },
+
+    titulo: {
+      x: 99.5, base: 381.3, entrelinha: 80.7, corpo: 67.2,
+      /* cada linha é uma lista de pedaços com peso próprio */
+      linhas: [
+        [ { t: 'FOI UM ', peso: 'medium' }, { t: 'PRAZER', peso: 'bold' } ],
+        [ { t: 'RECEBER ', peso: 'medium' }, { t: '{voce}', peso: 'medium' },
+          { t: ' NA', peso: 'medium' } ],
+        [ { t: 'DALMÓBILE', peso: 'bold' } ],
+        [ { t: '{cidade}.', peso: 'bold' } ]
+      ]
+    },
+
+    corpo: {
+      x: 88, base: 751.4, entrelinha: 45.2, corpo: 37.5, peso: 'medium',
+      /* o salto entre um parágrafo e o seguinte, em linhas
+         VAZIAS — uma, não duas: medido entre a última linha do
+         primeiro parágrafo e a primeira do segundo. */
+      saltoEntreParagrafos: 1
+    },
+
+    logo: { centro: 540, baixo: 1245, largura: 245 },
+
+    /* ⚠️ MEDIDOS NA PEÇA FINAL, não no fundo exportado.
+       A primeira versão veio do PNG de 810x1012 escalado por
+       4/3 — e todos saíram 25 px fora, porque aquele arquivo
+       tem recorte diferente. Escalar de um recorte para outro
+       carrega o deslocamento junto, em silêncio.
+
+       Os dois últimos passam da borda de baixo de propósito:
+       é assim no original, e o canvas corta sozinho. */
+    riscos: [
+      { x:  725, y:   48, l:  4, a: 63 },
+      { x:  848, y:   48, l:  4, a: 63 },
+      { x:  971, y:  108, l: 63, a:  4 },
+      { x:  909, y:  109, l:  4, a: 63 },
+      { x:  726, y:  169, l: 63, a:  4 },
+      { x:  910, y:  230, l: 63, a:  4 },
+      { x:  848, y:  231, l:  4, a: 63 },
+      { x: 1031, y:  231, l:  4, a: 63 },
+      { x:   62, y: 1103, l:  4, a: 63 },
+      { x:  185, y: 1163, l: 63, a:  4 },
+      { x:  123, y: 1164, l:  4, a: 63 },
+      { x:  306, y: 1225, l:  4, a: 63 },
+      { x:  124, y: 1285, l: 63, a:  4 },
+      { x:   62, y: 1286, l:  4, a: 63 },
+      { x:  245, y: 1286, l:  4, a: 63 }
+    ],
+
+    cores: { fundo: '#e5e4e2', texto: '#545351', risco: '#a09f9d' }
+  };
+
+  /* ⚠️ O TEXTO DO CORPO MORA AQUI, e isto é uma mudança.
+     Antes ele estava dentro da arte do Slides; qualquer correção
+     pedia reexportar tudo. Agora é texto.
+
+     O ORIGINAL TINHA UM DEFEITO: o segundo parágrafo repetia a
+     última frase do primeiro, e repetia sem a crase ("Seguimos a
+     disposição"). Deixei os dois jeitos abaixo para você
+     escolher olhando, em vez de no escuro. */
+  const POS_VISITA_TEXTO = {
+    /* o que a peça diz hoje, só com a crase corrigida */
+    comRepeticao: [
+      ['agradecemos sua visita e a oportunidade de',
+       'apresentar de perto tudo o que podemos construir',
+       'juntos. Seguimos à disposição para dar vida ao seu',
+       'projeto.'],
+      ['Seguimos à disposição para dar vida ao',
+       'seu projeto.']
+    ],
+    /* sem a repetição */
+    limpo: [
+      ['agradecemos sua visita e a oportunidade de',
+       'apresentar de perto tudo o que podemos construir',
+       'juntos. Seguimos à disposição para dar vida ao seu',
+       'projeto.']
+    ]
+  };
+
+  const CIDADES = { sjc: 'SÃO JOSÉ DOS CAMPOS', cgt: 'CARAGUATATUBA' };
+  const VOCE    = { ele: 'VOCÊ', ela: 'VOCÊ', eles: 'VOCÊS', elas: 'VOCÊS' };
+
+
+  /* ------------------------------------------------------------
+     Texto em canvas
+     ------------------------------------------------------------ */
+
+  /* Carrega a Krub de verdade no canvas. Sem isto o navegador
+     desenha com a fonte que achar, e a peça sai com outra cara
+     sem avisar. */
+  let fontesProntas = null;
+  function carregarFontes() {
+    if (fontesProntas) return fontesProntas;
+    fontesProntas = Promise.all([
+      new FontFace('KrubPeca', 'url(Krub-Medium.ttf)', { weight: '500' }).load(),
+      new FontFace('KrubPeca', 'url(Krub-Bold.ttf)',   { weight: '700' }).load()
+    ]).then(function (fs) {
+      fs.forEach(function (f) { document.fonts.add(f); });
+    });
+    return fontesProntas;
+  }
+
+  function fonteDe(peso, corpo) {
+    return (peso === 'bold' ? '700 ' : '500 ') + corpo + 'px KrubPeca';
+  }
+
+  /* Escreve ancorando a MANCHA, não a caneta.
+     A caneta do canvas começa antes da tinta — cada letra tem a
+     sua folga à esquerda. Medi a mancha no original, então aqui
+     a folga é descontada; senão cada linha começaria num lugar
+     um pouco diferente, conforme a letra inicial. */
+  function escreverNaMancha(ctx, texto, mancha, base) {
+    const m = ctx.measureText(texto);
+    ctx.fillText(texto, mancha + m.actualBoundingBoxLeft, base);
+    return m.width;
+  }
+
   /* ------------------------------------------------------------
      Apoio
      ------------------------------------------------------------ */
@@ -142,6 +282,18 @@ window.Pecas = (function () {
     if (!r.ok) throw new Error('Não encontrei ' + caminho);
     guardados[caminho] = new Uint8Array(await r.arrayBuffer());
     return guardados[caminho];
+  }
+
+  const imagens = {};
+  function imagemDe(caminho) {
+    if (imagens[caminho]) return imagens[caminho];
+    imagens[caminho] = new Promise(function (ok, erro) {
+      const im = new Image();
+      im.onload = function () { ok(im); };
+      im.onerror = function () { erro(new Error('Não carreguei ' + caminho)); };
+      im.src = caminho;
+    });
+    return imagens[caminho];
   }
 
   function cor(hex) {
@@ -366,11 +518,119 @@ window.Pecas = (function () {
   }
 
 
+
+
+  /* ============================================================
+     PÓS-VISITA
+     ------------------------------------------------------------
+     Card de agradecimento para mandar no WhatsApp depois da
+     visita do cliente à loja.
+     ============================================================ */
+
+  async function posVisita(dados) {
+    const M = POS_VISITA;
+    const loja = dados.loja === 'cgt' ? 'cgt' : 'sjc';
+    const e = M.escala;
+
+    await carregarFontes();
+
+    const tela = document.createElement('canvas');
+    tela.width  = M.largura * e;
+    tela.height = M.altura  * e;
+    const ctx = tela.getContext('2d');
+    ctx.scale(e, e);
+    ctx.textBaseline = 'alphabetic';
+
+    /* ---------- fundo e riscos ---------- */
+    ctx.fillStyle = M.cores.fundo;
+    ctx.fillRect(0, 0, M.largura, M.altura);
+
+    ctx.fillStyle = M.cores.risco;
+    M.riscos.forEach(function (r) { ctx.fillRect(r.x, r.y, r.l, r.a); });
+
+    ctx.fillStyle = M.cores.texto;
+
+    /* ---------- o nome ---------- */
+    const nome = String(dados.cliente || '').trim();
+    if (nome) {
+      ctx.font = fonteDe(M.nome.peso, M.nome.corpo);
+      escreverNaMancha(ctx, nome + ',', M.nome.x, M.nome.base);
+    }
+
+    /* ---------- o título ---------- */
+    const trocas = {
+      '{voce}':   VOCE[dados.genero] || VOCE.eles,
+      '{cidade}': CIDADES[loja]
+    };
+
+    M.titulo.linhas.forEach(function (linha, i) {
+      const base = M.titulo.base + i * M.titulo.entrelinha;
+      let x = M.titulo.x;
+      let primeiro = true;
+
+      linha.forEach(function (pedaco) {
+        const texto = pedaco.t.replace(/\{voce\}|\{cidade\}/g, function (m) {
+          return trocas[m];
+        });
+        ctx.font = fonteDe(pedaco.peso, M.titulo.corpo);
+
+        /* Só o primeiro pedaço da linha é ancorado pela mancha;
+           os seguintes continuam de onde o anterior parou, senão
+           apareceria um vão entre as palavras. */
+        if (primeiro) {
+          x += ctx.measureText(texto).actualBoundingBoxLeft;
+          primeiro = false;
+        }
+        ctx.fillText(texto, x, base);
+        x += ctx.measureText(texto).width;
+      });
+    });
+
+    /* ---------- o corpo ---------- */
+    const paragrafos = dados.semRepeticao
+      ? POS_VISITA_TEXTO.limpo
+      : POS_VISITA_TEXTO.comRepeticao;
+
+    ctx.font = fonteDe(M.corpo.peso, M.corpo.corpo);
+    let linha = 0;
+    paragrafos.forEach(function (par, iPar) {
+      if (iPar) linha += M.corpo.saltoEntreParagrafos;
+      par.forEach(function (t) {
+        escreverNaMancha(ctx, t, M.corpo.x, M.corpo.base + linha * M.corpo.entrelinha);
+        linha++;
+      });
+    });
+
+    /* ---------- a logo ---------- */
+    const logo = await imagemDe(LOGOS[loja]);
+    const altura = M.logo.largura * (logo.naturalHeight / logo.naturalWidth);
+    ctx.drawImage(logo, M.logo.centro - M.logo.largura / 2,
+                        M.logo.baixo - altura, M.logo.largura, altura);
+
+    /* ---------- reduz para o tamanho final ---------- */
+    const final = document.createElement('canvas');
+    final.width = M.largura; final.height = M.altura;
+    const fx = final.getContext('2d');
+    fx.imageSmoothingEnabled = true;
+    fx.imageSmoothingQuality = 'high';
+    fx.drawImage(tela, 0, 0, M.largura, M.altura);
+
+    const b64 = final.toDataURL('image/png').split(',')[1];
+
+    return {
+      ok: true,
+      b64: b64,
+      tipo: 'image/png',
+      nome: 'pos-visita-' + (semAcento(nome) || 'cliente') + '.png'
+    };
+  }
+
   /* O índice é por ID do material. O que estiver aqui é gerado
      no aparelho; o que não estiver continua indo para o Apps
      Script, sem precisar mexer em nada. */
   return {
     'boas-vindas-impresso': boasVindasImpresso,
+    'pos-visita': posVisita,
 
     /* exposto para a tela de conferência */
     _medidas: { 'boas-vindas-impresso': BOAS_VINDAS }
