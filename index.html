@@ -566,6 +566,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="campo.js"></script>
 <script src="auth.js"></script>
+<!-- As peças desenhadas aqui, sem passar pelo Google. O pdf-lib e o
+     fontkit já eram usados nas telas de campo; aqui servem ao mesmo
+     propósito: montar o arquivo no próprio aparelho. -->
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
+<script src="pecas.js"></script>
 <script>
 /* ============================================================
    CONFIGURAÇÃO
@@ -1576,6 +1582,29 @@ async function gerar() {
 
   if (faltando.length) {
     mostrarErro('Preencha: ' + faltando.join(', ') + '.');
+    return;
+  }
+
+  /* ⚠️ AQUI É ONDE A PEÇA DEIXA DE DEPENDER DO GOOGLE.
+     Se existe um desenhista local para este material, ele faz o
+     arquivo na hora — sem rede, sem cota, sem espera. O que não
+     tiver desenhista segue pelo Apps Script como sempre, então a
+     migração acontece peça a peça, sem nenhum dia em que metade
+     do sistema esteja quebrada. */
+  const desenhista = window.Pecas && window.Pecas[materialAtual.id];
+
+  if (desenhista) {
+    btnGerar.disabled = true;
+    resultado.innerHTML = '<p class="msg"><span class="spinner"></span>Montando a peça...</p>';
+    try {
+      ultimo = await desenhista(dados);
+      mostrarResultado(ultimo);
+    } catch (erro) {
+      console.error(erro);
+      mostrarErro('Não consegui montar a peça. ' + (erro.message || ''));
+    } finally {
+      btnGerar.disabled = false;
+    }
     return;
   }
 
