@@ -209,10 +209,10 @@ window.Pecas = (function () {
 
      O ORIGINAL TINHA UM DEFEITO: o segundo parágrafo repetia a
      última frase do primeiro, e repetia sem a crase ("Seguimos a
-     disposição"). Deixei os dois jeitos abaixo para você
-     escolher olhando, em vez de no escuro. */
+     disposição"). O padrão é o texto limpo; comRepeticao ficou
+     guardado caso alguém precise reproduzir a peça antiga. */
   const POS_VISITA_TEXTO = {
-    /* o que a peça diz hoje, só com a crase corrigida */
+    /* o que o Slides fazia, só com a crase corrigida */
     comRepeticao: [
       ['agradecemos sua visita e a oportunidade de',
        'apresentar de perto tudo o que podemos construir',
@@ -508,9 +508,33 @@ window.Pecas = (function () {
   /* Reparte em linhas, quebrando só em espaço. Devolve null se
      não couber no número de linhas pedido — quem chama então
      tenta um corpo menor. */
+  /* "Alexandre e Mariana Cavalcanti" não pode quebrar antes do
+     "e": linha começando com conjunção fica com cara de erro.
+     Então colo cada conectivo na palavra ANTERIOR, formando um
+     pedaço que a quebra não separa — o "e" desce junto com o
+     primeiro nome, nunca sozinho na frente do segundo.
+
+     Casos de união ("Maria de Souza", "Ana dos Santos") ficam de
+     fora de propósito: ali a quebra antes da preposição é comum e
+     natural, e grudar tudo só roubaria lugares de quebra num nome
+     que já está apertado. */
+  const CONECTIVOS = ['e', 'E', '&', 'y', 'Y'];
+
+  function grudarConectivos(palavras) {
+    const saida = [];
+    palavras.forEach(function (p) {
+      if (saida.length && CONECTIVOS.indexOf(p) !== -1) {
+        saida[saida.length - 1] += ' ' + p;
+      } else {
+        saida.push(p);
+      }
+    });
+    return saida;
+  }
+
   function repartir(texto, fonte, corpo, larguraMm, maxLinhas) {
     const limite = larguraMm * MM;
-    const palavras = String(texto).trim().split(/\s+/);
+    const palavras = grudarConectivos(String(texto).trim().split(/\s+/));
     const linhas = [];
     let atual = '';
 
@@ -758,9 +782,11 @@ window.Pecas = (function () {
     });
 
     /* ---------- o corpo ---------- */
-    const paragrafos = dados.semRepeticao
-      ? POS_VISITA_TEXTO.limpo
-      : POS_VISITA_TEXTO.comRepeticao;
+    /* O padrão agora é o texto sem a repetição. Quem quiser a peça
+       como o Slides fazia passa comRepeticao: true. */
+    const paragrafos = dados.comRepeticao
+      ? POS_VISITA_TEXTO.comRepeticao
+      : POS_VISITA_TEXTO.limpo;
 
     ctx.font = fonteDe(M.corpo.peso, M.corpo.corpo);
     let linha = 0;
