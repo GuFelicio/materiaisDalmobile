@@ -952,6 +952,287 @@ window.Pecas = (function () {
     };
   }
 
+  /* ============================================================
+     AVISOS DE ETAPA — agendamento e entrega
+
+     O catálogo tinha três vagas aqui: "Confirmação de
+     agendamento", "Lembrete de agendamento" e "Entrega
+     concluída". As duas primeiras eram a MESMA mensagem, com os
+     mesmos campos — construir as duas criaria, dentro do próprio
+     catálogo, a redundância que era para evitar. Viraram uma peça
+     só, com um campo que troca a frase de abertura.
+
+     A moldura é a do pós-visita, de propósito: mesmo fundo,
+     mesmos riscos, mesma escala tipográfica. Assim as peças
+     continuam parecendo da mesma família sem eu inventar um
+     segundo sistema visual para manter.
+     ============================================================ */
+
+  const AVISO = {
+    largura: 1080, altura: 1350, escala: 2,
+
+    nome: { x: 95, base: 153.5, corpo: 45.6, peso: 'bold' },
+
+    /* O título cresce PARA CIMA a partir da última linha. No
+       pós-visita as quatro linhas terminam em 623,4 e o corpo
+       começa em 751,4 — se eu ancorasse pelo topo, um título de
+       três linhas abriria um vão nesse meio e o de cinco encostaria
+       no texto. Ancorado embaixo, o respiro é sempre o mesmo. */
+    titulo: {
+      x: 99.5, baseUltima: 623.4, corpo: 67.2, corpoMinimo: 42,
+      proporcaoEntrelinha: 80.7 / 67.2, larguraMaxima: 880, linhas: 5
+    },
+
+    corpo: {
+      x: 88, base: 751.4, entrelinha: 45.2, corpo: 37.5,
+      corpoMinimo: 28, larguraMaxima: 905, linhas: 7, peso: 'medium'
+    },
+
+    logo: { centro: 540, baixo: 1245, largura: 245 },
+
+    riscos: POS_VISITA.riscos,
+    cores: POS_VISITA.cores
+  };
+
+  /* O asterisco marca o trecho em negrito, como no título do
+     pós-visita. Os {marcadores} são trocados antes de quebrar as
+     linhas, então a quebra já leva em conta o nome e a data reais
+     — não o tamanho do marcador. */
+  const AVISO_TEXTO = {
+    agendamento: {
+      confirmacao: {
+        titulo: 'SUA *{ETAPA}* ESTÁ AGENDADA.',
+        corpo: 'está tudo certo para a sua {etapa}: ficou marcada para ' +
+               '{data}, às {hora}. {responsavel} estará com {voce}. ' +
+               'Se precisar remarcar, é só nos avisar.'
+      },
+      lembrete: {
+        titulo: 'LEMBRANDO DA SUA *{ETAPA}*.',
+        corpo: 'passando para lembrar da sua {etapa}, marcada para ' +
+               '{data}, às {hora}. {responsavel} estará com {voce}. ' +
+               'Se precisar remarcar, é só nos avisar.'
+      }
+    },
+    entrega: {
+      titulo: 'SEU NOVO LAR ESTÁ *PRONTO*.',
+      corpo: 'obrigado por confiar à Dalmóbile a realização do seu ' +
+             'projeto. Foi um prazer acompanhar cada etapa ao lado de ' +
+             '{voce}, e seguimos à disposição sempre que {precisar}.'
+    }
+  };
+
+  const PRECISAR = { ele: 'precisar', ela: 'precisar',
+                     eles: 'precisarem', elas: 'precisarem' };
+
+  /* Quebra uma lista de palavras com peso próprio. Devolve null
+     se não couber no número de linhas — é assim que o autoajuste
+     sabe que precisa diminuir, em vez de entregar uma linha
+     estourada disfarçada de sucesso. */
+  function repartirPedacos(ctx, palavras, corpo, limite, maxLinhas) {
+    /* Uma "palavra" é uma lista de pedaços colados: "*MONTAGEM*."
+       é um pedaço em negrito seguido do ponto em medium, SEM
+       espaço entre eles. Medir e desenhar por pedaço solto punha
+       um espaço ali e a peça saía com "MONTAGEM ." */
+    const larg = function (palavra) {
+      let w = 0;
+      palavra.forEach(function (p) {
+        ctx.font = fonteDe(p.peso, corpo);
+        w += ctx.measureText(p.t).width;
+      });
+      return w;
+    };
+    ctx.font = fonteDe('medium', corpo);
+    const espaco = ctx.measureText(' ').width;
+
+    const linhas = [];
+    let atual = [], largura = 0;
+
+    for (const palavra of palavras) {
+      const w = larg(palavra);
+      if (w > limite) return null;           /* palavra sozinha não cabe */
+
+      const soma = atual.length ? largura + espaco + w : w;
+      if (soma <= limite) {
+        atual.push(palavra); largura = soma;
+      } else {
+        linhas.push(atual);
+        if (linhas.length >= maxLinhas) return null;
+        atual = [palavra]; largura = w;
+      }
+    }
+    if (atual.length) linhas.push(atual);
+    return linhas.length <= maxLinhas ? linhas : null;
+  }
+
+  function arrumarBloco(ctx, palavras, M) {
+    for (let corpo = M.corpo; corpo >= M.corpoMinimo; corpo -= 0.5) {
+      const linhas = repartirPedacos(ctx, palavras, corpo,
+                                     M.larguraMaxima, M.linhas);
+      if (linhas) return { linhas: linhas, corpo: corpo };
+    }
+    /* Chegou no piso: desenha assim mesmo, porque uma peça
+       apertada ainda serve e uma peça que não sai, não. */
+    return {
+      linhas: repartirPedacos(ctx, palavras, M.corpoMinimo,
+                              M.larguraMaxima, 99) || [palavras],
+      corpo: M.corpoMinimo
+    };
+  }
+
+  /* 'SUA *MEDIÇÃO* ESTÁ.' → uma lista de palavras, e cada palavra
+     é a lista dos seus pedaços colados. O corte é SEMPRE no
+     espaço do texto: o asterisco só troca o peso, nunca separa.
+     Por isso o ponto final de '*PRONTO*.' continua grudado. */
+  function emPedacos(texto) {
+    const palavras = [];
+    let negrito = false;
+
+    String(texto).trim().split(/\s+/).forEach(function (bruto) {
+      const pedacos = [];
+      bruto.split('*').forEach(function (parte, i) {
+        if (i) negrito = !negrito;   /* cada asterisco inverte o peso */
+        if (parte) pedacos.push({ t: parte, peso: negrito ? 'bold' : 'medium' });
+      });
+      if (pedacos.length) palavras.push(pedacos);
+    });
+    return palavras;
+  }
+
+  function escreverLinha(ctx, palavras, x, base, corpo) {
+    ctx.font = fonteDe('medium', corpo);
+    const espaco = ctx.measureText(' ').width;
+    let cursor = x, primeiro = true;
+
+    palavras.forEach(function (palavra) {
+      palavra.forEach(function (p) {
+        ctx.font = fonteDe(p.peso, corpo);
+        /* Só o primeiro pedaço da linha é ancorado pela mancha; os
+           seguintes continuam de onde o anterior parou, senão
+           apareceria um vão entre eles. */
+        if (primeiro) {
+          cursor += ctx.measureText(p.t).actualBoundingBoxLeft;
+          primeiro = false;
+        }
+        ctx.fillText(p.t, cursor, base);
+        cursor += ctx.measureText(p.t).width;
+      });
+      cursor += espaco;
+    });
+  }
+
+  function trocarMarcadores(texto, trocas) {
+    return String(texto).replace(/\{[a-zA-Z]+\}/g, function (m) {
+      return m in trocas ? trocas[m] : m;
+    });
+  }
+
+  function formatarData(iso) {
+    const p = String(iso || '').split('-');
+    return p.length === 3 ? p[2] + '/' + p[1] : String(iso || '');
+  }
+
+  function formatarHora(hm) {
+    const p = String(hm || '').split(':');
+    if (p.length < 2) return String(hm || '');
+    return p[1] === '00' ? p[0] + 'h' : p[0] + 'h' + p[1];
+  }
+
+  async function montarAviso(dados, receita, prefixo) {
+    const M = AVISO;
+    const loja = dados.loja === 'cgt' ? 'cgt' : 'sjc';
+    const e = M.escala;
+
+    await carregarFontes();
+
+    const tela = document.createElement('canvas');
+    tela.width = M.largura * e;
+    tela.height = M.altura * e;
+    const ctx = tela.getContext('2d');
+    ctx.scale(e, e);
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.fillStyle = M.cores.fundo;
+    ctx.fillRect(0, 0, M.largura, M.altura);
+    ctx.fillStyle = M.cores.risco;
+    M.riscos.forEach(function (r) { ctx.fillRect(r.x, r.y, r.l, r.a); });
+    ctx.fillStyle = M.cores.texto;
+
+    /* ---------- o nome ---------- */
+    const nome = String(dados.cliente || '').trim();
+    if (nome) {
+      ctx.font = fonteDe(M.nome.peso, M.nome.corpo);
+      escreverNaMancha(ctx, nome + ',', M.nome.x, M.nome.base);
+    }
+
+    /* ---------- as trocas ---------- */
+    const etapa = String(dados.etapa || '').trim();
+    const voce = (VOCE[dados.genero] || VOCE.eles);
+    const trocas = {
+      '{ETAPA}': etapa.toUpperCase(),
+      '{etapa}': etapa.toLowerCase(),
+      '{data}': formatarData(dados.data),
+      '{hora}': formatarHora(dados.hora),
+      '{responsavel}': String(dados.responsavel || '').trim(),
+      '{voce}': voce.toLowerCase(),
+      '{VOCE}': voce,
+      '{cidade}': CIDADES[loja],
+      '{precisar}': PRECISAR[dados.genero] || PRECISAR.eles
+    };
+
+    /* ---------- o título ---------- */
+    const t = arrumarBloco(ctx, emPedacos(trocarMarcadores(receita.titulo, trocas)),
+                           M.titulo);
+    const entre = t.corpo * M.titulo.proporcaoEntrelinha;
+    t.linhas.forEach(function (linha, i) {
+      const base = M.titulo.baseUltima - (t.linhas.length - 1 - i) * entre;
+      escreverLinha(ctx, linha, M.titulo.x, base, t.corpo);
+    });
+
+    /* ---------- o corpo ---------- */
+    const c = arrumarBloco(ctx, emPedacos(trocarMarcadores(receita.corpo, trocas)),
+                           M.corpo);
+    const entreCorpo = c.corpo * (M.corpo.entrelinha / M.corpo.corpo);
+    c.linhas.forEach(function (linha, i) {
+      escreverLinha(ctx, linha, M.corpo.x, M.corpo.base + i * entreCorpo, c.corpo);
+    });
+
+    /* ---------- a logo ---------- */
+    const logo = await imagemDe(LOGOS[loja]);
+    const altura = M.logo.largura * (logo.naturalHeight / logo.naturalWidth);
+    ctx.drawImage(logo, M.logo.centro - M.logo.largura / 2,
+                        M.logo.baixo - altura, M.logo.largura, altura);
+
+    const final = document.createElement('canvas');
+    final.width = M.largura; final.height = M.altura;
+    const fx = final.getContext('2d');
+    fx.imageSmoothingEnabled = true;
+    fx.imageSmoothingQuality = 'high';
+    fx.drawImage(tela, 0, 0, M.largura, M.altura);
+
+    return {
+      ok: true,
+      b64: final.toDataURL('image/png').split(',')[1],
+      tipo: 'image/png',
+      nome: prefixo + '-' + (semAcento(nome) || 'cliente') + '.png'
+    };
+  }
+
+  function agendamento(dados) {
+    /* O campo vem da lista do formulário, com o rótulo que a
+       pessoa lê ("Lembrete"), não com um código. Comparar com
+       string exata quebraria no dia em que alguém reescrevesse o
+       rótulo — e quebraria em silêncio, caindo na confirmação. */
+    const ehLembrete = /^lembr/i.test(String(dados.aviso || '').trim());
+    const receita = ehLembrete
+      ? AVISO_TEXTO.agendamento.lembrete
+      : AVISO_TEXTO.agendamento.confirmacao;
+    return montarAviso(dados, receita, 'agendamento');
+  }
+
+  function entrega(dados) {
+    return montarAviso(dados, AVISO_TEXTO.entrega, 'entrega');
+  }
+
   /* O índice é por ID do material. O que estiver aqui é gerado
      no aparelho; o que não estiver continua indo para o Apps
      Script, sem precisar mexer em nada. */
@@ -959,6 +1240,8 @@ window.Pecas = (function () {
     'boas-vindas-impresso': boasVindasImpresso,
     'pos-visita': posVisita,
     'boas-vindas': cardWhatsApp,
+    'agendamento': agendamento,
+    'entrega': entrega,
 
     /* exposto para a tela de conferência */
     _medidas: { 'boas-vindas-impresso': BOAS_VINDAS }

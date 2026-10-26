@@ -768,52 +768,55 @@ const CATALOGO = [
     campos: []
   },
 
+  /* As duas vagas de agendamento ("Confirmação" e "Lembrete")
+     eram a MESMA mensagem, com os mesmos campos. Viraram uma peça
+     só: o campo "Tipo de aviso" troca a frase de abertura. Duas
+     entradas idênticas no catálogo só fariam quem está com pressa
+     escolher no escuro. */
   {
-    id: 'confirmacao',
-    nome: 'Confirmação de agendamento',
-    descricao: 'Ao confirmar a medição, apresentação ou montagem, envie este card para o cliente.',
-    icone: 'caixa',
+    id: 'agendamento',
+    nome: 'Agendamento',
+    descricao: 'Confirma ou lembra o horário da medição, da apresentação ou da montagem.',
+    icone: 'calendario',
     formato: 'png',
-    disponivel: false,
-    endpoints: { sjc: '', cgt: '' },
+    disponivel: true,
+    endpoints: {},
     campos: [
-      CLIENTE, GENERO, CONSULTOR,
-      { chave: 'montador', rotulo: 'Supervisor de Montagem', tipo: 'texto',
-        exemplo: 'Ex.: Rômullo Goulart', obrigatorio: true }
+      CLIENTE,
+      GENERO,
+      { chave: 'aviso', rotulo: 'Tipo de aviso', tipo: 'lista', obrigatorio: true,
+        nota: 'Confirmação é o primeiro aviso; lembrete é o de véspera.',
+        opcoes: ['Confirmação', 'Lembrete'] },
+      { chave: 'etapa', rotulo: 'Etapa', tipo: 'lista', obrigatorio: true,
+        opcoes: ['Medição', 'Apresentação do projeto', 'Montagem', 'Entrega'] },
+      { chave: 'data', rotulo: 'Data', tipo: 'data', obrigatorio: true },
+      { chave: 'hora', rotulo: 'Horário', tipo: 'hora', obrigatorio: true },
+      /* Um campo só, com o rótulo acompanhando a etapa: quem
+         preenche não precisa lembrar quem vai em cada visita, e
+         não dá para digitar o nome no lugar errado. */
+      { chave: 'responsavel', rotulo: 'Responsável', tipo: 'texto',
+        exemplo: 'Ex.: Rômullo Goulart', obrigatorio: true,
+        rotuloPor: {
+          campo: 'etapa',
+          mapa: {
+            'Medição': 'Responsável pela medição',
+            'Apresentação do projeto': 'Consultor de Vendas',
+            'Montagem': 'Supervisor de Montagem',
+            'Entrega': 'Supervisor de Montagem'
+          }
+        } }
     ]
   },
 
   {
     id: 'entrega',
     nome: 'Entrega concluída',
-    descricao: 'Encerramento do projeto, após a montagem.',
+    descricao: 'Encerramento do projeto, para enviar ao cliente depois da montagem.',
     icone: 'caixa',
     formato: 'png',
-    disponivel: false,
-    endpoints: { sjc: '', cgt: '' },
-    campos: [
-      CLIENTE, GENERO, CONSULTOR,
-      { chave: 'montador', rotulo: 'Supervisor de Montagem', tipo: 'texto',
-        exemplo: 'Ex.: Rômullo Goulart', obrigatorio: true }
-    ]
-  },
-
-  {
-    id: 'agendamento',
-    nome: 'Lembrete de agendamento',
-    descricao: 'Confirmação do horário de medição, apresentação ou montagem.',
-    icone: 'calendario',
-    formato: 'png',
-    disponivel: false,
-    endpoints: { sjc: '', cgt: '' },
-    campos: [
-      CLIENTE,
-      { chave: 'etapa', rotulo: 'Etapa', tipo: 'lista', obrigatorio: true,
-        opcoes: ['Medição', 'Apresentação do projeto', 'Montagem', 'Entrega'] },
-      { chave: 'data', rotulo: 'Data', tipo: 'data', obrigatorio: true },
-      { chave: 'hora', rotulo: 'Horário', tipo: 'hora', obrigatorio: true },
-      CONSULTOR
-    ]
+    disponivel: true,
+    endpoints: {},
+    campos: [ CLIENTE, GENERO ]
   }
 
 ];
@@ -1305,11 +1308,35 @@ function abrirMaterial(material) {
       el('campo-' + c.chave).addEventListener('change', () => atualizarDependentes(material));
     });
 
+  /* Rótulos que acompanham outro campo. Quem escolhe "Montagem"
+     na etapa vê "Supervisor de Montagem" no campo seguinte, em
+     vez de um "Responsável" genérico que convida ao nome errado. */
+  material.campos
+    .filter((c) => c.rotuloPor)
+    .forEach((c) => {
+      const pai = el('campo-' + c.rotuloPor.campo);
+      if (!pai) return;
+      pai.addEventListener('change', () => atualizarRotulos(material));
+    });
+
   atualizarDependentes(material);
+  atualizarRotulos(material);
 
   hub.classList.add('oculto');
   gerador.classList.remove('oculto');
   window.scrollTo(0, 0);
+}
+
+function atualizarRotulos(material) {
+  material.campos.forEach((campo) => {
+    if (!campo.rotuloPor) return;
+    const pai = el('campo-' + campo.rotuloPor.campo);
+    const alvo = el('rotulo-' + campo.chave);
+    if (!pai || !alvo) return;
+    /* Sem correspondência, volta ao rótulo original em vez de
+       deixar o da escolha anterior, que estaria mentindo. */
+    alvo.textContent = campo.rotuloPor.mapa[pai.value] || campo.rotulo;
+  });
 }
 
 function montarCampo(campo) {
@@ -1335,6 +1362,7 @@ function montarCampo(campo) {
 
   const label = document.createElement('label');
   label.setAttribute('for', 'campo-' + campo.chave);
+  label.id = 'rotulo-' + campo.chave;
   label.textContent = campo.rotulo;
   bloco.appendChild(label);
 
