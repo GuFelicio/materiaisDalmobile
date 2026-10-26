@@ -268,6 +268,134 @@ window.Pecas = (function () {
     return m.width;
   }
 
+
+  /* ========================================================
+     CARD DE APRESENTAÇÃO NO WHATSAPP — 1080x1080
+     --------------------------------------------------------
+     A peça mais densa das três: parágrafos JUSTIFICADOS e uma
+     lista que muda de tamanho conforme o projeto tenha ou não
+     arquiteto.
+
+     As quebras de linha dos parágrafos são fixas, copiadas do
+     original. Poderia calcular as quebras, mas aí elas cairiam
+     em pontos diferentes dos de hoje — e o pedido foi qualidade
+     e fidelidade, não liberdade de composição. Mudou o texto?
+     Reescreva as linhas aqui.
+     ======================================================== */
+
+  const CARD_WPP = {
+    largura: 1080, altura: 1080, escala: 2,
+
+    /* Os corpos abaixo não foram chutados nem convertidos de pt:
+       cada um foi resolvido por busca binária dentro do próprio
+       canvas, até a mancha de tinta bater com a largura medida no
+       card original. Por isso os quatro itens caem todos em 23,7
+       e os dois parágrafos em 19,6 — é a mesma fonte do Slides,
+       reencontrada pela largura. */
+    cliente: { x: 151, base: 240.5, corpo: 25.88, peso: 'medium', cor: '#565554' },
+
+    saudacao: { x: 148, base: 309.5, corpo: 20.58, peso: 'bold', cor: '#1a1a1a' },
+
+    /* Blocos justificados: todas as linhas esticam até a margem
+       direita, menos a última de cada parágrafo. */
+    texto: {
+      x: 149, direita: 1016, base: 358.5, entrelinha: 50,
+      corpo: 19.64, peso: 'medium', cor: '#484846'
+    },
+
+    itens: {
+      marcador: { x: 166.5, raio: 5 },
+      x: 200, base: 620.5, entrelinha: 57.8, corpo: 23.71,
+      peso: 'medium', cor: '#555452'
+    },
+
+    fecho: {
+      x: 115, direita: 983, base: 844.5, entrelinha: 50,
+      corpo: 19.79, peso: 'medium', cor: '#474745'
+    },
+
+    assinatura: { x: 40, base: 996.5, entrelinha: 37, corpo: 26.83,
+                  peso: 'medium', cor: '#6f6e6c', texto: ['CRIE SEU', 'MUNDO'] },
+
+    logo: { direita: 1013, topo: 65, largura: 222 },
+
+    /* Medidos no fundo que o Gu exportou — e aquele arquivo já
+       está em 1080x1080, o mesmo tamanho da peça, então aqui
+       não há escala nem o deslocamento que isso causou no
+       pós-visita. */
+    riscos: [
+      { x: 134, y:   0, l: 3, a: 58 },
+      { x: 269, y:  55, l: 3, a: 60 },
+      { x:   0, y:  56, l: 67, a: 3 },
+      { x: 135, y: 115, l: 68, a: 3 },
+      { x:  65, y: 118, l: 3, a: 60 },
+      { x: 272, y: 176, l: 68, a: 3 }
+    ],
+
+    cores: { fundo: '#e6e5e3', risco: '#9c9b99' }
+  };
+
+  /* O texto fixo. Saiu da arte do Slides para cá — com a
+     correção de "Caraguatauba" para "Caraguatatuba", que estava
+     errado no original e ia para o cliente assim. */
+  const CARD_TEXTO = {
+    saudacao: 'Sejam muito bem-vindos à Dalmóbile {cidade}!',
+    paragrafos: [
+      ['É uma satisfação recebê-los e agradecer pela confiança em nos permitir fazer parte da',
+       'realização do seu novo lar.'],
+      ['A partir de agora, compartilhamos com vocês as próximas etapas do processo até a entrega',
+       'e execução do seu mobiliário, bem como os profissionais que estarão ao seu lado em cada',
+       'fase dessa jornada:']
+    ],
+    fecho: ['Nossa equipe está à disposição para oferecer um atendimento próximo, transparente e',
+            'dedicado em cada etapa do projeto.'],
+    /* Último item da lista, sempre presente. Está aqui, e não na
+       arte, justamente para o dia em que mudar de pessoa. */
+    fixo: 'Rômullo Goulart – Supervisor de Montagem'
+  };
+
+  const CIDADES_CARD = { sjc: 'São José dos Campos', cgt: 'Caraguatatuba' };
+
+
+  /* Escreve uma linha esticada até a margem direita.
+     ------------------------------------------------------------
+     O canvas não justifica: distribui-se a sobra pelos espaços,
+     um a um. Com dois decimais de precisão isso é invisível, e é
+     o que faz a mancha de texto ter a borda reta que a peça
+     original tinha.
+
+     Linha de um palavrão só não estica — não há onde pôr a
+     sobra, e esticar letra a letra deformaria a palavra. */
+  function escreverJustificado(ctx, texto, esquerda, direita, base) {
+    const palavras = String(texto).trim().split(/\s+/);
+    if (palavras.length < 2) { escreverNaMancha(ctx, texto, esquerda, base); return; }
+
+    /* A margem é de tinta, não de avanço. Se eu alinhasse pelo
+       width da primeira e da última palavra, as duas pontas
+       ficariam para dentro pela lateral do glifo — foi exatamente
+       o que deixou minhas linhas justificadas 2 px curtas. Então
+       ancoro a primeira pela borda esquerda da tinta e a última
+       pela direita, e distribuo o espaço entre essas duas âncoras. */
+    const pri = ctx.measureText(palavras[0]);
+    const ult = ctx.measureText(palavras[palavras.length - 1]);
+
+    const xPrimeira = esquerda + pri.actualBoundingBoxLeft;
+    const xUltima = direita - ult.actualBoundingBoxRight;
+
+    let avancos = 0;
+    for (let i = 0; i < palavras.length - 1; i++) {
+      avancos += ctx.measureText(palavras[i]).width;
+    }
+
+    const espaco = (xUltima - xPrimeira - avancos) / (palavras.length - 1);
+
+    let x = xPrimeira;
+    palavras.forEach(function (p) {
+      ctx.fillText(p, x, base);
+      x += ctx.measureText(p).width + espaco;
+    });
+  }
+
   /* ------------------------------------------------------------
      Apoio
      ------------------------------------------------------------ */
@@ -294,6 +422,49 @@ window.Pecas = (function () {
       im.src = caminho;
     });
     return imagens[caminho];
+  }
+
+  /* ⚠️ OS DOIS ARQUIVOS DE LOGO NÃO SÃO IGUAIS.
+     O de Caraguá tem 85 px vazios embaixo; o de SJC não tem
+     nenhum. Ancorando pelo arquivo, a mesma peça põe uma loja
+     mais alta que a outra — e ninguém desconfia, porque cada
+     uma parece certa sozinha.
+
+     Então a tinta é recortada aqui: o desenho passa a depender
+     do que se VÊ, não das bordas do arquivo. Um logo novo com
+     outra sobra entra sem ajuste. */
+  const recortes = {};
+  function logoRecortada(caminho) {
+    if (recortes[caminho]) return recortes[caminho];
+
+    recortes[caminho] = imagemDe(caminho).then(function (im) {
+      const c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const x = c.getContext('2d');
+      x.drawImage(im, 0, 0);
+
+      const d = x.getImageData(0, 0, c.width, c.height).data;
+      let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+
+      for (let i = 0, px = 0; i < d.length; i += 4, px++) {
+        /* Tinta = opaco e escuro. Logo em PNG costuma vir com
+           fundo transparente, mas um exportado com fundo branco
+           também precisa funcionar. */
+        const opaco = d[i + 3] > 20;
+        const escuro = (d[i] + d[i + 1] + d[i + 2]) < 700;
+        if (!opaco || !escuro) continue;
+        const cx = px % c.width, cy = (px / c.width) | 0;
+        if (cx < x0) x0 = cx;
+        if (cy < y0) y0 = cy;
+        if (cx > x1) x1 = cx;
+        if (cy > y1) y1 = cy;
+      }
+
+      if (x1 < 0) return { img: im, sx: 0, sy: 0, sl: im.naturalWidth, sa: im.naturalHeight };
+      return { img: im, sx: x0, sy: y0, sl: x1 - x0 + 1, sa: y1 - y0 + 1 };
+    });
+
+    return recortes[caminho];
   }
 
   function cor(hex) {
@@ -625,12 +796,143 @@ window.Pecas = (function () {
     };
   }
 
+
+
+  /* ============================================================
+     CARD DE APRESENTAÇÃO NO WHATSAPP
+     ============================================================ */
+
+  async function cardWhatsApp(dados) {
+    const M = CARD_WPP;
+    const loja = dados.loja === 'cgt' ? 'cgt' : 'sjc';
+    const e = M.escala;
+
+    await carregarFontes();
+
+    const tela = document.createElement('canvas');
+    tela.width = M.largura * e; tela.height = M.altura * e;
+    const ctx = tela.getContext('2d');
+    ctx.scale(e, e);
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.fillStyle = M.cores.fundo;
+    ctx.fillRect(0, 0, M.largura, M.altura);
+
+    ctx.fillStyle = M.cores.risco;
+    M.riscos.forEach(function (r) { ctx.fillRect(r.x, r.y, r.l, r.a); });
+
+    /* ---------- cliente ---------- */
+    const nome = String(dados.cliente || '').trim();
+    if (nome) {
+      ctx.fillStyle = M.cliente.cor;
+      ctx.font = fonteDe(M.cliente.peso, M.cliente.corpo);
+      escreverNaMancha(ctx, nome, M.cliente.x, M.cliente.base);
+    }
+
+    /* ---------- saudação ---------- */
+    ctx.fillStyle = M.saudacao.cor;
+    ctx.font = fonteDe(M.saudacao.peso, M.saudacao.corpo);
+    escreverNaMancha(ctx,
+      CARD_TEXTO.saudacao.replace('{cidade}', CIDADES_CARD[loja]),
+      M.saudacao.x, M.saudacao.base);
+
+    /* ---------- parágrafos justificados ---------- */
+    ctx.fillStyle = M.texto.cor;
+    ctx.font = fonteDe(M.texto.peso, M.texto.corpo);
+
+    let linha = 0;
+    CARD_TEXTO.paragrafos.forEach(function (par) {
+      par.forEach(function (t, i) {
+        const base = M.texto.base + linha * M.texto.entrelinha;
+        /* A última linha do parágrafo não estica: esticá-la
+           abriria vãos enormes entre poucas palavras. */
+        if (i === par.length - 1) {
+          escreverNaMancha(ctx, t, M.texto.x, base);
+        } else {
+          escreverJustificado(ctx, t, M.texto.x, M.texto.direita, base);
+        }
+        linha++;
+      });
+    });
+
+    /* ---------- a lista ---------- */
+    const lista = [];
+    if (dados.consultor) lista.push(dados.consultor);
+    if (dados.temArquiteto && dados.arquiteto) lista.push(dados.arquiteto);
+    if (dados.executivo) lista.push(dados.executivo);
+    lista.push(CARD_TEXTO.fixo);
+
+    ctx.fillStyle = M.itens.cor;
+    ctx.font = fonteDe(M.itens.peso, M.itens.corpo);
+
+    lista.forEach(function (item, i) {
+      const base = M.itens.base + i * M.itens.entrelinha;
+
+      ctx.beginPath();
+      ctx.arc(M.itens.marcador.x, base - M.itens.corpo * 0.28,
+              M.itens.marcador.raio, 0, Math.PI * 2);
+      ctx.fill();
+
+      escreverNaMancha(ctx, item, M.itens.x, base);
+    });
+
+    /* ---------- fecho ----------
+       Ancorado pela ÚLTIMA linha, não pela primeira: sem
+       arquiteto a lista encurta, e o fecho sobe junto em vez de
+       deixar o buraco que a peça do Slides deixava. */
+    const ultimoItem = M.itens.base + (lista.length - 1) * M.itens.entrelinha;
+    const folga = M.fecho.base - (M.itens.base + 3 * M.itens.entrelinha);
+    const fechoBase = ultimoItem + folga;
+
+    ctx.fillStyle = M.fecho.cor;
+    ctx.font = fonteDe(M.fecho.peso, M.fecho.corpo);
+    CARD_TEXTO.fecho.forEach(function (t, i) {
+      const base = fechoBase + i * M.fecho.entrelinha;
+      if (i === CARD_TEXTO.fecho.length - 1) {
+        escreverNaMancha(ctx, t, M.fecho.x, base);
+      } else {
+        escreverJustificado(ctx, t, M.fecho.x, M.fecho.direita, base);
+      }
+    });
+
+    /* ---------- assinatura ---------- */
+    ctx.fillStyle = M.assinatura.cor;
+    ctx.font = fonteDe(M.assinatura.peso, M.assinatura.corpo);
+    M.assinatura.texto.forEach(function (t, i) {
+      escreverNaMancha(ctx, t, M.assinatura.x,
+                       M.assinatura.base + i * M.assinatura.entrelinha);
+    });
+
+    /* ---------- logo ---------- */
+    const lg = await logoRecortada(LOGOS[loja]);
+    const alturaLogo = M.logo.largura * (lg.sa / lg.sl);
+    ctx.drawImage(lg.img, lg.sx, lg.sy, lg.sl, lg.sa,
+                  M.logo.direita - M.logo.largura, M.logo.topo,
+                  M.logo.largura, alturaLogo);
+
+    /* ---------- reduz ---------- */
+    const final = document.createElement('canvas');
+    final.width = M.largura; final.height = M.altura;
+    const fx = final.getContext('2d');
+    fx.imageSmoothingEnabled = true;
+    fx.imageSmoothingQuality = 'high';
+    fx.drawImage(tela, 0, 0, M.largura, M.altura);
+
+    return {
+      ok: true,
+      b64: final.toDataURL('image/png').split(',')[1],
+      tipo: 'image/png',
+      nome: 'apresentacao-' + (semAcento(nome) || 'cliente') + '.png'
+    };
+  }
+
   /* O índice é por ID do material. O que estiver aqui é gerado
      no aparelho; o que não estiver continua indo para o Apps
      Script, sem precisar mexer em nada. */
   return {
     'boas-vindas-impresso': boasVindasImpresso,
     'pos-visita': posVisita,
+    'boas-vindas': cardWhatsApp,
 
     /* exposto para a tela de conferência */
     _medidas: { 'boas-vindas-impresso': BOAS_VINDAS }
