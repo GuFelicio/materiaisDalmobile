@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f2f2f0">
+<title>Vistoria de Montagem · Dalmóbile</title>
+
+<!-- ============================================================
+     VISTORIA DE MONTAGEM — a conferência com o cliente
+     ------------------------------------------------------------
+     Controle interno: quem preenche confere o trabalho da equipe
+     de montagem. O cliente não vê nem assina.
+
+     São 36 itens, quase o dobro do Documento 101, e isso manda na
+     tela inteira: cada item ocupa POUCO espaço vertical e se
+     resolve em um toque. Um item que exige dois toques vira 72
+     toques no total, e um formulário que ninguém termina.
+
+     O que NÃO tem aqui, de propósito: um botão de "marcar tudo
+     como conforme". Ele economizaria minutos reais, já que a
+     maioria das montagens passa — e é exatamente por isso que
+     acabaria com a inspeção. Um checklist preenchido de uma vez
+     só não é registro de nada.
+
+     Depende de campo.js (armazém offline, fotos, conexão), que é
+     o mesmo código usado pela tela de medição.
+     ============================================================ -->
+
+<style>
+  :root {
+    --bg: #f2f2f0; --card: #fff; --ink: #141618; --ink-2: #4a5054;
+    --muted: #8a9094; --line: #e0e1df; --line-2: #c9cbc8;
+    --ok: #1c6b3f; --ok-bg: #eef3ee; --ok-line: #cfe0d2;
+    --aviso: #8a4b12; --aviso-bg: #fdf1e7; --aviso-line: #f0cfae;
+    --erro: #b3261e; --erro-bg: #fdeceb; --erro-line: #f3c9c6;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-size: 16px; line-height: 1.5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 16px 120px; }
+
+  .topo { position: relative; padding: 24px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+  .marca { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .marca span { font-weight: 400; color: var(--muted); }
+  .assinatura { margin: 3px 0 0; font-size: 10px; font-weight: 600; letter-spacing: .18em;
+                text-transform: uppercase; color: var(--muted); }
+
+  .voltar { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0;
+            padding: 13px 0; margin: 0 0 6px; font-family: inherit; font-size: 14.5px;
+            font-weight: 600; color: var(--ink-2); cursor: pointer; text-decoration: none; }
+
+  .rede { display: none; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 16px;
+          border-radius: 10px; font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  .rede.off { display: flex; background: var(--aviso-bg); border: 1px solid var(--aviso-line); color: var(--aviso); }
+  .rede.pendente { display: flex; background: var(--ok-bg); border: 1px solid var(--ok-line); color: var(--ok); }
+  .rede b { display: block; font-weight: 400; color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
+
+  .painel { background: var(--card); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 18px; margin-bottom: 18px; }
+  .painel > h2 { margin: 0 0 3px; font-size: 17px; font-weight: 700; letter-spacing: -0.015em; }
+  .painel > h2 + p { margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2); }
+
+  label.rot { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em;
+              text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+  input[type=text], textarea, select {
+    width: 100%; font-family: inherit; font-size: 16px; color: var(--ink);
+    background: #fff; border: 1px solid var(--line-2); border-radius: 10px;
+    padding: 12px 13px; line-height: 1.45; min-height: 46px;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+  .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .campo { margin-bottom: 14px; }
+  .historico { margin-top: 22px; }
+  .versao {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+    padding: 11px 13px; margin-top: 8px;
+  }
+  .versao .topo { display: flex; align-items: baseline; gap: 8px; }
+  .versao .numero { font-weight: 700; font-size: 14px; }
+  .versao .quando { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+  .versao .porque { font-size: 13.5px; color: var(--ink-2); margin: 3px 0 0; }
+  .versao .digital {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--muted); margin-top: 5px; word-break: break-all;
+  }
+  .versao.pendente { border-style: dashed; }
+  .historico .recado { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 8px; }
+  .acrescentar { margin: -4px 0 18px; }
+  .acrescentar .mais {
+    border: 1px dashed var(--line-2); background: none; color: var(--muted);
+    border-radius: 10px; padding: 9px 14px; font: inherit; font-size: 13.5px;
+    cursor: pointer; width: 100%;
+  }
+  .acrescentar .mais.firme {
+    border-style: solid; border-color: var(--ink); background: var(--ink);
+    color: #fff; width: auto; flex: 0 0 auto; font-weight: 600;
+  }
+  .acrescentar-forma { display: flex; gap: 7px; }
+  .acrescentar-forma input {
+    flex: 1; min-width: 0; padding: 9px 11px; font: inherit; font-size: 14px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+    color: var(--ink);
+  }
+  .acrescentar .oculto { display: none; }
+  .item.acrescentado { border-left: 3px solid var(--line-2); }
+  .item.acrescentado h3 { display: flex; align-items: flex-start; gap: 8px; }
+  .tirar-extra {
+    margin-left: auto; border: 0; background: none; color: var(--muted);
+    font-size: 19px; line-height: 1; cursor: pointer; padding: 0 2px;
+  }
+  .montadores { display: flex; flex-wrap: wrap; gap: 7px; }
+  .montadores button {
+    padding: 8px 13px; border-radius: 999px; font: inherit; font-size: 14px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink-2);
+    cursor: pointer;
+  }
+  /* --accent nao existe nesta pagina; e variavel da Central. Com
+     ela, a ficha marcada ficava com texto branco sobre fundo
+     transparente: invisivel. A paleta daqui usa --ink. */
+  .montadores button[aria-pressed="true"] {
+    background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600;
+  }
+  /* Quem saiu da equipe depois de ter trabalhado nesta montagem:
+     continua escolhido, e so aparece porque esta no registro. */
+  .montadores button.fora[aria-pressed="true"] { opacity: .72; }
+  .montadores .vazio { color: var(--muted); font-size: 13px; line-height: 1.5; }
+  @media (max-width: 430px) { .dupla { grid-template-columns: 1fr; } }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+         font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+         border-radius: 10px; padding: 13px 18px; border: 1px solid var(--ink);
+         background: var(--ink); color: #fff; min-height: 46px; }
+  .btn.vazio { background: #fff; color: var(--ink); }
+  .btn.largo { width: 100%; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  /* ⚠️ ISTO NÃO É ENFEITE.
+     A regra .btn traz display:inline-flex, e classe vence o
+     estilo que o navegador dá a [hidden]. Sem esta linha,
+     'botao.hidden = true' não esconde nada: o botão "Enviar"
+     vinha aparecendo em quem NÃO sabe compartilhar arquivo —
+     ou seja, justamente o botão que não fazia nada, que é o
+     que o código tentava evitar. */
+  .btn[hidden] { display: none !important; }
+
+  /* O cartão é um contêiner, não um botão: dentro dele vive o
+     botão de abrir e, para o administrador, o de apagar. Botão
+     dentro de botão é HTML inválido e o clique fica imprevisível. */
+  .ficha { background: var(--card); border: 1px solid var(--line);
+           border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+  .ficha.removido { opacity: .62; border-style: dashed; }
+
+  .ficha > .abrir { display: block; width: 100%; text-align: left; background: none;
+                    border: 0; padding: 15px 16px; cursor: pointer; font-family: inherit;
+                    color: inherit; }
+
+  .ficha .acoes { display: flex; gap: 8px; padding: 0 16px 13px; }
+  .ficha .acoes button { font-family: inherit; font-size: 13px; font-weight: 600;
+                         cursor: pointer; border-radius: 9px; padding: 10px 13px;
+                         min-height: 44px; background: #fff;
+                         border: 1px solid var(--erro-line); color: var(--erro); }
+  .ficha .acoes button:disabled { opacity: .5; cursor: default; }
+  .ficha h3 { margin: 0 0 3px; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .ficha p { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .ficha .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+         text-transform: uppercase; padding: 4px 8px; border-radius: 6px;
+         background: #f2f2f0; color: var(--ink-2); border: 1px solid var(--line); }
+  .tag.ok    { background: var(--ok-bg);    color: var(--ok);    border-color: var(--ok-line); }
+  .tag.aviso { background: var(--aviso-bg); color: var(--aviso); border-color: var(--aviso-line); }
+  .tag.erro  { background: var(--erro-bg);  color: var(--erro);  border-color: var(--erro-line); }
+
+  /* ---------- documentos da equipe ---------- */
+
+  .equipe-titulo { display: flex; align-items: baseline; justify-content: space-between;
+                   gap: 12px; margin: 32px 0 6px; }
+  .equipe-titulo h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+                      text-transform: uppercase; color: var(--muted); }
+  .equipe-sub { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
+
+  .autor { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+           padding: 4px 8px; border-radius: 6px; background: #ebebe8;
+           border: 1px solid var(--line-2); color: var(--ink-2); }
+  .autor.meu { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); }
+
+  .vazio-msg { text-align: center; padding: 30px 16px; color: var(--ink-2); font-size: 14.5px; }
+
+  /* ---------- blocos e itens ---------- */
+
+  .bloco-titulo { display: flex; align-items: baseline; justify-content: space-between;
+                  gap: 12px; margin: 30px 0 12px; }
+  .bloco-titulo h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+                     text-transform: uppercase; color: var(--muted); }
+  .bloco-titulo .conta { font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .bloco-titulo .conta.pronto { color: var(--ok); }
+  .bloco-titulo .conta.falta  { color: var(--aviso); }
+
+  /* Item enxuto: 36 deles precisam caber numa rolagem que
+     alguém termina. Sem card, sem sombra, sem respiro grande. */
+  .item { background: var(--card); border: 1px solid var(--line);
+          border-radius: 11px; padding: 13px 14px; margin-bottom: 8px; }
+  .item.nao { border-color: var(--erro-line); background: #fffcfc; }
+
+  .item h3 { margin: 0 0 10px; font-size: 14.5px; font-weight: 600;
+             line-height: 1.35; letter-spacing: -0.005em; }
+
+  .escolha { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .escolha button {
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    border-radius: 9px; padding: 12px 4px; min-height: 46px; line-height: 1.2;
+    border: 1.5px solid var(--line-2); background: #fff; color: var(--ink-2);
+  }
+  .escolha button[aria-pressed=true].sim { background: var(--ok-bg);   border-color: var(--ok);   color: var(--ok); }
+  .escolha button[aria-pressed=true].nao { background: var(--erro-bg); border-color: var(--erro); color: var(--erro); }
+  .escolha button[aria-pressed=true].na  { background: #ebebe8;        border-color: var(--line-2); color: var(--ink-2); }
+
+  .extras { display: flex; gap: 7px; align-items: center; margin-top: 9px; flex-wrap: wrap; }
+
+  .anexar, .obs-btn {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    border: 1.5px solid var(--line-2); border-radius: 9px;
+    padding: 10px 13px; min-height: 44px; background: #fff;
+    font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  }
+  .anexar span { font-size: 16px; line-height: 1; }
+  .obs-btn[aria-expanded=true] { background: #ebebe8; }
+
+  /* Item não conforme e sem registro: os botões cobram. */
+  .item.nao .anexar.vazio { border-color: var(--erro); color: var(--erro); background: var(--erro-bg); }
+
+  .obs-campo { margin-top: 9px; }
+  .obs-campo[hidden] { display: none; }
+
+  .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .fotos:not(:empty) { margin-top: 9px; }
+  .foto { position: relative; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); background: #ebebe8; }
+  .foto img { display: block; width: 100%; height: 104px; object-fit: cover; }
+  .foto input { width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0;
+                font-size: 12.5px; padding: 10px 8px; background: #fff; min-height: 0; }
+  .foto .tirar { position: absolute; top: 5px; right: 5px; width: 34px; height: 34px;
+                 border-radius: 50%; border: 0; background: rgba(20,22,24,.78); color: #fff;
+                 font-size: 17px; line-height: 1; cursor: pointer; }
+
+  .barra { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(242,242,240,.96);
+           backdrop-filter: blur(8px); border-top: 1px solid var(--line);
+           padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); z-index: 40; }
+  .barra .dentro { max-width: 620px; margin: 0 auto; display: flex; gap: 9px; align-items: center; }
+  .barra .estado { flex: 1; font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+  .barra .btn { flex: 0 0 auto; }
+
+  .oculto { display: none !important; }
+</style>
+
+<style id="trava-entrada">html { visibility: hidden; }</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header class="topo">
+    <h1 class="marca">Dalmóbile <span>· Central de Peças</span></h1>
+    <p class="assinatura">Vistoria de Montagem</p>
+  </header>
+
+  <div class="rede" id="rede"></div>
+
+  <section id="tela-lista">
+    <a class="voltar" href="index.html">← Voltar para a Central</a>
+
+    <div class="painel">
+      <h2>Montagens</h2>
+      <p>Controle interno de qualidade. Tudo fica salvo neste aparelho, com ou sem internet.</p>
+      <button class="btn largo" id="nova">+ Nova vistoria</button>
+    </div>
+
+    <div id="lista"></div>
+
+    <div class="equipe-titulo oculto" id="equipe-titulo">
+      <h2 id="equipe-rotulo"></h2>
+    </div>
+    <p class="equipe-sub oculto" id="equipe-sub"></p>
+    <div id="equipe"></div>
+  </section>
+
+  <section id="tela-ficha" class="oculto">
+    <button class="voltar" id="voltar-lista">← Vistorias</button>
+
+    <div class="painel">
+      <h2>Dados da vistoria</h2>
+
+      <div class="campo">
+        <label class="rot" for="f-cliente">Cliente</label>
+        <input type="text" id="f-cliente" autocomplete="off" placeholder="Nome do cliente">
+      </div>
+
+      <div class="dupla">
+        <div class="campo">
+          <label class="rot" for="f-contrato">Nº do contrato</label>
+          <input type="text" id="f-contrato" autocomplete="off" placeholder="OR-D...">
+        </div>
+        <div class="campo">
+          <label class="rot" for="f-loja">Loja</label>
+          <select id="f-loja">
+            <option value="sjc">São José dos Campos</option>
+            <option value="cgt">Caraguatatuba</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label class="rot" for="f-ambiente">Ambiente</label>
+        <input type="text" id="f-ambiente" autocomplete="off" placeholder="Ex.: Cozinha e área de serviço">
+      </div>
+
+      <div class="campo">
+        <label class="rot" for="f-responsavel">Responsável pelo preenchimento</label>
+        <input type="text" id="f-responsavel" autocomplete="off" placeholder="Seu nome">
+      </div>
+
+      <div class="campo" style="margin-bottom:0">
+        <label class="rot" for="f-cliente-assina">Quem assina pelo cliente</label>
+        <input type="text" id="f-cliente-assina" autocomplete="off"
+               placeholder="Nome de quem recebe a obra">
+      </div>
+    </div>
+
+    <div id="blocos"></div>
+
+    <div class="campo" style="margin-top:22px">
+      <label class="rot" for="f-observacoes">Observações gerais e não conformidades</label>
+      <textarea id="f-observacoes" placeholder="O que não coube nos itens acima"></textarea>
+    </div>
+
+    <div class="historico" id="historico">
+      <button type="button" class="btn vazio largo" id="ver-historico" aria-expanded="false">
+        Histórico de versões
+      </button>
+      <div id="historico-lista" hidden></div>
+    </div>
+
+    <button class="btn vazio largo" id="apagar"
+            style="margin-top:6px;border-color:var(--erro-line);color:var(--erro)">
+      Apagar esta vistoria
+    </button>
+  </section>
+
+</div>
+
+<div class="barra oculto" id="barra">
+  <div class="dentro">
+    <div class="estado" id="estado"></div>
+    <button class="btn vazio" id="enviar" hidden>Enviar</button>
+    <button class="btn" id="salvar">Salvar PDF</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
+<script src="campo.js"></script>
+<script src="auth.js"></script>
+<script src="pdf-doc.js"></script>
+<script src="pdf-vistoria.js"></script>
+<script src="tela-itens.js"></script>
+<script>
+/* O que esta página tem de diferente da vistoria de equipe.
+   O resto da tela mora em tela-doc.js. */
+window.DOC_CONFIG = {
+  gaveta: 'vistorias',
+  tipo: 'vistoria',
+  prefixoId: 'vist',
+  receita: window.PDFVistoria,
+  umaPalavra: 'vistoria',
+  variasPalavras: 'vistorias',
+  rotuloNovo: 'Nova vistoria',
+  rotuloEquipe: 'Vistorias da equipe'
+};
+</script>
+<script src="tela-doc.js"></script>
+</body>
+</html>

@@ -28,7 +28,7 @@
    baixou da primeira vez.
    ============================================================ */
 
-const VERSAO = 'dalmobile-campo-v10';
+const VERSAO = 'dalmobile-campo-v12';
 
 /* O que precisa existir no aparelho para a tela funcionar
    sozinha. Se algum destes faltar, falta função: sem as fontes
@@ -49,7 +49,8 @@ const VERSAO = 'dalmobile-campo-v10';
    a falha do outro é esperada. */
 const PAGINAS = {
   medicao:  ['medicao', 'medicao.html'],
-  montagem: ['montagem', 'montagem.html']
+  montagem: ['montagem', 'montagem.html'],
+  vistoria: ['vistoria', 'vistoria.html']
 };
 
 const TODAS_AS_PAGINAS = Object.keys(PAGINAS).reduce(function (lista, k) {
@@ -62,7 +63,9 @@ const ESSENCIAIS = TODAS_AS_PAGINAS.concat([
   'pdf-101.js',
   'pdf-doc.js',
   'tela-itens.js',
+  'tela-doc.js',
   'pdf-montagem.js',
+  'pdf-vistoria.js',
   'vendor/pdf-lib.min.js',
   'vendor/fontkit.umd.min.js',
   'Krub-Medium.ttf',

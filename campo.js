@@ -37,8 +37,12 @@ window.Campo = (function () {
      ------------------------------------------------------------ */
 
   const BANCO = 'dalmobile-campo';
-  const VERSAO = 1;
-  const GAVETAS = ['medicoes', 'montagens', 'fotos'];
+  /* Gaveta nova exige versão nova: o onupgradeneeded só roda
+     quando o número sobe, então acrescentar 'vistorias' sem subir
+     a versão daria "NotFoundError" no primeiro aparelho que já
+     tivesse o banco — ou seja, em todos menos o meu. */
+  const VERSAO = 2;
+  const GAVETAS = ['medicoes', 'montagens', 'vistorias', 'fotos'];
 
   let bd = null;
 
@@ -71,7 +75,7 @@ window.Campo = (function () {
     });
   }
 
-  /** Abre o armazém de um tipo de documento: 'medicoes', 'montagens'. */
+  /** Abre o armazém de um tipo: 'medicoes', 'montagens', 'vistorias'. */
   function armazem(gaveta) {
     if (GAVETAS.indexOf(gaveta) === -1) {
       throw new Error('gaveta desconhecida: ' + gaveta);
