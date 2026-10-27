@@ -81,6 +81,15 @@
 
   .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .campo { margin-bottom: 14px; }
+  .caixa-assinatura {
+    margin-top: 18px; padding: 14px 15px; border-radius: var(--radius);
+    border: 1px solid var(--line); background: var(--card);
+  }
+  .caixa-assinatura.oculto { display: none; }
+  .caixa-assinatura h3 { margin: 0 0 8px; font-size: 11px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .caixa-assinatura p { margin: 0 0 5px; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+  .caixa-assinatura .alerta { color: var(--aviso); font-weight: 600; }
   .parecer {
     margin-top: 22px; padding: 14px 15px; border-radius: var(--radius);
     border: 1px solid var(--line); background: var(--card);
@@ -351,16 +360,31 @@
         <input type="text" id="f-responsavel" autocomplete="off" placeholder="Seu nome">
       </div>
 
-      <div class="campo" style="margin-bottom:0">
+      <div class="campo">
         <label class="rot" for="f-cliente-assina">Quem assina pelo cliente</label>
         <input type="text" id="f-cliente-assina" autocomplete="off"
                placeholder="Nome de quem recebe a obra">
+      </div>
+
+      <div class="campo">
+        <label class="rot" for="f-whatsapp">WhatsApp do cliente</label>
+        <input type="tel" id="f-whatsapp" autocomplete="off" placeholder="(12) 99999-0000">
+      </div>
+
+      <div class="campo" style="margin-bottom:0">
+        <label class="rot" for="f-email">E-mail do cliente</label>
+        <input type="email" id="f-email" autocomplete="off" placeholder="cliente@exemplo.com">
       </div>
     </div>
 
     <div id="blocos"></div>
 
     <div class="parecer aguardando" id="parecer"></div>
+
+    <div class="caixa-assinatura oculto" id="caixa-assinatura">
+      <h3>Assinatura</h3>
+      <div id="resumo-assinatura"></div>
+    </div>
 
     <div class="campo" style="margin-top:22px">
       <label class="rot" for="f-observacoes">Observações gerais e não conformidades</label>
@@ -386,7 +410,8 @@
   <div class="dentro">
     <div class="estado" id="estado"></div>
     <button class="btn vazio" id="enviar" hidden>Enviar</button>
-    <button class="btn" id="salvar">Salvar PDF</button>
+    <button class="btn vazio" id="salvar">Salvar PDF</button>
+    <button class="btn" id="assinar" hidden>Enviar para assinatura</button>
   </div>
 </div>
 

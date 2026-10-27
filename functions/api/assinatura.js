@@ -223,6 +223,87 @@ async function lerPedido(request, tetoMB) {
    ------------------------------------------------------------ */
 
 function planoDeAssinatura(ficha, pedido) {
+  if (ficha.tipo === 'vistoria') return planoDaVistoria(ficha, pedido);
+  return planoDaMedicao(ficha, pedido);
+}
+
+
+/* ------------------------------------------------------------
+   Vistoria de montagem
+   ------------------------------------------------------------
+   Quem assina sai do parecer:
+
+     aprovada sem restrição  → o cliente assina
+     aprovada com assistência→ o cliente assina
+     reprovada               → a Dalmóbile assina e o cliente recebe
+
+   Tudo é recontado AQUI, a partir das respostas gravadas, em vez
+   de acreditar no que o navegador mandou. O corpo do pedido pode
+   ser escrito à mão por qualquer um com a sessão aberta; as
+   respostas não, porque vêm do banco.
+   ------------------------------------------------------------ */
+function planoDaVistoria(ficha, pedido) {
+  const dados = ficha.dados || {};
+  const itens = dados.itens || {};
+
+  let pendentes = 0;
+  let embranco = 0;
+  Object.keys(itens).forEach(function (k) {
+    const r = (itens[k] || {}).resposta;
+    if (r === 'nao') pendentes += 1;
+    else if (!r) embranco += 1;
+  });
+
+  if (embranco) {
+    throw falha('Responda todos os itens antes de enviar para assinatura.', 422);
+  }
+
+  const escolhido = String(dados.parecer || '');
+  if (pendentes && escolhido !== 'assistencia' && escolhido !== 'reprovada') {
+    throw falha('Escolha entre aprovar com assistência e reprovar antes de enviar para assinatura.', 422);
+  }
+
+  const cliente  = ficha.cliente || 'Cliente';
+  const contrato = ficha.contrato ? ' · ' + ficha.contrato : '';
+
+  /* Reprovada: o cliente NÃO assina. O documento é o parecer da
+     Dalmóbile, assinado por nós, e o e-mail é obrigatório porque
+     sem ele o documento nasce assinado e não chega a ninguém —
+     custou e não registrou nada. */
+  if (pendentes && escolhido === 'reprovada') {
+    if (!emailValido(pedido.email)) {
+      throw falha('Informe o e-mail do cliente: é por ele que a vistoria reprovada é entregue.', 422);
+    }
+    return {
+      clienteAssina: false,
+      canal: 'email',
+      nome: 'Vistoria de montagem — obra reprovada · ' + cliente + contrato,
+      recado: 'Segue a vistoria da montagem, com as pendências apontadas e o prazo de atendimento.',
+      copiaPara: pedido.email
+    };
+  }
+
+  const fone = normalizarWhatsapp(pedido.whatsapp);
+  if (!fone) {
+    throw falha('Informe o WhatsApp do cliente com DDD para pedir a assinatura.', 422);
+  }
+
+  return {
+    clienteAssina: true,
+    canal: 'whatsapp',
+    nome: (pendentes ? 'Vistoria de montagem — aprovada com assistência'
+                     : 'Vistoria de montagem — obra liberada') + ' · ' + cliente + contrato,
+    recado: pendentes
+      ? 'Olá! Segue a vistoria da sua montagem. Ela registra o que está conforme e o '
+        + 'que ficou para a assistência técnica.'
+      : 'Olá! Segue a vistoria da sua montagem, com a liberação da obra.',
+    cliente: { nome: cliente, telefone: fone },
+    copiaPara: emailValido(pedido.email) ? pedido.email : null
+  };
+}
+
+
+function planoDaMedicao(ficha, pedido) {
   const dados   = ficha.dados || {};
   const parecer = dados.parecerFinal || '';
   const caminho = dados.caminhoInapto || '';

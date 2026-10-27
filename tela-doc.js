@@ -376,6 +376,8 @@
     if (el('f-cliente-assina')) {
       el('f-cliente-assina').value = m.dados.cliente_assina || '';
     }
+    if (el('f-whatsapp')) el('f-whatsapp').value = m.dados.whatsapp || '';
+    if (el('f-email'))    el('f-email').value    = m.dados.email    || '';
     /* Ficha antiga não tem o campo: sem isto, o primeiro toque
        num montador leria undefined e perderia a escolha. */
     if (!Array.isArray(m.dados.montadores)) m.dados.montadores = [];
@@ -681,6 +683,8 @@
     if (el('f-cliente-assina')) {
       atual.dados.cliente_assina = el('f-cliente-assina').value.trim();
     }
+    if (el('f-whatsapp')) atual.dados.whatsapp = el('f-whatsapp').value.trim();
+    if (el('f-email'))    atual.dados.email    = el('f-email').value.trim();
   }
 
   async function guardar() {
@@ -701,7 +705,8 @@
     salvando = setTimeout(function () { sincronizar(pendente); }, 4000);
   }
 
-  ['f-cliente','f-contrato','f-ambiente','f-responsavel','f-observacoes','f-cliente-assina']
+  ['f-cliente','f-contrato','f-ambiente','f-responsavel','f-observacoes',
+   'f-cliente-assina','f-whatsapp','f-email']
     .forEach(function (id) {
       const campo = el(id);
       if (campo) campo.addEventListener('input', guardar);
@@ -718,6 +723,7 @@
                : 'Tudo conforme');
 
     pintarParecer(c);
+    pintarAssinatura(c);
   }
 
   /* ------------------------------------------------------------
@@ -731,6 +737,164 @@
      Com item em branco também não aparece: antes de concluir é
      preciso terminar.
      ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+     Assinatura
+     ------------------------------------------------------------
+     Quem assina sai do parecer, e quem decide de verdade é o
+     servidor: ele relê as respostas no banco. O que acontece
+     aqui é só não deixar a pessoa tocar num botão que vai ser
+     recusado do outro lado — e dizer por quê antes, em vez de
+     depois.
+     ------------------------------------------------------------ */
+  function faseDaAssinatura(c) {
+    const d = atual.dados;
+
+    if (d.assinatura) return { fase: 'enviada' };
+
+    const quem = D.receita.quemAssina ? D.receita.quemAssina(d, c) : 'cliente';
+
+    if (!quem) {
+      return { fase: 'falta', porque: c.faltam
+        ? 'Responda todos os itens para concluir a vistoria.'
+        : 'Escolha entre aprovar com assistência e reprovar.' };
+    }
+
+    /* O que falta preencher vem ANTES do que falta de sinal: na
+       obra dá para preencher sem rede, e aí quando o sinal
+       chegar é só enviar. Dizer "aguardando sinal" para quem
+       ainda nem pôs o WhatsApp manda a pessoa esperar por nada. */
+    if (quem === 'cliente' && !C.normalizarWhatsapp(d.whatsapp)) {
+      return { fase: 'falta', porque: 'Informe o WhatsApp do cliente, com DDD.' };
+    }
+
+    /* Reprovada vai por e-mail e o e-mail é obrigatório: sem ele
+       o documento nasce assinado e não chega a ninguém. */
+    if (quem === 'loja' && !C.emailValido(d.email)) {
+      return { fase: 'falta', porque: 'Informe o e-mail do cliente: é por ele que a vistoria reprovada é entregue.' };
+    }
+
+    if (!atual.remoto) {
+      return { fase: 'esperando', porque: 'A vistoria ainda não subiu para o sistema.' };
+    }
+
+    return { fase: 'pronta', quem: quem };
+  }
+
+  function pintarAssinatura(c) {
+    const botao = el('assinar');
+    if (!botao) return;          /* só a vistoria assina */
+
+    const caixa = el('caixa-assinatura');
+    const e = faseDaAssinatura(c);
+
+    if (e.fase === 'enviada') {
+      botao.hidden = true;
+      el('salvar').className = 'btn';
+      caixa.classList.remove('oculto');
+      el('resumo-assinatura').innerHTML = resumoDaAssinatura(atual.dados.assinatura);
+      return;
+    }
+
+    caixa.classList.add('oculto');
+
+    if (e.fase === 'pronta') {
+      botao.hidden = false;
+      botao.disabled = false;
+      botao.title = '';
+      botao.textContent = e.quem === 'cliente' ? 'Enviar para assinatura' : 'Assinar e enviar';
+      el('salvar').className = 'btn vazio';
+      return;
+    }
+
+    /* Apagado, e não escondido: ver que o botão existe e por que
+       ainda não dá vale mais do que não vê-lo. */
+    botao.hidden = false;
+    botao.disabled = true;
+    botao.textContent = e.fase === 'esperando' ? 'Aguardando sinal' : 'Falta preencher';
+    botao.title = e.porque || '';
+    el('salvar').className = 'btn';
+  }
+
+  function resumoDaAssinatura(a) {
+    const linhas = [];
+    linhas.push('<p>' + (a.clienteAssina
+      ? 'Enviada para o cliente assinar, por ' + C.escapar(a.canal || 'WhatsApp') + '.'
+      : 'Assinada pela Dalmóbile e enviada ao cliente por e-mail.') + '</p>');
+    if (a.em) linhas.push('<p>' + C.escapar(dataLonga(a.em)) + '</p>');
+    if (a.sandbox) {
+      linhas.push('<p class="alerta">Documento de teste (sandbox): não tem validade.</p>');
+    }
+    if (a.aviso) linhas.push('<p class="alerta">' + C.escapar(a.aviso) + '</p>');
+    return linhas.join('');
+  }
+
+  (function ligarAssinatura() {
+    const botao = el('assinar');
+    if (!botao) return;
+
+    botao.onclick = async function () {
+      const d = atual.dados;
+      const c = D.receita.contar(d);
+      const e = faseDaAssinatura(c);
+      if (e.fase !== 'pronta') return;
+
+      const pergunta = e.quem === 'cliente'
+        ? 'Enviar a vistoria para ' + (atual.cliente || 'o cliente') + ' assinar, no WhatsApp '
+          + C.mascararWhatsapp(d.whatsapp) + '?'
+        : 'Assinar a vistoria pela Dalmóbile e enviar para ' + d.email + '?';
+
+      /* Depois de enviado não tem como desfazer sem custo: o
+         documento foi criado e cobrado, e o cliente já recebeu o
+         aviso. */
+      if (!confirm(pergunta)) return;
+
+      botao.disabled = true;
+      const antes = botao.textContent;
+
+      try {
+        botao.textContent = 'Subindo a vistoria…';
+        colher();
+        await guardar();
+        await sincronizar(atual);
+
+        if (!atual.remoto) {
+          throw new Error('A vistoria não subiu para o sistema. Confira o sinal e tente de novo.');
+        }
+
+        botao.textContent = 'Gerando o PDF…';
+        const pdf = await montarPdf();
+
+        botao.textContent = 'Enviando…';
+        const r = await C.pedirAssinatura({
+          remoto: atual.remoto, blob: pdf.blob, nome: pdf.nome,
+          whatsapp: d.whatsapp, email: d.email
+        });
+
+        atual.dados.assinatura = {
+          documento: r.documento, em: C.agora(), canal: r.canal,
+          clienteAssina: r.clienteAssina, link: r.linkDoCliente || null,
+          assinadoPor: r.assinadoPor || null, aviso: r.aviso || null,
+          sandbox: !!r.sandbox
+        };
+
+        await guardar();
+        await sincronizar(atual);
+
+        alert(r.clienteAssina
+          ? 'Pronto. O cliente recebeu o pedido de assinatura no WhatsApp.'
+          : 'Pronto. A vistoria foi assinada pela Dalmóbile e enviada por e-mail.');
+
+      } catch (erro) {
+        console.error(erro);
+        alert(erro.message || 'Não consegui enviar para assinatura.');
+        botao.textContent = antes;
+      } finally {
+        botao.disabled = false;
+        pintarEstado();
+      }
+    };
+  })();
+
   function pintarParecer(c) {
     const area = el('parecer');
     if (!area) return;            /* só a vistoria tem isto */
