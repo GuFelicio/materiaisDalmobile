@@ -4,6 +4,12 @@
    O desenho do PDF mora em pdf-doc.js. Aqui ficam só as coisas
    que são DESTE documento: os itens, os títulos e quem assina.
 
+   O bloco "Vistoria final" saiu daqui e virou documento próprio
+   (pdf-vistoria.js). Os 21 itens que ficaram falam de COMO A
+   EQUIPE TRABALHOU; os 15 que saíram falam do MÓVEL ENTREGUE, e
+   são os que o cliente confere e assina. Misturados, o cliente
+   assinaria um papel que avalia o uniforme dos montadores.
+
    Separado assim porque a vistoria com o cliente usa o mesmo
    desenho e itens diferentes. Enquanto era um arquivo só, criar
    o segundo documento significava copiar 776 linhas — e toda
@@ -60,29 +66,6 @@ const BLOCOS = [
       { id: 'l2', texto: 'Separação de resíduos recicláveis e não recicláveis' },
       { id: 'l3', texto: 'Proteções de piso, paredes e móveis mantidas durante a montagem' },
       { id: 'l4', texto: 'Área entregue limpa ao final do dia' }
-    ]
-  },
-  {
-    id: 'vistoria',
-    titulo: 'VISTORIA FINAL',
-    vocabulario: 'conforme',
-    itens: [
-      { id: 'v1',  texto: 'Acabamento interno' },
-      { id: 'v2',  texto: 'Acabamento externo' },
-      { id: 'v3',  texto: 'Regulagem de portas e gavetas' },
-      { id: 'v4',  texto: 'Regulagem de corrediças e dobradiças' },
-      { id: 'v5',  texto: 'Acabamentos gerais' },
-      { id: 'v6',  texto: 'Aplicação de tapa-furo' },
-      { id: 'v7',  texto: 'Acesso aos pontos de elétrica, gás e água' },
-      { id: 'v8',  texto: 'Recolhimento total de sobras e resíduos' },
-      { id: 'v9',  texto: 'Alinhamento de puxadores' },
-      { id: 'v10', texto: 'Aplicação de amortecedores' },
-      { id: 'v11', texto: 'Remoção de riscos de lápis' },
-      { id: 'v12', texto: 'Funcionalidade de acessórios' },
-      { id: 'v13', texto: 'Nivelamento dos móveis' },
-      /* Era "Emblema Todeschini" no papel. */
-      { id: 'v14', texto: 'Emblema Dalmóbile' },
-      { id: 'v15', texto: 'Limpeza do ambiente e dos móveis' }
     ]
   }
 ];
