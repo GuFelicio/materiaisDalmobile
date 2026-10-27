@@ -371,6 +371,7 @@
 <script src="auth.js"></script>
 <script src="pdf-doc.js"></script>
 <script src="pdf-montagem.js"></script>
+<script src="tela-itens.js"></script>
 <script>
 (function () {
   'use strict';
@@ -378,18 +379,9 @@
   const C = window.Campo;
   const Armazem = C.armazem('montagens');
 
-  /* A lista de blocos agora depende da ficha aberta, porque cada
-     uma pode ter itens acrescentados à mão. Pedir sempre ao
-     PDFMontagem evita que a tela e o PDF discordem sobre o que
-     existe. */
-  function blocosAtuais() {
-    if (!window.PDFMontagem) return [];
-    return PDFMontagem.blocos(atual ? atual.dados : null);
-  }
 
   let atual = null;
   let salvando = null;
-  const previas = {};
 
   function el(id) { return document.getElementById(id); }
 
@@ -455,6 +447,18 @@
      ============================================================ */
 
   const TIPO_DOC = 'montagem';
+
+  /* A tela dos itens mora em tela-itens.js, compartilhada com a
+     vistoria do cliente. Ela não conhece armazenamento nem
+     sincronia: avisa que mudou, e quem decide o que fazer é esta
+     página. */
+  const Itens = TelaItens({
+    caixa: el('blocos'),
+    receita: PDFMontagem,
+    ficha: function () { return atual; },
+    guardar: function () { return guardar(); },
+    aoMudar: function () { pintarEstado(); }
+  });
   const ROTULO_EQUIPE = 'Montagens da equipe';
 
   async function montarPdfDe(doc) {
@@ -621,7 +625,7 @@
     el('tela-lista').classList.remove('oculto');
     el('barra').classList.add('oculto');
     atual = null;
-    limparPrevias();
+    Itens.limparPrevias();
 
     await pintarRede();
     desenharEquipe();
@@ -689,7 +693,7 @@
     if (!m) return mostrarLista();
 
     atual = m;
-    limparPrevias();
+    Itens.limparPrevias();
 
     el('tela-lista').classList.add('oculto');
     el('tela-ficha').classList.remove('oculto');
@@ -713,95 +717,9 @@
     el('ver-historico').setAttribute('aria-expanded', 'false');
     el('f-observacoes').value = m.dados.observacoes || '';
 
-    desenharBlocos();
+    Itens.desenhar();
     pintarEstado();
     sincronizar(m);
-  }
-
-  /* ------------------------------------------------------------
-     Acrescentar item à mão
-     ------------------------------------------------------------
-     A obra traz coisa que o checklist não previu. Antes isso só
-     cabia em "observações gerais", onde não responde, não conta
-     e não recebe foto.
-
-     O id leva acaso junto com o relógio: duas fichas podem ser
-     preenchidas no mesmo milissegundo em aparelhos diferentes e
-     subir para o mesmo contrato. Dois itens com o mesmo id
-     compartilhariam resposta e foto, calados.
-     ------------------------------------------------------------ */
-  function novoIdDeItem() {
-    return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  }
-
-  function acrescentarItem(bloco) {
-    const area = document.createElement('div');
-    area.className = 'acrescentar';
-
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'mais';
-    b.textContent = '+ acrescentar item';
-
-    const forma = document.createElement('div');
-    forma.className = 'acrescentar-forma oculto';
-
-    const campo = document.createElement('input');
-    campo.type = 'text';
-    campo.placeholder = 'O que verificar';
-    campo.autocomplete = 'off';
-
-    const ok = document.createElement('button');
-    ok.type = 'button';
-    ok.className = 'mais firme';
-    ok.textContent = 'Incluir';
-
-    function abrir() {
-      forma.classList.remove('oculto');
-      b.classList.add('oculto');
-      campo.focus();
-    }
-
-    function fechar() {
-      forma.classList.add('oculto');
-      b.classList.remove('oculto');
-      campo.value = '';
-    }
-
-    function incluir() {
-      const texto = campo.value.trim();
-      if (!texto) { campo.focus(); return; }
-
-      atual.dados.extras = Array.isArray(atual.dados.extras) ? atual.dados.extras : [];
-      atual.dados.extras.push({ id: novoIdDeItem(), bloco: bloco.id, texto: texto });
-
-      fechar();
-      guardar();
-      desenharBlocos();
-    }
-
-    b.addEventListener('click', abrir);
-    ok.addEventListener('click', incluir);
-    campo.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') incluir();
-      if (e.key === 'Escape') fechar();
-    });
-
-    forma.append(campo, ok);
-    area.append(b, forma);
-    return area;
-  }
-
-  /* Tirar um item acrescentado leva junto a resposta e a foto
-     dele. Sem isso, a contagem passaria a somar uma resposta de
-     um item que ninguém mais vê. */
-  function tirarExtra(id) {
-    atual.dados.extras = (atual.dados.extras || []).filter(function (x) { return x.id !== id; });
-    /* As fotos moram dentro do próprio item, então apagar a
-       resposta leva as fotos junto. */
-    if (atual.dados.itens) delete atual.dados.itens[id];
-    guardar();
-    desenharBlocos();
   }
 
   /* ------------------------------------------------------------
@@ -937,27 +855,6 @@
     });
   })();
 
-  function desenharBlocos() {
-    const caixa = el('blocos');
-    caixa.innerHTML = '';
-
-    blocosAtuais().forEach(function (bloco) {
-      const cab = document.createElement('div');
-      cab.className = 'bloco-titulo';
-      cab.innerHTML = '<h2>' + C.escapar(bloco.titulo) + '</h2>' +
-                      '<span class="conta" data-bloco="' + bloco.id + '"></span>';
-      caixa.appendChild(cab);
-
-      bloco.itens.forEach(function (item) {
-        caixa.appendChild(montarItem(bloco, item));
-      });
-
-      caixa.appendChild(acrescentarItem(bloco));
-    });
-
-    pintarContas();
-  }
-
   /* Quantos faltam em cada bloco. Com 36 itens, rolar de volta
      para procurar o que ficou em branco é o jeito mais rápido de
      desistir do formulário. */
@@ -1006,170 +903,7 @@
     return linha;
   }
 
-  function pintarContas() {
-    blocosAtuais().forEach(function (bloco) {
-      const alvo = document.querySelector('.conta[data-bloco="' + bloco.id + '"]');
-      if (!alvo) return;
 
-      const respostas = atual.dados.itens || {};
-      const faltam = bloco.itens.filter(function (i) {
-        return !(respostas[i.id] || {}).resposta;
-      }).length;
-
-      alvo.textContent = faltam
-        ? faltam + ' de ' + bloco.itens.length + ' sem resposta'
-        : 'completo';
-      alvo.className = 'conta ' + (faltam ? 'falta' : 'pronto');
-    });
-  }
-
-  function montarItem(bloco, item) {
-    const v = PDFMontagem.VOCABULARIO[bloco.vocabulario];
-
-    const resposta = atual.dados.itens[item.id] ||
-                     (atual.dados.itens[item.id] = { resposta: '', obs: '', fotos: [] });
-
-    const d = document.createElement('div');
-    d.className = 'item' + (resposta.resposta === 'nao' ? ' nao' : '') +
-                           (item.extra ? ' acrescentado' : '');
-
-    d.innerHTML =
-      '<h3>' + C.escapar(item.texto) +
-        (item.extra ? '<button type="button" class="tirar-extra" title="Tirar este item">×</button>' : '') +
-      '</h3>' +
-      '<div class="escolha">' +
-        '<button type="button" class="sim" data-v="ok">'  + C.escapar(v.ok)  + '</button>' +
-        '<button type="button" class="nao" data-v="nao">' + C.escapar(v.nao) + '</button>' +
-        '<button type="button" class="na"  data-v="na">'  + C.escapar(v.na)  + '</button>' +
-      '</div>' +
-      '<div class="extras">' +
-        '<label class="anexar"><span>+</span> Foto' +
-          '<input type="file" accept="image/*" capture="environment" hidden multiple>' +
-        '</label>' +
-        '<button type="button" class="obs-btn" aria-expanded="false">Observação</button>' +
-      '</div>' +
-      '<div class="obs-campo" hidden>' +
-        '<textarea placeholder="O que foi encontrado"></textarea>' +
-      '</div>' +
-      '<div class="fotos"></div>';
-
-    const botaoTirar = d.querySelector('.tirar-extra');
-    if (botaoTirar) {
-      botaoTirar.onclick = function () {
-        /* Sem confirmar: o item foi escrito agora, por quem está
-           olhando, e devolver é só escrever de novo. Confirmação
-           em cada toque treina a pessoa a dizer sim sem ler. */
-        tirarExtra(item.id);
-      };
-    }
-
-    const anexar = d.querySelector('.anexar');
-    const obsBtn = d.querySelector('.obs-btn');
-    const obsCampo = d.querySelector('.obs-campo');
-    const obs = d.querySelector('textarea');
-    const fotos = d.querySelector('.fotos');
-
-    obs.value = resposta.obs || '';
-    obs.oninput = function () { resposta.obs = obs.value; guardar(); };
-
-    obsBtn.onclick = function () {
-      const abrindo = obsCampo.hidden;
-      obsCampo.hidden = !abrindo;
-      obsBtn.setAttribute('aria-expanded', String(abrindo));
-      if (abrindo) obs.focus();
-    };
-
-    d.querySelectorAll('.escolha button').forEach(function (b) {
-      b.setAttribute('aria-pressed', String(resposta.resposta === b.dataset.v));
-
-      b.onclick = function () {
-        /* Tocar de novo no que já estava marcado desmarca — um
-           "conforme" dado por engano precisa ter volta. */
-        resposta.resposta = (resposta.resposta === b.dataset.v) ? '' : b.dataset.v;
-
-        d.querySelectorAll('.escolha button').forEach(function (o) {
-          o.setAttribute('aria-pressed', String(resposta.resposta === o.dataset.v));
-        });
-
-        d.className = 'item' + (resposta.resposta === 'nao' ? ' nao' : '');
-
-        /* Não conforme abre a observação sozinho: é ali que o
-           supervisor diz o que precisa ser corrigido. */
-        if (resposta.resposta === 'nao' && obsCampo.hidden) {
-          obsCampo.hidden = false;
-          obsBtn.setAttribute('aria-expanded', 'true');
-        }
-
-        pintar();
-        guardar();
-        pintarEstado();
-        pintarContas();
-      };
-    });
-
-    function pintar() {
-      anexar.classList.toggle('vazio', !(resposta.fotos || []).length);
-      if (resposta.obs && obsCampo.hidden) {
-        obsCampo.hidden = false;
-        obsBtn.setAttribute('aria-expanded', 'true');
-      }
-    }
-
-    anexar.querySelector('input').onchange = async function () {
-      const novas = await C.receber(this.files, function () {
-        alert('Não consegui usar uma das fotos.');
-      });
-      this.value = '';
-
-      resposta.fotos = (resposta.fotos || []).concat(novas);
-      await guardar();
-      desenharFotos(fotos, resposta, pintar);
-      pintar();
-    };
-
-    desenharFotos(fotos, resposta, pintar);
-    pintar();
-
-    return d;
-  }
-
-  function desenharFotos(caixa, resposta, aoMudar) {
-    caixa.innerHTML = '';
-
-    (resposta.fotos || []).forEach(function (f, i) {
-      const d = document.createElement('div');
-      d.className = 'foto';
-      d.innerHTML =
-        '<img alt="">' +
-        '<button type="button" class="tirar" title="Remover">×</button>' +
-        '<input type="text" placeholder="Legenda" value="' + C.escapar(f.legenda || '') + '">';
-
-      const img = d.querySelector('img');
-
-      C.fotos.ler(f.id).then(function (reg) {
-        if (!reg) return;
-        if (previas[f.id]) URL.revokeObjectURL(previas[f.id]);
-        previas[f.id] = URL.createObjectURL(reg.blob);
-        img.src = previas[f.id];
-      });
-
-      d.querySelector('input').oninput = function () {
-        resposta.fotos[i].legenda = this.value;
-        guardar();
-      };
-
-      d.querySelector('.tirar').onclick = function () {
-        C.fotos.apagar(f.id);
-        if (previas[f.id]) { URL.revokeObjectURL(previas[f.id]); delete previas[f.id]; }
-        resposta.fotos.splice(i, 1);
-        guardar();
-        desenharFotos(caixa, resposta, aoMudar);
-        if (aoMudar) aoMudar();
-      };
-
-      caixa.appendChild(d);
-    });
-  }
 
 
   /* ============================================================
@@ -1489,12 +1223,7 @@
      Miudezas e partida
      ============================================================ */
 
-  function limparPrevias() {
-    Object.keys(previas).forEach(function (id) {
-      URL.revokeObjectURL(previas[id]);
-      delete previas[id];
-    });
-  }
+
 
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'hidden' && atual) guardar();
