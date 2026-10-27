@@ -88,6 +88,41 @@ const PDFDoc = (function () {
   }
 
   /** Todos os itens dos quatro blocos, em ordem, com o bloco junto. */
+  /* ------------------------------------------------------------
+     Itens acrescentados à mão
+     ------------------------------------------------------------
+     A obra traz coisa que o checklist não previu. Em vez de
+     empurrar tudo para "observações gerais", o vistoriador
+     acrescenta um item com o texto dele, e esse item responde e
+     recebe foto como qualquer outro.
+
+     A junção mora AQUI, e não em cada tela, porque a conta, o
+     desenho da página e o PDF precisam enxergar exatamente a
+     mesma lista. Com a junção repetida em três lugares, bastaria
+     um deles esquecer os extras para o documento dizer "completo"
+     com item em branco.
+     ------------------------------------------------------------ */
+  function blocosCom(BLOCOS, dados) {
+    const extras = (dados && Array.isArray(dados.extras)) ? dados.extras : [];
+    if (!extras.length) return BLOCOS;
+
+    return BLOCOS.map(function (b) {
+      const meus = extras.filter(function (x) { return x && x.bloco === b.id; });
+      if (!meus.length) return b;
+
+      const juntos = b.itens.concat(meus.map(function (x) {
+        return { id: x.id, texto: x.texto, extra: true };
+      }));
+      /* Cópia rasa com os itens trocados: mexer em b.itens
+         contaminaria a receita, que é compartilhada entre todas
+         as fichas abertas na mesma sessão. */
+      const copia = {};
+      Object.keys(b).forEach(function (k) { copia[k] = b[k]; });
+      copia.itens = juntos;
+      return copia;
+    });
+  }
+
   function todosOsItens(BLOCOS) {
     const saida = [];
     BLOCOS.forEach(function (b) {
@@ -98,6 +133,7 @@ const PDFDoc = (function () {
 
   /** Conta respostas. Serve ao PDF e à barra da tela. */
   function contar(dados, BLOCOS) {
+    BLOCOS = blocosCom(BLOCOS, dados);
     const r = (dados && dados.itens) || {};
     const c = { total: 0, ok: 0, nao: 0, na: 0, faltam: 0 };
 
@@ -137,7 +173,7 @@ const PDFDoc = (function () {
     novaPagina(e);
     cabecalho(e, doc, dados);
 
-    receita.blocos.forEach(function (b) { desenharBloco(e, b, dados); });
+    blocosCom(receita.blocos, dados).forEach(function (b) { desenharBloco(e, b, dados); });
 
     if (String(dados.observacoes || '').trim()) {
       blocoDeTexto(e, 'OBSERVAÇÕES GERAIS E NÃO CONFORMIDADES',
@@ -721,6 +757,10 @@ const PDFDoc = (function () {
       montar: function (doc) { return montar(doc, receita); },
       nomeDoArquivo: function (doc) { return nomeDoArquivo(doc, receita.prefixo); },
       BLOCOS: B,
+      /* A lista de verdade de uma ficha: a receita mais o que foi
+         acrescentado nela. Quem desenha a tela usa esta, nunca
+         BLOCOS cru. */
+      blocos: function (dados) { return blocosCom(B, dados); },
       VOCABULARIO: VOCABULARIO,
       rotulo: rotulo,
       contar: function (dados) { return contar(dados, B); },

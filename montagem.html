@@ -81,6 +81,44 @@
 
   .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .campo { margin-bottom: 14px; }
+  .historico { margin-top: 22px; }
+  .versao {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+    padding: 11px 13px; margin-top: 8px;
+  }
+  .versao .topo { display: flex; align-items: baseline; gap: 8px; }
+  .versao .numero { font-weight: 700; font-size: 14px; }
+  .versao .quando { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+  .versao .porque { font-size: 13.5px; color: var(--ink-2); margin: 3px 0 0; }
+  .versao .digital {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--muted); margin-top: 5px; word-break: break-all;
+  }
+  .versao.pendente { border-style: dashed; }
+  .historico .recado { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 8px; }
+  .acrescentar { margin: -4px 0 18px; }
+  .acrescentar .mais {
+    border: 1px dashed var(--line-2); background: none; color: var(--muted);
+    border-radius: 10px; padding: 9px 14px; font: inherit; font-size: 13.5px;
+    cursor: pointer; width: 100%;
+  }
+  .acrescentar .mais.firme {
+    border-style: solid; border-color: var(--ink); background: var(--ink);
+    color: #fff; width: auto; flex: 0 0 auto; font-weight: 600;
+  }
+  .acrescentar-forma { display: flex; gap: 7px; }
+  .acrescentar-forma input {
+    flex: 1; min-width: 0; padding: 9px 11px; font: inherit; font-size: 14px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+    color: var(--ink);
+  }
+  .acrescentar .oculto { display: none; }
+  .item.acrescentado { border-left: 3px solid var(--line-2); }
+  .item.acrescentado h3 { display: flex; align-items: flex-start; gap: 8px; }
+  .tirar-extra {
+    margin-left: auto; border: 0; background: none; color: var(--muted);
+    font-size: 19px; line-height: 1; cursor: pointer; padding: 0 2px;
+  }
   .montadores { display: flex; flex-wrap: wrap; gap: 7px; }
   .montadores button {
     padding: 8px 13px; border-radius: 999px; font: inherit; font-size: 14px;
@@ -303,6 +341,13 @@
       <textarea id="f-observacoes" placeholder="O que não coube nos itens acima"></textarea>
     </div>
 
+    <div class="historico" id="historico">
+      <button type="button" class="btn vazio largo" id="ver-historico" aria-expanded="false">
+        Histórico de versões
+      </button>
+      <div id="historico-lista" hidden></div>
+    </div>
+
     <button class="btn vazio largo" id="apagar"
             style="margin-top:6px;border-color:var(--erro-line);color:var(--erro)">
       Apagar esta montagem
@@ -333,7 +378,14 @@
   const C = window.Campo;
   const Armazem = C.armazem('montagens');
 
-  const BLOCOS = window.PDFMontagem ? PDFMontagem.BLOCOS : [];
+  /* A lista de blocos agora depende da ficha aberta, porque cada
+     uma pode ter itens acrescentados à mão. Pedir sempre ao
+     PDFMontagem evita que a tela e o PDF discordem sobre o que
+     existe. */
+  function blocosAtuais() {
+    if (!window.PDFMontagem) return [];
+    return PDFMontagem.blocos(atual ? atual.dados : null);
+  }
 
   let atual = null;
   let salvando = null;
@@ -653,6 +705,12 @@
        num montador leria undefined e perderia a escolha. */
     if (!Array.isArray(m.dados.montadores)) m.dados.montadores = [];
     pintarMontadores();
+
+    /* Fecha o histórico ao trocar de ficha: aberto, ele mostraria
+       as versões da anterior até alguém tocar de novo. */
+    el('historico-lista').hidden = true;
+    el('historico-lista').innerHTML = '';
+    el('ver-historico').setAttribute('aria-expanded', 'false');
     el('f-observacoes').value = m.dados.observacoes || '';
 
     desenharBlocos();
@@ -660,11 +718,230 @@
     sincronizar(m);
   }
 
+  /* ------------------------------------------------------------
+     Acrescentar item à mão
+     ------------------------------------------------------------
+     A obra traz coisa que o checklist não previu. Antes isso só
+     cabia em "observações gerais", onde não responde, não conta
+     e não recebe foto.
+
+     O id leva acaso junto com o relógio: duas fichas podem ser
+     preenchidas no mesmo milissegundo em aparelhos diferentes e
+     subir para o mesmo contrato. Dois itens com o mesmo id
+     compartilhariam resposta e foto, calados.
+     ------------------------------------------------------------ */
+  function novoIdDeItem() {
+    return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function acrescentarItem(bloco) {
+    const area = document.createElement('div');
+    area.className = 'acrescentar';
+
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mais';
+    b.textContent = '+ acrescentar item';
+
+    const forma = document.createElement('div');
+    forma.className = 'acrescentar-forma oculto';
+
+    const campo = document.createElement('input');
+    campo.type = 'text';
+    campo.placeholder = 'O que verificar';
+    campo.autocomplete = 'off';
+
+    const ok = document.createElement('button');
+    ok.type = 'button';
+    ok.className = 'mais firme';
+    ok.textContent = 'Incluir';
+
+    function abrir() {
+      forma.classList.remove('oculto');
+      b.classList.add('oculto');
+      campo.focus();
+    }
+
+    function fechar() {
+      forma.classList.add('oculto');
+      b.classList.remove('oculto');
+      campo.value = '';
+    }
+
+    function incluir() {
+      const texto = campo.value.trim();
+      if (!texto) { campo.focus(); return; }
+
+      atual.dados.extras = Array.isArray(atual.dados.extras) ? atual.dados.extras : [];
+      atual.dados.extras.push({ id: novoIdDeItem(), bloco: bloco.id, texto: texto });
+
+      fechar();
+      guardar();
+      desenharBlocos();
+    }
+
+    b.addEventListener('click', abrir);
+    ok.addEventListener('click', incluir);
+    campo.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') incluir();
+      if (e.key === 'Escape') fechar();
+    });
+
+    forma.append(campo, ok);
+    area.append(b, forma);
+    return area;
+  }
+
+  /* Tirar um item acrescentado leva junto a resposta e a foto
+     dele. Sem isso, a contagem passaria a somar uma resposta de
+     um item que ninguém mais vê. */
+  function tirarExtra(id) {
+    atual.dados.extras = (atual.dados.extras || []).filter(function (x) { return x.id !== id; });
+    /* As fotos moram dentro do próprio item, então apagar a
+       resposta leva as fotos junto. */
+    if (atual.dados.itens) delete atual.dados.itens[id];
+    guardar();
+    desenharBlocos();
+  }
+
+  /* ------------------------------------------------------------
+     Histórico de versões
+     ------------------------------------------------------------
+     A versão já era gravada em cada PDF gerado, com a impressão
+     digital do arquivo — faltava onde olhar.
+
+     Duas origens, e as duas importam: o que já subiu (servidor)
+     e o que ainda está na fila do aparelho. Mostrar só o que
+     subiu esconderia justamente a versão do momento em que o
+     cliente viu o documento, que é a que foi gerada na obra, sem
+     sinal.
+     ------------------------------------------------------------ */
+  const MOTIVOS = {
+    pdf: 'PDF gerado',
+    assinado: 'documento assinado',
+    correcao: 'correção depois de assinado',
+    reabertura: 'medição reaberta'
+  };
+
+  function cartaoDeVersao(v, pendente) {
+    const d = document.createElement('div');
+    d.className = 'versao' + (pendente ? ' pendente' : '');
+
+    const topo = document.createElement('div');
+    topo.className = 'topo';
+
+    const num = document.createElement('span');
+    num.className = 'numero';
+    num.textContent = pendente ? 'a subir' : 'versão ' + v.numero;
+
+    const quando = document.createElement('span');
+    quando.className = 'quando';
+    quando.textContent = dataLonga(pendente ? v.em : v.criada_em);
+
+    topo.append(num, quando);
+
+    const porque = document.createElement('p');
+    porque.className = 'porque';
+    porque.textContent = (MOTIVOS[v.motivo] || v.motivo || 'sem motivo registrado') +
+      (v.criada_por_nome ? ' · ' + v.criada_por_nome : '');
+
+    d.append(topo, porque);
+
+    if (v.hash) {
+      const dig = document.createElement('p');
+      dig.className = 'digital';
+      /* Os 16 primeiros bastam para conferir à vista se o papel
+         na mão é esta versão; o resto só ocuparia a tela. */
+      dig.textContent = 'impressão digital ' + String(v.hash).slice(0, 16);
+      d.appendChild(dig);
+    }
+
+    return d;
+  }
+
+  function dataLonga(iso) {
+    const d = new Date(iso);
+    if (!iso || isNaN(d)) return 'sem data';
+    return d.toLocaleDateString('pt-BR') + ' às ' +
+           d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function recado(caixa, texto) {
+    const p = document.createElement('p');
+    p.className = 'recado';
+    p.textContent = texto;
+    caixa.appendChild(p);
+  }
+
+  async function desenharHistorico() {
+    const caixa = el('historico-lista');
+    caixa.innerHTML = '';
+    if (!atual) return;
+
+    /* A fila do aparelho primeiro: é o que acabou de acontecer. */
+    const fila = atual.marcos || [];
+
+    const sb = C.temServidor();
+    let subidas = [];
+    let falhou = null;
+
+    if (sb && atual.remoto) {
+      try {
+        const r = await sb.from('formulario_historico')
+          .select('numero, motivo, hash, criada_em, criada_por_nome')
+          .eq('formulario', atual.remoto)
+          .order('numero', { ascending: false });
+        if (r.error) falhou = r.error.message;
+        else subidas = r.data || [];
+      } catch (e) {
+        falhou = e.message;
+      }
+    }
+
+    fila.slice().reverse().forEach(function (m) {
+      caixa.appendChild(cartaoDeVersao(m, true));
+    });
+    subidas.forEach(function (v) { caixa.appendChild(cartaoDeVersao(v, false)); });
+
+    if (!fila.length && !subidas.length) {
+      recado(caixa, falhou
+        ? 'Não consegui ler o histórico agora: ' + falhou
+        : (!atual.remoto
+            ? 'Esta montagem ainda não subiu. A primeira versão nasce quando o PDF for gerado.'
+            : 'Nenhuma versão ainda. Elas nascem quando o PDF é gerado.'));
+      return;
+    }
+
+    if (!sb || !atual.remoto) {
+      recado(caixa, 'Sem conexão: aparecem só as versões guardadas neste aparelho. ' +
+                    'As que já subiram aparecem quando houver sinal.');
+    } else if (falhou) {
+      recado(caixa, 'As versões do servidor não vieram agora: ' + falhou);
+    }
+  }
+
+  (function ligarHistorico() {
+    const b = el('ver-historico');
+    const caixa = el('historico-lista');
+    if (!b || !caixa) return;
+
+    b.addEventListener('click', async function () {
+      const abrindo = caixa.hidden;
+      caixa.hidden = !abrindo;
+      b.setAttribute('aria-expanded', String(abrindo));
+      if (abrindo) {
+        caixa.innerHTML = '';
+        recado(caixa, 'Carregando...');
+        await desenharHistorico();
+      }
+    });
+  })();
+
   function desenharBlocos() {
     const caixa = el('blocos');
     caixa.innerHTML = '';
 
-    BLOCOS.forEach(function (bloco) {
+    blocosAtuais().forEach(function (bloco) {
       const cab = document.createElement('div');
       cab.className = 'bloco-titulo';
       cab.innerHTML = '<h2>' + C.escapar(bloco.titulo) + '</h2>' +
@@ -674,6 +951,8 @@
       bloco.itens.forEach(function (item) {
         caixa.appendChild(montarItem(bloco, item));
       });
+
+      caixa.appendChild(acrescentarItem(bloco));
     });
 
     pintarContas();
@@ -728,7 +1007,7 @@
   }
 
   function pintarContas() {
-    BLOCOS.forEach(function (bloco) {
+    blocosAtuais().forEach(function (bloco) {
       const alvo = document.querySelector('.conta[data-bloco="' + bloco.id + '"]');
       if (!alvo) return;
 
@@ -751,10 +1030,13 @@
                      (atual.dados.itens[item.id] = { resposta: '', obs: '', fotos: [] });
 
     const d = document.createElement('div');
-    d.className = 'item' + (resposta.resposta === 'nao' ? ' nao' : '');
+    d.className = 'item' + (resposta.resposta === 'nao' ? ' nao' : '') +
+                           (item.extra ? ' acrescentado' : '');
 
     d.innerHTML =
-      '<h3>' + C.escapar(item.texto) + '</h3>' +
+      '<h3>' + C.escapar(item.texto) +
+        (item.extra ? '<button type="button" class="tirar-extra" title="Tirar este item">×</button>' : '') +
+      '</h3>' +
       '<div class="escolha">' +
         '<button type="button" class="sim" data-v="ok">'  + C.escapar(v.ok)  + '</button>' +
         '<button type="button" class="nao" data-v="nao">' + C.escapar(v.nao) + '</button>' +
@@ -770,6 +1052,16 @@
         '<textarea placeholder="O que foi encontrado"></textarea>' +
       '</div>' +
       '<div class="fotos"></div>';
+
+    const botaoTirar = d.querySelector('.tirar-extra');
+    if (botaoTirar) {
+      botaoTirar.onclick = function () {
+        /* Sem confirmar: o item foi escrito agora, por quem está
+           olhando, e devolver é só escrever de novo. Confirmação
+           em cada toque treina a pessoa a dizer sim sem ler. */
+        tirarExtra(item.id);
+      };
+    }
 
     const anexar = d.querySelector('.anexar');
     const obsBtn = d.querySelector('.obs-btn');
