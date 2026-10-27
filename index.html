@@ -631,14 +631,25 @@ const CATALOGO = [
       sjc: 'https://script.google.com/macros/s/AKfycbwxQcXBO9b_75gwXHVsP4i5L6zucxPFGAQNpvaPNZiqITvmwz9x_GDNeOnfJxcQe57U/exec',
       cgt: 'https://script.google.com/macros/s/AKfycby33G9QNUNl9r9G1yTopKx2BoFp8ftpe6hwgrXX2DZ5_N18EUBcHUaojzX7_1-JomQi/exec'
     },
+    /* O cargo é um campo próprio, com as duas formas escritas por
+       extenso, em vez de um "Consultor(a)" que resolve tudo e
+       erra o tom. O card imprime o que estiver escolhido aqui,
+       então quem monta a peça lê exatamente o que vai sair. */
     campos: [
       CLIENTE,
+      GENERO,
       CONSULTOR,
+      { chave: 'cargoConsultor', rotulo: 'Cargo', tipo: 'lista', obrigatorio: true,
+        opcoes: ['Consultora de Vendas', 'Consultor de Vendas'] },
       { chave: 'temArquiteto', rotulo: 'Este projeto tem arquiteto', tipo: 'checkbox', padrao: true },
       { chave: 'arquiteto', rotulo: 'Arquiteto', tipo: 'texto',
         exemplo: 'Ex.: Camila Prado', obrigatorio: true, dependeDe: 'temArquiteto' },
+      { chave: 'cargoArquiteto', rotulo: 'Cargo', tipo: 'lista', obrigatorio: true,
+        dependeDe: 'temArquiteto', opcoes: ['Arquiteta', 'Arquiteto'] },
       { chave: 'executivo', rotulo: 'Executivo', tipo: 'texto',
-        exemplo: 'Ex.: Marcos Rocha', obrigatorio: true }
+        exemplo: 'Ex.: Marcos Rocha', obrigatorio: true },
+      { chave: 'cargoExecutivo', rotulo: 'Cargo', tipo: 'lista', obrigatorio: true,
+        opcoes: ['Executiva', 'Executivo'] }
     ]
   },
 

@@ -338,12 +338,27 @@ window.Pecas = (function () {
   /* O texto fixo. Saiu da arte do Slides para cá — com a
      correção de "Caraguatauba" para "Caraguatatuba", que estava
      errado no original e ia para o cliente assim. */
+  /* As palavras que mudam com quem recebe o card. O cartão A6 já
+     fazia isso; aqui o texto estava travado no plural masculino,
+     então "Seja bem-vinda" no título convivia com "recebê-los"
+     duas linhas abaixo. Concordar só a saudação deixaria a peça
+     pela metade, que é pior que não concordar nada. */
+  const FLEXOES_CARD = {
+    ele:  { seja: 'Seja',  bemvindo: 'bem-vindo',  recebelo: 'recebê-lo',  voce: 'você'  },
+    ela:  { seja: 'Seja',  bemvindo: 'bem-vinda',  recebelo: 'recebê-la',  voce: 'você'  },
+    eles: { seja: 'Sejam', bemvindo: 'bem-vindos', recebelo: 'recebê-los', voce: 'vocês' },
+    elas: { seja: 'Sejam', bemvindo: 'bem-vindas', recebelo: 'recebê-las', voce: 'vocês' }
+  };
+
   const CARD_TEXTO = {
-    saudacao: 'Sejam muito bem-vindos à Dalmóbile {cidade}!',
+    saudacao: '{seja} {bemvindo} à Dalmóbile {cidade}!',
+    /* As linhas continuam quebradas à mão porque são justificadas
+       e o desenho depende desses cortes. As trocas mudam uma ou
+       duas letras por linha — a justificação absorve sozinha. */
     paragrafos: [
-      ['É uma satisfação recebê-los e agradecer pela confiança em nos permitir fazer parte da',
+      ['É uma satisfação {recebelo} e agradecer pela confiança em nos permitir fazer parte da',
        'realização do seu novo lar.'],
-      ['A partir de agora, compartilhamos com vocês as próximas etapas do processo até a entrega',
+      ['A partir de agora, compartilhamos com {voce} as próximas etapas do processo até a entrega',
        'e execução do seu mobiliário, bem como os profissionais que estarão ao seu lado em cada',
        'fase dessa jornada:']
     ],
@@ -828,6 +843,18 @@ window.Pecas = (function () {
      CARD DE APRESENTAÇÃO NO WHATSAPP
      ============================================================ */
 
+  /* Põe "Nome – Cargo" na lista. Se o nome vier vazio, não entra
+     linha nenhuma; se já vier com travessão, quer dizer que a
+     pessoa escreveu o cargo na mão — e aí respeito o que ela
+     escreveu em vez de carimbar o cargo duas vezes. */
+  function juntar(lista, nome, cargo) {
+    const t = String(nome || '').trim();
+    if (!t) return;
+    const c = String(cargo || '').trim();
+    if (!c || /[–—-]/.test(t)) { lista.push(t); return; }
+    lista.push(t + ' – ' + c);
+  }
+
   async function cardWhatsApp(dados) {
     const M = CARD_WPP;
     const loja = dados.loja === 'cgt' ? 'cgt' : 'sjc';
@@ -855,12 +882,26 @@ window.Pecas = (function () {
       escreverNaMancha(ctx, nome, M.cliente.x, M.cliente.base);
     }
 
+    /* ---------- as trocas de concordância ---------- */
+    const flex = FLEXOES_CARD[dados.genero] || FLEXOES_CARD.eles;
+    const trocas = {
+      '{seja}': flex.seja,
+      '{bemvindo}': flex.bemvindo,
+      '{recebelo}': flex.recebelo,
+      '{voce}': flex.voce,
+      '{cidade}': CIDADES_CARD[loja]
+    };
+    const flexionar = function (t) {
+      return String(t).replace(/\{[a-zA-Z]+\}/g, function (m) {
+        return m in trocas ? trocas[m] : m;
+      });
+    };
+
     /* ---------- saudação ---------- */
     ctx.fillStyle = M.saudacao.cor;
     ctx.font = fonteDe(M.saudacao.peso, M.saudacao.corpo);
-    escreverNaMancha(ctx,
-      CARD_TEXTO.saudacao.replace('{cidade}', CIDADES_CARD[loja]),
-      M.saudacao.x, M.saudacao.base);
+    escreverNaMancha(ctx, flexionar(CARD_TEXTO.saudacao),
+                     M.saudacao.x, M.saudacao.base);
 
     /* ---------- parágrafos justificados ---------- */
     ctx.fillStyle = M.texto.cor;
@@ -873,19 +914,23 @@ window.Pecas = (function () {
         /* A última linha do parágrafo não estica: esticá-la
            abriria vãos enormes entre poucas palavras. */
         if (i === par.length - 1) {
-          escreverNaMancha(ctx, t, M.texto.x, base);
+          escreverNaMancha(ctx, flexionar(t), M.texto.x, base);
         } else {
-          escreverJustificado(ctx, t, M.texto.x, M.texto.direita, base);
+          escreverJustificado(ctx, flexionar(t), M.texto.x, M.texto.direita, base);
         }
         linha++;
       });
     });
 
     /* ---------- a lista ---------- */
+    /* O cargo vem do formulário já escrito por extenso, com o
+       gênero escolhido ali. Antes o card imprimia só o que fosse
+       digitado, e como na prática se digita o primeiro nome, a
+       lista saía sem cargo nenhum. */
     const lista = [];
-    if (dados.consultor) lista.push(dados.consultor);
-    if (dados.temArquiteto && dados.arquiteto) lista.push(dados.arquiteto);
-    if (dados.executivo) lista.push(dados.executivo);
+    juntar(lista, dados.consultor, dados.cargoConsultor);
+    if (dados.temArquiteto) juntar(lista, dados.arquiteto, dados.cargoArquiteto);
+    juntar(lista, dados.executivo, dados.cargoExecutivo);
     lista.push(CARD_TEXTO.fixo);
 
     ctx.fillStyle = M.itens.cor;
