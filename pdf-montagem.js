@@ -42,12 +42,12 @@ const BLOCOS = [
     itens: [
       { id: 'c1', texto: 'Peças apoiadas nas paredes' },
       { id: 'c2', texto: 'Área de montagem organizada e livre de obstáculos' },
-      { id: 'c3', texto: 'Utilização adequada de tapa-furos (havia a necessidade?)' },
-      { id: 'c4', texto: 'Padrão simétrico de tapa-furos' },
+      { id: 'c3', texto: 'Tapa-furos usados onde era necessário' },
+      { id: 'c4', texto: 'Tapa-furos aplicados em padrão simétrico' },
       { id: 'c5', texto: 'Colocação de capinha nas dobradiças' },
       { id: 'c6', texto: 'Colocação do acabamento no VB' },
-      { id: 'c7', texto: 'Regulagens de portas e gavetas' },
-      { id: 'c8', texto: 'Acabamentos' },
+      { id: 'c7', texto: 'Portas e gavetas reguladas durante a montagem' },
+      { id: 'c8', texto: 'Acabamentos executados durante a montagem' },
       { id: 'c9', texto: 'Projeto montado conforme o Caderno de Montagem' }
     ]
   },

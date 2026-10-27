@@ -102,17 +102,25 @@ const PDFDoc = (function () {
      um deles esquecer os extras para o documento dizer "completo"
      com item em branco.
      ------------------------------------------------------------ */
-  function blocosCom(BLOCOS, dados) {
+  function blocosCom(BLOCOS, dados, filtro) {
     const extras = (dados && Array.isArray(dados.extras)) ? dados.extras : [];
-    if (!extras.length) return BLOCOS;
+    if (!extras.length && !filtro) return BLOCOS;
+
+    const respostas = (dados && dados.itens) || {};
 
     return BLOCOS.map(function (b) {
       const meus = extras.filter(function (x) { return x && x.bloco === b.id; });
-      if (!meus.length) return b;
+      if (!meus.length && !filtro) return b;
 
-      const juntos = b.itens.concat(meus.map(function (x) {
+      let juntos = b.itens.concat(meus.map(function (x) {
         return { id: x.id, texto: x.texto, extra: true };
       }));
+
+      if (filtro) {
+        juntos = juntos.filter(function (i) {
+          return filtro(i, respostas[i.id] || {});
+        });
+      }
       /* Cópia rasa com os itens trocados: mexer em b.itens
          contaminaria a receita, que é compartilhada entre todas
          as fichas abertas na mesma sessão. */
@@ -120,7 +128,9 @@ const PDFDoc = (function () {
       Object.keys(b).forEach(function (k) { copia[k] = b[k]; });
       copia.itens = juntos;
       return copia;
-    });
+    /* Bloco que ficou sem item nenhum sai do documento: um título
+       seguido de nada parece defeito de geração. */
+    }).filter(function (b) { return b.itens.length > 0; });
   }
 
   function todosOsItens(BLOCOS) {
@@ -173,7 +183,8 @@ const PDFDoc = (function () {
     novaPagina(e);
     cabecalho(e, doc, dados);
 
-    blocosCom(receita.blocos, dados).forEach(function (b) { desenharBloco(e, b, dados); });
+    blocosCom(receita.blocos, dados, receita.filtroDeItem)
+      .forEach(function (b) { desenharBloco(e, b, dados); });
 
     if (String(dados.observacoes || '').trim()) {
       blocoDeTexto(e, 'OBSERVAÇÕES GERAIS E NÃO CONFORMIDADES',
@@ -624,8 +635,12 @@ const PDFDoc = (function () {
       });
 
       const resp = String((doc.dados || {}).responsavel || '').trim();
+      /* Vinha fixo como "Documento interno de qualidade", que é
+         verdade na vistoria de equipe e mentira na que o cliente
+         assina. */
       pagina.drawText(
-        'Documento interno de qualidade' + (resp ? ' · ' + resp : '') + ' · ' +
+        (e.receita.legendaDoRodape || 'Documento interno de qualidade') +
+        (resp ? ' · ' + resp : '') + ' · ' +
         dataLonga(doc.preenchido_em || doc.atualizado_em), {
         x: MARGEM.esq, y: 20, size: 6.4, font: e.fontes.media,
         color: e.rgb.apply(null, COR.apagado)
