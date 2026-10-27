@@ -70,30 +70,71 @@ const PRAZO_ASSISTENCIA = '20 dias úteis';
 /* ------------------------------------------------------------
    O parecer
    ------------------------------------------------------------
-   Três estados, não dois. "Incompleta" existe porque uma
-   vistoria com item em branco não é nem liberação nem pendência
-   — e chamá-la de qualquer uma das duas seria mentir no
-   documento que o cliente assina.
+   Cinco estados, e só dois deles são escolha de alguém.
+
+     incompleta  — item em branco. Não é aprovação nem reprovação,
+                   e chamá-la de qualquer uma das duas seria
+                   mentir num documento que o cliente assina.
+     aprovada    — nenhuma não conformidade. Automático: não há o
+                   que decidir, e por isso NÃO existe como opção
+                   na tela. É o que impede alguém de marcar "sem
+                   restrição" com pendência na lista.
+     indefinido  — há pendência e ninguém disse ainda se aprova
+                   com assistência ou reprova.
+     assistencia — há pendência e a obra foi aprovada assim
+                   mesmo. O cliente assina.
+     reprovada   — há pendência e a obra não foi aceita. Quem
+                   assina é a Dalmóbile; o cliente recebe.
+
+   A escolha existe só dentro do ramo que tem pendência. É o
+   pedaço da garantia que dá para manter: o julgamento é humano,
+   mas o ramo em que ele acontece não é.
    ------------------------------------------------------------ */
-function parecerDaVistoria(dados, c) {
-  if (c.faltam) {
-    return { texto: 'VISTORIA INCOMPLETA', cor: [0.54, 0.29, 0.07] };
-  }
-  if (c.nao) {
-    return {
-      texto: c.nao === 1 ? '1 PENDÊNCIA — OBRA NÃO LIBERADA'
-                         : c.nao + ' PENDÊNCIAS — OBRA NÃO LIBERADA',
-      cor: [0.70, 0.15, 0.12]
-    };
-  }
-  return { texto: 'OBRA LIBERADA', cor: [0.11, 0.42, 0.25] };
+const COR_APROVA   = [0.11, 0.42, 0.25];
+const COR_ATENCAO  = [0.54, 0.29, 0.07];
+const COR_REPROVA  = [0.70, 0.15, 0.12];
+
+function situacao(dados, c) {
+  if (c.faltam) return 'incompleta';
+  if (!c.nao) return 'aprovada';
+
+  const escolhido = String((dados || {}).parecer || '');
+  if (escolhido === 'reprovada') return 'reprovada';
+  if (escolhido === 'assistencia') return 'assistencia';
+  return 'indefinido';
 }
 
-/* Mesma pergunta, em palavras de quem lê: serve para a tela e
-   para qualquer lugar que precise do veredito sem montar o PDF. */
-function situacao(contagem) {
-  if (contagem.faltam) return 'incompleta';
-  return contagem.nao ? 'pendencias' : 'liberada';
+function pendencias(c) {
+  return c.nao === 1 ? '1 pendência' : c.nao + ' pendências';
+}
+
+function parecerDaVistoria(dados, c) {
+  switch (situacao(dados, c)) {
+    case 'incompleta':
+      return { texto: 'VISTORIA INCOMPLETA', cor: COR_ATENCAO };
+
+    case 'aprovada':
+      return { texto: 'OBRA APROVADA SEM RESTRIÇÃO', cor: COR_APROVA };
+
+    case 'assistencia':
+      return { texto: 'APROVADA COM ASSISTÊNCIA — ' + pendencias(c), cor: COR_ATENCAO };
+
+    case 'reprovada':
+      return { texto: 'OBRA REPROVADA — ' + pendencias(c), cor: COR_REPROVA };
+
+    default:
+      return { texto: 'PARECER NÃO DEFINIDO — ' + pendencias(c), cor: COR_ATENCAO };
+  }
+}
+
+/* Quem assina depende do parecer, e não do contrário: aprovada,
+   com ou sem assistência, o cliente assina. Reprovada, quem
+   assina é a Dalmóbile e o cliente recebe. */
+function quemAssina(dados, c) {
+  const s = situacao(dados, c);
+  if (s === 'aprovada' || s === 'assistencia') return 'cliente';
+  if (s === 'reprovada') return 'loja';
+  return null;   /* ainda não está pronta para assinar */
 }
 
 
@@ -143,5 +184,6 @@ PDFVistoria.assistencia = PDFDoc.criar({
 PDFVistoria.ITENS = ITENS_VISTORIA;
 PDFVistoria.PRAZO_ASSISTENCIA = PRAZO_ASSISTENCIA;
 PDFVistoria.situacao = situacao;
+PDFVistoria.quemAssina = quemAssina;
 
 window.PDFVistoria = PDFVistoria;

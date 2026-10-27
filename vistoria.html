@@ -81,6 +81,29 @@
 
   .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .campo { margin-bottom: 14px; }
+  .parecer {
+    margin-top: 22px; padding: 14px 15px; border-radius: var(--radius);
+    border: 1px solid var(--line); background: var(--card);
+  }
+  .parecer .veredito { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
+  .parecer .recado { margin: 5px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .parecer .recado.aviso { color: var(--aviso); font-weight: 600; }
+  .parecer.aprovada { border-color: var(--ok-line); background: var(--ok-bg); }
+  .parecer.aprovada .veredito { color: var(--ok); }
+  .parecer.escolher { border-color: var(--aviso-line); background: var(--aviso-bg); }
+  .parecer.escolher .veredito { color: var(--aviso); }
+  .parecer-opcoes { display: grid; gap: 8px; margin-top: 11px; }
+  .parecer-opcoes button {
+    text-align: left; padding: 11px 13px; border-radius: 11px; font: inherit;
+    border: 1px solid var(--line-2); background: var(--card); color: var(--ink);
+    cursor: pointer;
+  }
+  .parecer-opcoes button b { display: block; font-size: 14.5px; }
+  .parecer-opcoes button small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+  .parecer-opcoes button[aria-pressed="true"] {
+    background: var(--ink); border-color: var(--ink); color: #fff;
+  }
+  .parecer-opcoes button[aria-pressed="true"] small { color: rgba(255,255,255,.72); }
   .historico { margin-top: 22px; }
   .versao {
     border: 1px solid var(--line); border-radius: 12px; background: var(--card);
@@ -336,6 +359,8 @@
     </div>
 
     <div id="blocos"></div>
+
+    <div class="parecer aguardando" id="parecer"></div>
 
     <div class="campo" style="margin-top:22px">
       <label class="rot" for="f-observacoes">Observações gerais e não conformidades</label>

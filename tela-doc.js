@@ -716,6 +716,90 @@
       ? '<b>' + (c.total - c.faltam) + '</b> de ' + c.total + ' respondidos'
       : (c.nao ? '<b>' + c.nao + '</b> não conforme' + (c.nao > 1 ? 's' : '')
                : 'Tudo conforme');
+
+    pintarParecer(c);
+  }
+
+  /* ------------------------------------------------------------
+     O parecer da vistoria
+     ------------------------------------------------------------
+     A escolha só aparece quando há pendência. Sem pendência não
+     há o que decidir, e oferecer a escolha ali seria convidar
+     alguém a marcar "reprovada" numa obra conforme — ou, pior, a
+     aprovar com restrição uma obra que não tem nenhuma.
+
+     Com item em branco também não aparece: antes de concluir é
+     preciso terminar.
+     ------------------------------------------------------------ */
+  function pintarParecer(c) {
+    const area = el('parecer');
+    if (!area) return;            /* só a vistoria tem isto */
+
+    const dados = atual.dados;
+
+    if (c.faltam) {
+      area.className = 'parecer aguardando';
+      area.innerHTML = '<p class="recado">Responda todos os itens para concluir a vistoria.</p>';
+      return;
+    }
+
+    if (!c.nao) {
+      /* Automático: some qualquer escolha gravada antes, senão um
+         "reprovada" de quando havia pendência ficaria valendo
+         depois que ela foi corrigida. */
+      if (dados.parecer) { delete dados.parecer; guardar(); }
+      area.className = 'parecer aprovada';
+      area.innerHTML = '<p class="veredito">Obra aprovada sem restrição</p>' +
+        '<p class="recado">Nenhuma não conformidade. O cliente assina a liberação.</p>';
+      return;
+    }
+
+    area.className = 'parecer escolher';
+    area.innerHTML = '';
+
+    const titulo = document.createElement('p');
+    titulo.className = 'veredito';
+    titulo.textContent = c.nao === 1 ? '1 pendência encontrada'
+                                     : c.nao + ' pendências encontradas';
+
+    const ajuda = document.createElement('p');
+    ajuda.className = 'recado';
+    ajuda.textContent = 'As duas saídas registram as pendências e geram o pedido de ' +
+                        'assistência. A diferença é quem assina.';
+
+    const caixa = document.createElement('div');
+    caixa.className = 'parecer-opcoes';
+
+    [
+      { v: 'assistencia', r: 'Aprovar com assistência', sub: 'O cliente assina' },
+      { v: 'reprovada',   r: 'Reprovar a obra',         sub: 'A Dalmóbile assina; o cliente recebe' }
+    ].forEach(function (o) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(dados.parecer === o.v));
+      b.innerHTML = '<b></b><small></small>';
+      b.querySelector('b').textContent = o.r;
+      b.querySelector('small').textContent = o.sub;
+
+      b.onclick = function () {
+        /* Tocar de novo desmarca: um parecer dado por engano
+           precisa ter volta, como qualquer resposta aqui. */
+        dados.parecer = (dados.parecer === o.v) ? '' : o.v;
+        guardar();
+        pintarParecer(c);
+      };
+
+      caixa.appendChild(b);
+    });
+
+    area.append(titulo, ajuda, caixa);
+
+    if (!dados.parecer) {
+      const falta = document.createElement('p');
+      falta.className = 'recado aviso';
+      falta.textContent = 'Escolha uma das duas para concluir.';
+      area.appendChild(falta);
+    }
   }
 
 
