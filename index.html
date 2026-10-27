@@ -408,6 +408,20 @@
   }
   .pessoa .acoes button:hover:not(:disabled) { border-color: var(--line-2); color: var(--ink); }
   .pessoa .acoes button:disabled { opacity: .4; cursor: default; }
+  #montadores-novo { display: flex; gap: 8px; margin: 10px 0 14px; }
+  #montadores-novo input {
+    flex: 1; min-width: 0; padding: 9px 11px; font: inherit; font-size: 14px;
+    border: 1px solid var(--line); border-radius: 9px; background: var(--card);
+    color: var(--ink);
+  }
+  /* .botao nasce com width:100%; dentro do flex isso come a
+     linha inteira e deixa o campo do nome com 10px. */
+  #montadores-novo .botao {
+    margin: 0; white-space: nowrap; width: auto; flex: 0 0 auto; padding: 9px 18px;
+    font-size: 14px;
+  }
+  .seccao-sub { color: var(--muted); font-size: 13px; margin: -4px 0 10px; max-width: 60ch; }
+  .pessoa.inativo .nome { color: var(--muted); text-decoration: line-through; }
 
   .pessoa .acoes select {
     width: auto; padding: 6px 28px 6px 10px; font-size: 12px;
@@ -509,7 +523,21 @@
       <div id="contas-recado"></div>
 
       <div id="contas-area" class="oculto">
-        <h3 class="seccao-titulo">Cargos</h3>
+        <h3 class="seccao-titulo">Montadores</h3>
+        <p class="seccao-sub">Quem aparece para escolher na vistoria de montagem.
+           Quem sai da equipe fica inativo: some da escolha e continua
+           nas vistorias antigas.</p>
+        <div id="montadores-novo">
+          <input id="montador-nome" type="text" placeholder="Nome do montador" autocomplete="off">
+          <button type="button" class="botao" id="montador-add">Cadastrar</button>
+        </div>
+        <div id="montadores-lista"></div>
+
+        <!-- Daqui para baixo é só administrador. O gerente abre esta
+             aba para cuidar dos montadores e não deve topar com a
+             lixeira nem com os cargos. -->
+        <div id="contas-admin">
+        <h3 class="seccao-titulo" style="margin-top:26px">Cargos</h3>
         <div id="contas-lista"></div>
 
         <h3 class="seccao-titulo" style="margin-top:26px">Documentos</h3>
@@ -535,8 +563,9 @@
           </a>
         </div>
 
-        <p class="aviso-aba">Esta aba aparece só para quem é administrador.</p>
+        <p class="aviso-aba">Esta parte aparece só para quem é administrador.</p>
       </div>
+        </div>
     </div>
 
   </section>
@@ -2003,7 +2032,10 @@ async function descobrirQuemSou() {
      mundo. Agora que se sabe quem é, desenha de novo. */
   montarAtalhos();
 
-  if (EU.admin) {
+  /* O gerente passa a abrir esta aba para cuidar dos montadores.
+     O resto dela continua só do administrador — quem decide é o
+     banco, esconder é educação. */
+  if (EU.admin || EU.gerente) {
     botaoContas.classList.remove('oculto');
     if (abaSalva() === 'contas' && !location.hash) trocarAba('contas');
   }
@@ -2017,6 +2049,7 @@ async function descobrirQuemSou() {
   }
 
   if (EU.admin) carregarCargos();
+  if (EU.admin || EU.gerente) carregarMontadores();
   else explicarPorQueNao();
 })();
 
@@ -2346,6 +2379,138 @@ async function gravar(controle, id, campos) {
 
   await carregarCargos();
 }
+
+/* ============================================================
+   MONTADORES
+   ------------------------------------------------------------
+   Montador não é conta de acesso: não entra, não tem senha, não
+   tem cargo. Por isso mora em tabela própria e não em "perfis".
+
+   Não existe apagar, de propósito: a vistoria guarda o NOME
+   junto do registro, e inativar é o que tira da escolha sem
+   mexer no que já aconteceu.
+   ============================================================ */
+
+async function carregarMontadores() {
+  contasArea.classList.remove('oculto');
+
+  /* Quem não é administrador vê só esta seção. */
+  const parteAdmin = el('contas-admin');
+  if (parteAdmin) parteAdmin.classList.toggle('oculto', !EU.admin);
+
+  /* O recado "você não é administrador" não faz sentido para o
+     gerente que veio justamente cuidar dos montadores. */
+  if (!EU.admin && EU.gerente) contasRecado.innerHTML = '';
+
+  const lista = el('montadores-lista');
+  lista.innerHTML = '<p class="vazio-busca">Carregando...</p>';
+
+  const sb = window.dalmobileAuth && window.dalmobileAuth.cliente;
+  if (!sb) { lista.innerHTML = '<p class="vazio-busca">Sem sessão.</p>'; return; }
+
+  const { data, error } = await sb
+    .from('montadores').select('id, nome, ativo').order('nome');
+
+  if (error) {
+    lista.innerHTML = '';
+    const aviso = document.createElement('div');
+    aviso.className = 'cartao-aviso atencao';
+    aviso.innerHTML = '<h3>Não consegui ler a lista</h3>';
+    const t = document.createElement('p');
+    /* A tabela não existir é o caso mais provável, e a mensagem
+       crua do Postgres não diz o que fazer. */
+    t.textContent = /montadores.*does not exist|relation .* does not exist/i.test(error.message || '')
+      ? 'Falta rodar o supabase-montadores.sql no SQL Editor — a tabela ainda não existe.'
+      : error.message;
+    aviso.appendChild(t);
+    lista.appendChild(aviso);
+    return;
+  }
+
+  lista.innerHTML = '';
+
+  if (!data.length) {
+    const vazio = document.createElement('p');
+    vazio.className = 'vazio-busca';
+    vazio.textContent = 'Nenhum montador cadastrado ainda.';
+    lista.appendChild(vazio);
+    return;
+  }
+
+  data.forEach((m) => lista.appendChild(cartaoMontador(m)));
+}
+
+function cartaoMontador(m) {
+  const cartao = document.createElement('div');
+  cartao.className = 'pessoa' + (m.ativo ? '' : ' inativo');
+
+  const cabeca = document.createElement('div');
+  cabeca.className = 'cabeca';
+
+  const nome = document.createElement('span');
+  nome.className = 'nome';
+  nome.textContent = m.nome;
+  cabeca.appendChild(nome);
+  if (!m.ativo) cabeca.appendChild(selo('alerta', 'inativo'));
+
+  const sub = document.createElement('p');
+  sub.className = 'sub';
+  sub.textContent = m.ativo
+    ? 'Aparece para escolher na vistoria.'
+    : 'Fora da escolha. Continua nas vistorias em que trabalhou.';
+
+  const acoes = document.createElement('div');
+  acoes.className = 'acoes';
+
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = m.ativo ? 'Inativar' : 'Reativar';
+  b.addEventListener('click', async () => {
+    b.disabled = true;
+    const { error } = await window.dalmobileAuth.cliente
+      .from('montadores').update({ ativo: !m.ativo }).eq('id', m.id);
+    if (error) { alert('Não consegui gravar: ' + error.message); b.disabled = false; return; }
+    await carregarMontadores();
+  });
+  acoes.appendChild(b);
+
+  cartao.append(cabeca, sub, acoes);
+  return cartao;
+}
+
+(function ligarCadastroDeMontador() {
+  const campo = el('montador-nome');
+  const botao = el('montador-add');
+  if (!campo || !botao) return;
+
+  async function cadastrar() {
+    const nome = campo.value.trim();
+    if (!nome) { campo.focus(); return; }
+
+    botao.disabled = true;
+    const { error } = await window.dalmobileAuth.cliente
+      .from('montadores').insert({ nome: nome });
+    botao.disabled = false;
+
+    if (error) {
+      /* Nome repetido é o erro comum, e "duplicate key value
+         violates unique constraint" não diz nada a quem está
+         cadastrando. */
+      alert(/duplicate key|montadores_nome_unico/i.test(error.message || '')
+        ? 'Já existe um montador com esse nome. Se ele está inativo, use "Reativar".'
+        : /row-level security/i.test(error.message || '')
+          ? 'O banco recusou: só administrador ou gerente cadastra montador.'
+          : 'Não consegui cadastrar: ' + error.message);
+      return;
+    }
+
+    campo.value = '';
+    await carregarMontadores();
+  }
+
+  botao.addEventListener('click', cadastrar);
+  campo.addEventListener('keydown', (e) => { if (e.key === 'Enter') cadastrar(); });
+})();
 
 function nomeDaLoja(id) {
   const l = LOJAS.find((x) => x.id === id);
