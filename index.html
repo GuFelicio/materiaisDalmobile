@@ -808,18 +808,15 @@ const CATALOGO = [
     campos: []
   },
 
-  /* Ainda sem página. Entra como "Em breve" de propósito: um item
-     que abrisse a vistoria de equipe seria pior que um item que
-     não abre nada — quem preenchesse acharia que estava
-     registrando outra coisa. */
   {
     id: 'vistoria-montagem',
     nome: 'Vistoria de Montagem',
-    descricao: 'Em definição.',
-    icone: 'caixa',
+    descricao: 'Conferência da obra com o cliente, pelo celular. Tudo conforme libera a obra; o que ficar pendente vira pedido de assistência técnica. Funciona sem sinal.',
+    icone: 'regua',
     formato: 'link',
     fase: 'posvenda',
-    disponivel: false,
+    pagina: 'vistoria.html',
+    disponivel: true,
     endpoints: {},
     campos: []
   },
@@ -2143,7 +2140,8 @@ async function carregarCargos() {
 const NOME_DO_TIPO = {
   'itens-extras': 'Checklist de Eletros',
   'medicao':      'Termo de medição',
-  'montagem':     'Vistoria de Equipe de Montagem'
+  'montagem':     'Vistoria de Equipe de Montagem',
+  'vistoria':     'Vistoria de Montagem'
 };
 
 async function carregarDocumentos() {
