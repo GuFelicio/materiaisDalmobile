@@ -266,7 +266,22 @@ const PDFDoc = (function () {
             dataCurta(doc.preenchido_em || doc.atualizado_em), terco - 10);
 
     e.y = Math.min(yDepois, e.y);
-    e.y -= 22;
+    e.y -= 6;
+
+    /* A equipe sai por nome, não por id: o documento precisa
+       dizer quem esteve lá sem depender de abrir o cadastro.
+       Só aparece quando há alguém, para não deixar um campo
+       vazio em toda vistoria antiga. */
+    const equipe = Array.isArray(dados.montadores)
+      ? dados.montadores.map(function (m) { return m && m.nome; }).filter(Boolean)
+      : [];
+
+    if (equipe.length) {
+      campoEm(e, MARGEM.esq, 'EQUIPE DE MONTAGEM', equipe.join(', '), UTIL);
+      e.y -= 6;
+    }
+
+    e.y -= 16;
 
     resumo(e, dados);
   }

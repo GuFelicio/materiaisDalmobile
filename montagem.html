@@ -81,6 +81,22 @@
 
   .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .campo { margin-bottom: 14px; }
+  .montadores { display: flex; flex-wrap: wrap; gap: 7px; }
+  .montadores button {
+    padding: 8px 13px; border-radius: 999px; font: inherit; font-size: 14px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink-2);
+    cursor: pointer;
+  }
+  /* --accent nao existe nesta pagina; e variavel da Central. Com
+     ela, a ficha marcada ficava com texto branco sobre fundo
+     transparente: invisivel. A paleta daqui usa --ink. */
+  .montadores button[aria-pressed="true"] {
+    background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600;
+  }
+  /* Quem saiu da equipe depois de ter trabalhado nesta montagem:
+     continua escolhido, e so aparece porque esta no registro. */
+  .montadores button.fora[aria-pressed="true"] { opacity: .72; }
+  .montadores .vazio { color: var(--muted); font-size: 13px; line-height: 1.5; }
   @media (max-width: 430px) { .dupla { grid-template-columns: 1fr; } }
 
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -269,9 +285,14 @@
         <input type="text" id="f-ambiente" autocomplete="off" placeholder="Ex.: Cozinha e área de serviço">
       </div>
 
-      <div class="campo" style="margin-bottom:0">
+      <div class="campo">
         <label class="rot" for="f-responsavel">Responsável pelo preenchimento</label>
         <input type="text" id="f-responsavel" autocomplete="off" placeholder="Seu nome">
+      </div>
+
+      <div class="campo" style="margin-bottom:0">
+        <label class="rot">Equipe de montagem</label>
+        <div id="f-montadores" class="montadores"></div>
       </div>
     </div>
 
@@ -338,6 +359,7 @@
       atualizado_em: C.agora(),
       dados: {
         ambiente: '',
+        montadores: [],
         responsavel: (eu && eu.user_metadata && eu.user_metadata.nome) || '',
         itens: {},
         observacoes: ''
@@ -627,6 +649,10 @@
     el('f-loja').value        = m.loja || 'sjc';
     el('f-ambiente').value    = m.dados.ambiente || '';
     el('f-responsavel').value = m.dados.responsavel || '';
+    /* Ficha antiga não tem o campo: sem isto, o primeiro toque
+       num montador leria undefined e perderia a escolha. */
+    if (!Array.isArray(m.dados.montadores)) m.dados.montadores = [];
+    pintarMontadores();
     el('f-observacoes').value = m.dados.observacoes || '';
 
     desenharBlocos();
@@ -857,6 +883,83 @@
   /* ============================================================
      Salvar
      ============================================================ */
+
+  /* ------------------------------------------------------------
+     Equipe de montagem
+     ------------------------------------------------------------
+     O registro guarda NOME e id, não só o id. O nome é o que
+     importa daqui a um ano: se o montador sair da equipe e for
+     inativado, a vistoria tem que continuar dizendo quem estava
+     lá — e um id solto, sem a linha do cadastro à mão, não diz
+     nada a ninguém.
+     ------------------------------------------------------------ */
+  let cadastroDeMontadores = C.montadoresGuardados();
+
+  function escolhidos() {
+    return (atual && Array.isArray(atual.dados.montadores))
+      ? atual.dados.montadores : [];
+  }
+
+  function pintarMontadores() {
+    const area = el('f-montadores');
+    area.innerHTML = '';
+    if (!atual) return;
+
+    const marcados = escolhidos();
+    const ativos = cadastroDeMontadores.filter(function (m) { return m.ativo !== false; });
+
+    /* Quem está no registro mas não está mais na lista de ativos
+       entra assim mesmo, no fim: tirar da tela seria apagar da
+       vistoria alguém que trabalhou nela. */
+    const extras = marcados.filter(function (e) {
+      return !ativos.some(function (m) { return m.id === e.id; });
+    });
+
+    const tudo = ativos.map(function (m) { return { id: m.id, nome: m.nome, fora: false }; })
+      .concat(extras.map(function (e) { return { id: e.id, nome: e.nome, fora: true }; }));
+
+    if (!tudo.length) {
+      const vazio = document.createElement('p');
+      vazio.className = 'vazio';
+      vazio.textContent = cadastroDeMontadores.length
+        ? 'Nenhum montador ativo no cadastro.'
+        : 'A lista ainda não chegou neste aparelho. Abra a Central com internet uma vez e ela fica guardada.';
+      area.appendChild(vazio);
+      return;
+    }
+
+    tudo.forEach(function (m) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = m.nome;
+      if (m.fora) b.className = 'fora';
+      const ligado = marcados.some(function (x) { return x.id === m.id; });
+      b.setAttribute('aria-pressed', ligado ? 'true' : 'false');
+
+      b.addEventListener('click', function () {
+        const lista = escolhidos().slice();
+        const i = lista.findIndex(function (x) { return x.id === m.id; });
+        if (i >= 0) lista.splice(i, 1);
+        else lista.push({ id: m.id, nome: m.nome });
+        atual.dados.montadores = lista;
+        pintarMontadores();
+        guardar();
+      });
+
+      area.appendChild(b);
+    });
+  }
+
+  /* Busca a lista quando houver rede e repinta. Se não houver,
+     a guardada continua valendo e nada na tela muda. */
+  (async function trazerMontadores() {
+    try {
+      cadastroDeMontadores = await C.montadores();
+      if (atual) pintarMontadores();
+    } catch (e) {
+      console.warn('Lista de montadores não atualizou agora.', e);
+    }
+  })();
 
   function colher() {
     if (!atual) return;

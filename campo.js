@@ -297,6 +297,48 @@ window.Campo = (function () {
 
 
   /* ------------------------------------------------------------
+     Montadores
+     ------------------------------------------------------------
+     A escolha acontece na obra, onde quase nunca há sinal. Então
+     a lista vive no aparelho e a ida ao servidor só serve para
+     atualizar: offline, vale a última que chegou.
+
+     Guardo TODOS, com o campo "ativo" junto, e não só os ativos.
+     Assim uma vistoria antiga aberta para conferência continua
+     mostrando quem trabalhou nela, mesmo que a pessoa tenha
+     saído da equipe desde então.
+     ------------------------------------------------------------ */
+  const CHAVE_MONTADORES = 'dalmobile:montadores';
+
+  function montadoresGuardados() {
+    try {
+      const bruto = localStorage.getItem(CHAVE_MONTADORES);
+      const lista = bruto ? JSON.parse(bruto) : [];
+      return Array.isArray(lista) ? lista : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /* Devolve sempre alguma coisa: se o servidor não responder, a
+     lista do aparelho serve. Uma vistoria não pode travar porque
+     a obra está num subsolo sem sinal. */
+  async function montadores() {
+    const sb = temServidor();
+    if (!sb) return montadoresGuardados();
+
+    try {
+      const r = await sb.from('montadores').select('id, nome, ativo').order('nome');
+      if (r.error || !Array.isArray(r.data)) return montadoresGuardados();
+      try { localStorage.setItem(CHAVE_MONTADORES, JSON.stringify(r.data)); } catch (e) {}
+      return r.data;
+    } catch (e) {
+      return montadoresGuardados();
+    }
+  }
+
+
+  /* ------------------------------------------------------------
      Versões
      ------------------------------------------------------------
      Versão nasce em EVENTO, não a cada tecla digitada: PDF
@@ -696,6 +738,8 @@ window.Campo = (function () {
     temServidor: temServidor,
     eu: eu,
     hashDoPdf: hashDoPdf,
+    montadores: montadores,
+    montadoresGuardados: montadoresGuardados,
     anotarMarco: anotarMarco,
     enviarMarcos: enviarMarcos,
     reabrirMedicao: reabrirMedicao,
