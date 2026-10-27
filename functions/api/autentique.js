@@ -506,7 +506,10 @@ async function lerFichaPorDocumento(env, docId) {
   const base = String(env.SUPABASE_URL).replace(/\/+$/, '');
 
   const r = await fetch(base + '/rest/v1/formularios'
-    + '?select=id,cliente,contrato,loja,status,dados&limit=1'
+    /* 'tipo' decide o que o e-mail diz. Sem ele, uma vistoria
+       assinada avisava que os prazos de produção começaram e
+       mandava o link da medição. */
+    + '?select=id,tipo,cliente,contrato,loja,status,dados&limit=1'
     + '&autentique_id=eq.' + encodeURIComponent(docId),
     { headers: cabecalhoDoBanco(env) });
 
@@ -628,8 +631,61 @@ async function mandarEmail(env, chave, ficha, gente, assinadoEm) {
 
 
 function assunto(ficha) {
-  return 'Prazo iniciado · ' + (ficha.cliente || 'cliente')
-       + (ficha.contrato ? ' · ' + ficha.contrato : '');
+  const quem = (ficha.cliente || 'cliente')
+             + (ficha.contrato ? ' · ' + ficha.contrato : '');
+
+  if (ficha.tipo === 'vistoria') {
+    return (pendenciasDa(ficha) ? 'Vistoria com pendências · ' : 'Obra liberada · ') + quem;
+  }
+  return 'Prazo iniciado · ' + quem;
+}
+
+/* Conta as não conformidades a partir das respostas, como o banco
+   faz. Um campo gravado pela tela poderia estar errado; as
+   respostas são o que o cliente assinou. */
+function pendenciasDa(ficha) {
+  const itens = ((ficha.dados || {}).itens) || {};
+  return Object.keys(itens).filter(function (k) {
+    return (itens[k] || {}).resposta === 'nao';
+  }).length;
+}
+
+/* O que o e-mail diz, por tipo de documento: a faixa de cima, a
+   frase do meio e a tela para onde o botão leva. Era tudo fixo na
+   medição, inclusive o link. */
+function recadoDoDocumento(ficha, quando) {
+  if (ficha.tipo === 'vistoria') {
+    const n = pendenciasDa(ficha);
+    const reprovada = String((ficha.dados || {}).parecer || '') === 'reprovada';
+
+    if (!n) {
+      return {
+        tela: 'vistoria', fundo: '#eef3ee', borda: '#cfe0d2',
+        destaque: 'A obra foi liberada pelo cliente em ' + quando + '.',
+        frase: 'A vistoria não encontrou nenhuma não conformidade, e o cliente '
+             + 'assinou a liberação.'
+      };
+    }
+
+    return {
+      tela: 'vistoria', fundo: '#fdf1e7', borda: '#f0cfae',
+      destaque: reprovada
+        ? 'A obra foi REPROVADA na vistoria de ' + quando + '.'
+        : 'Obra aprovada COM ASSISTÊNCIA em ' + quando + '.',
+      frase: (n === 1 ? '1 pendência segue' : n + ' pendências seguem')
+           + ' para assistência técnica, em até <b>20 dias úteis</b>, conforme contrato.'
+    };
+  }
+
+  const apto = (ficha.dados || {}).parecerFinal === 'aptos';
+  return {
+    tela: 'medicao', fundo: '#eef3ee', borda: '#cfe0d2',
+    destaque: 'Os prazos de produção, entrega e montagem começaram a contar em ' + quando + '.',
+    frase: apto
+      ? 'Os ambientes foram considerados <b>aptos</b> e o cliente assinou o termo de ciência.'
+      : 'Os ambientes foram considerados <b>não aptos</b>, e o cliente assinou o termo '
+        + 'de responsabilidade para <b>prosseguir assumindo os riscos</b>.'
+  };
 }
 
 
@@ -638,19 +694,12 @@ function assunto(ficha) {
    e o que o cliente decidiu. O link é para conferir, não para
    descobrir. */
 function corpoDoEmail(ficha, gente, assinadoEm, teste) {
-  const d = ficha.dados || {};
-  const apto = d.parecerFinal === 'aptos';
-
   const quando = assinadoEm
     ? new Date(assinadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     : 'hoje';
 
   const loja = ficha.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos';
-
-  const situacao = apto
-    ? 'Os ambientes foram considerados <b>aptos</b> e o cliente assinou o termo de ciência.'
-    : 'Os ambientes foram considerados <b>não aptos</b>, e o cliente assinou o termo '
-      + 'de responsabilidade para <b>prosseguir assumindo os riscos</b>.';
+  const r = recadoDoDocumento(ficha, quando);
 
   const aviso = teste
     ? '<p style="background:#fdf1e7;border:1px solid #f0cfae;padding:10px 12px;'
@@ -666,12 +715,11 @@ function corpoDoEmail(ficha, gente, assinadoEm, teste) {
     + '<p style="font-size:18px;margin:0 0 4px"><b>' + escapar(ficha.cliente || 'Cliente') + '</b></p>'
     + '<p style="margin:0 0 18px;color:#4a5054">'
     + escapar(ficha.contrato || 'sem contrato') + ' · ' + loja + '</p>'
-    + '<p style="background:#eef3ee;border:1px solid #cfe0d2;padding:12px 14px;'
-    + 'border-radius:8px;margin:0 0 18px">'
-    + '<b>Os prazos de produção, entrega e montagem começaram a contar em '
-    + quando + '.</b></p>'
-    + '<p>' + situacao + '</p>'
-    + '<p style="margin:22px 0 0"><a href="https://materiais.luminamkt.co/medicao" '
+    + '<p style="background:' + r.fundo + ';border:1px solid ' + r.borda + ';'
+    + 'padding:12px 14px;border-radius:8px;margin:0 0 18px">'
+    + '<b>' + escapar(r.destaque) + '</b></p>'
+    + '<p>' + r.frase + '</p>'
+    + '<p style="margin:22px 0 0"><a href="https://materiais.luminamkt.co/' + r.tela + '" '
     + 'style="background:#141618;color:#fff;text-decoration:none;padding:12px 18px;'
     + 'border-radius:8px;display:inline-block">Abrir na Central de Peças</a></p>'
     + '<p style="margin-top:22px;font-size:12.5px;color:#4a5054">'
@@ -683,9 +731,6 @@ function corpoDoEmail(ficha, gente, assinadoEm, teste) {
 /* O mesmo conteúdo, sem marcação. Quem lê em texto tem de
    receber a informação inteira, não um "abra no navegador". */
 function corpoEmTexto(ficha, gente, assinadoEm, teste) {
-  const d = ficha.dados || {};
-  const apto = d.parecerFinal === 'aptos';
-
   const quando = assinadoEm
     ? new Date(assinadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     : 'hoje';
@@ -702,16 +747,17 @@ function corpoEmTexto(ficha, gente, assinadoEm, teste) {
   linhas.push((ficha.cliente || 'Cliente')
     + ' — ' + (ficha.contrato || 'sem contrato')
     + ' — ' + (ficha.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos'));
+  /* Mesma fonte do e-mail em HTML: duas versões do texto
+     divergem no dia em que alguém corrige só uma. */
+  const r = recadoDoDocumento(ficha, quando);
+  const semMarcacao = function (t) { return String(t).replace(/<\/?b>/g, ''); };
+
   linhas.push('');
-  linhas.push('Os prazos de produção, entrega e montagem começaram a contar em '
-    + quando + '.');
+  linhas.push(semMarcacao(r.destaque));
   linhas.push('');
-  linhas.push(apto
-    ? 'Os ambientes foram considerados aptos e o cliente assinou o termo de ciência.'
-    : 'Os ambientes foram considerados não aptos, e o cliente assinou o termo de '
-      + 'responsabilidade para prosseguir assumindo os riscos.');
+  linhas.push(semMarcacao(r.frase));
   linhas.push('');
-  linhas.push('Abrir na Central de Peças: https://materiais.luminamkt.co/medicao');
+  linhas.push('Abrir na Central de Peças: https://materiais.luminamkt.co/' + r.tela);
   linhas.push('');
   linhas.push('Aviso automático da Central de Peças.');
 

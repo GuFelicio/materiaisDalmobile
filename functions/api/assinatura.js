@@ -593,7 +593,11 @@ function recadoDoErro(erros) {
    como apikey, que o PostgREST exige, sem virar a autorização. */
 async function buscarComoUsuario(url, secreta, sessao, id) {
   const r = await fetch(url + '/rest/v1/formularios'
-    + '?select=id,cliente,contrato,loja,status,dados,autentique_id'
+    /* 'tipo' é o que escolhe o plano de assinatura. Faltava
+       aqui, então ficha.tipo chegava vazio e TODA vistoria caía
+       no caminho da medição, pedindo um parecer final que ela
+       não tem. */
+    + '?select=id,tipo,cliente,contrato,loja,status,dados,autentique_id'
     + '&limit=1&id=eq.' + encodeURIComponent(id), {
     headers: {
       apikey: secreta,
