@@ -28,7 +28,7 @@
    baixou da primeira vez.
    ============================================================ */
 
-const VERSAO = 'dalmobile-campo-v8';
+const VERSAO = 'dalmobile-campo-v9';
 
 /* O que precisa existir no aparelho para a tela funcionar
    sozinha. Se algum destes faltar, falta função: sem as fontes
@@ -60,6 +60,7 @@ const ESSENCIAIS = TODAS_AS_PAGINAS.concat([
   'auth.js',
   'campo.js',
   'pdf-101.js',
+  'pdf-doc.js',
   'pdf-montagem.js',
   'vendor/pdf-lib.min.js',
   'vendor/fontkit.umd.min.js',
