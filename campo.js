@@ -1,7 +1,7 @@
 /* ============================================================
    CAMPO — o que as telas de obra têm em comum
    ------------------------------------------------------------
-   O Documento 101 (medição) e o checklist de montagem são
+   O Documento 101 (medição) e a vistoria de montagem são
    preenchidos no mesmo lugar: dentro de um imóvel, pelo celular,
    muitas vezes sem sinal. As duas telas precisam exatamente das
    mesmas três coisas, e elas moram aqui:
@@ -420,7 +420,7 @@ window.Campo = (function () {
       return { texto: 'tudo conforme', classe: 'ok' };
     }
 
-    return null;   // itens-extras não tem parecer
+    return null;   // checklist de eletros não tem parecer
   }
 
   function etiquetaEstado(doc) {
@@ -583,7 +583,7 @@ window.Campo = (function () {
      Assinatura eletrônica
      ------------------------------------------------------------
      A chamada mora aqui, e não na tela, porque o Documento 102 e
-     o checklist de montagem vão pedir a mesma coisa. O token da
+     a vistoria de montagem vão pedir a mesma coisa. O token da
      Autentique não encosta no navegador em momento nenhum: quem
      fala com eles é a Function no Cloudflare.
      ------------------------------------------------------------ */

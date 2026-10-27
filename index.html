@@ -742,7 +742,7 @@ const CATALOGO = [
 
   {
     id: 'itens-extras',
-    nome: 'Itens extras do cliente',
+    nome: 'Checklist de Eletros',
     descricao: 'Link para o cliente informar marca e medidas da geladeira, do fogão e dos outros aparelhos.',
     icone: 'regua',
     formato: 'link',
@@ -768,13 +768,29 @@ const CATALOGO = [
 
   {
     id: 'montagem',
-    nome: 'Checklist de montagem',
+    nome: 'Vistoria de Equipe de Montagem',
     descricao: 'Controle interno de qualidade: 36 itens conferidos pelo responsável no celular, com foto nas não conformidades. Funciona sem sinal.',
     icone: 'caixa',
     formato: 'link',
     fase: 'posvenda',
     pagina: 'montagem.html',
     disponivel: true,
+    endpoints: {},
+    campos: []
+  },
+
+  /* Ainda sem página. Entra como "Em breve" de propósito: um item
+     que abrisse a vistoria de equipe seria pior que um item que
+     não abre nada — quem preenchesse acharia que estava
+     registrando outra coisa. */
+  {
+    id: 'vistoria-montagem',
+    nome: 'Vistoria de Montagem',
+    descricao: 'Em definição.',
+    icone: 'caixa',
+    formato: 'link',
+    fase: 'posvenda',
+    disponivel: false,
     endpoints: {},
     campos: []
   },
@@ -2092,9 +2108,9 @@ async function carregarCargos() {
    ============================================================ */
 
 const NOME_DO_TIPO = {
-  'itens-extras': 'Itens extras',
+  'itens-extras': 'Checklist de Eletros',
   'medicao':      'Termo de medição',
-  'montagem':     'Checklist de montagem'
+  'montagem':     'Vistoria de Equipe de Montagem'
 };
 
 async function carregarDocumentos() {

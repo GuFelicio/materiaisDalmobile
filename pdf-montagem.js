@@ -1,5 +1,5 @@
 /* ============================================================
-   CHECKLIST DE MONTAGEM — Dalmóbile
+   VISTORIA DE EQUIPE DE MONTAGEM — Dalmóbile
    ------------------------------------------------------------
    Controle interno de qualidade da montagem. Quem preenche é o
    responsável pela obra, conferindo o trabalho da equipe. O
@@ -191,7 +191,7 @@ const PDFMontagem = (function () {
     const { PDFDocument, rgb } = window.PDFLib;
 
     const pdf = await PDFDocument.create();
-    pdf.setTitle('Checklist de montagem — ' + (doc.cliente || ''));
+    pdf.setTitle('Vistoria de Equipe de Montagem — ' + (doc.cliente || ''));
     pdf.setSubject('Controle interno de montagem');
     pdf.setProducer('Dalmóbile · Central de Peças');
 
@@ -307,7 +307,7 @@ const PDFMontagem = (function () {
       e.y -= 26;
     }
 
-    texto(e, 'CHECKLIST DE MONTAGEM', 15, 'negrito', COR.tinta, { espacamento: 0.4 });
+    texto(e, 'VISTORIA DE EQUIPE DE MONTAGEM', 15, 'negrito', COR.tinta, { espacamento: 0.4 });
     e.y -= 8;
 
     texto(e,
@@ -620,7 +620,7 @@ const PDFMontagem = (function () {
     e.paginas.forEach(function (pagina, i) {
       const loja = LOJAS[doc.loja];
 
-      const esquerda = 'Checklist de montagem · Dalmóbile' +
+      const esquerda = 'Vistoria de Equipe de Montagem · Dalmóbile' +
         (loja ? ' ' + loja.nome : '') + ' · ' +
         (doc.cliente || '') + (doc.contrato ? ' · ' + doc.contrato : '');
 
@@ -756,7 +756,7 @@ const PDFMontagem = (function () {
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
 
-    return 'checklist-montagem-' + limpo + (doc.contrato ? '-' + doc.contrato : '') + '.pdf';
+    return 'vistoria-equipe-montagem-' + limpo + (doc.contrato ? '-' + doc.contrato : '') + '.pdf';
   }
 
   return {

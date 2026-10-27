@@ -1,5 +1,5 @@
 /* ============================================================
-   DOCUMENTO 102 — Configuração dos itens extras
+   DOCUMENTO 102 — Checklist de Eletros
    ------------------------------------------------------------
    Monta o PDF a partir da ficha que o cliente preencheu.
 
@@ -78,7 +78,7 @@ const PDF102 = (function () {
     const { PDFDocument, rgb } = window.PDFLib;
 
     const pdf = await PDFDocument.create();
-    pdf.setTitle('Configuração dos itens extras — ' + (doc.cliente || ''));
+    pdf.setTitle('Checklist de Eletros — ' + (doc.cliente || ''));
     pdf.setSubject('Documento 102');
     pdf.setProducer('Dalmóbile · Central de Peças');
 
@@ -207,11 +207,11 @@ const PDF102 = (function () {
       e.y -= 26;
     }
 
-    texto(e, 'CONFIGURAÇÃO DOS ITENS EXTRAS', 15, 'negrito', COR.tinta, { espacamento: 0.4 });
+    texto(e, 'CHECKLIST DE ELETROS', 15, 'negrito', COR.tinta, { espacamento: 0.4 });
     e.y -= 8;
 
     texto(e,
-      'Este documento informa as medidas e dimensões dos itens extras que ' +
+      'Este documento informa as medidas e dimensões dos eletros que ' +
       'compatibilizam com o mobiliário.',
       CORPO, 'media', COR.suave, { largura: UTIL });
 
@@ -282,7 +282,7 @@ const PDF102 = (function () {
     });
 
     e.y -= 20;
-    e.pagina.drawText('NÃO HÁ ITENS EXTRAS A COMPATIBILIZAR', {
+    e.pagina.drawText('NÃO HÁ ELETROS A COMPATIBILIZAR', {
       x: MARGEM.esq + 14, y: e.y, size: 10, font: e.fontes.negrito,
       color: e.rgb.apply(null, COR.tinta), characterSpacing: 0.3
     });
@@ -727,7 +727,7 @@ const PDF102 = (function () {
       .replace(/^-+|-+$/g, '')
       .toLowerCase();
 
-    return 'itens-extras-' + limpo + (doc.contrato ? '-' + doc.contrato : '') + '.pdf';
+    return 'checklist-eletros-' + limpo + (doc.contrato ? '-' + doc.contrato : '') + '.pdf';
   }
 
   return { montar, nomeDoArquivo };

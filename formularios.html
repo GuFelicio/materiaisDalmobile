@@ -162,7 +162,7 @@
   </a>
 
   <section class="painel">
-    <h2>Pedir os itens extras</h2>
+    <h2>Pedir o checklist de eletros</h2>
     <p class="desc">Gera um link para o cliente informar marca e medidas dos
        aparelhos que convivem com os móveis. Ele preenche pelo celular, aos
        poucos, e você acompanha aqui.</p>
@@ -640,7 +640,7 @@ function seloDe(d) {
 
 function resumoDeProgresso(d) {
   const dados = d.dados || {};
-  if (dados.semItensExtras) return 'sem itens extras';
+  if (dados.semItensExtras) return 'sem eletros';
 
   let total = 0, ok = 0, links = 0;
   (dados.ambientes || []).forEach((a) => (a.itens || []).forEach((i) => {
@@ -690,7 +690,7 @@ function verRespostas(d) {
   if (dados.semItensExtras) {
     const p = document.createElement('p');
     p.className = 'msg';
-    p.textContent = 'O cliente declarou que não tem itens extras para informar.';
+    p.textContent = 'O cliente declarou que não tem eletros para informar.';
     caixa.appendChild(p);
     return caixa;
   }
