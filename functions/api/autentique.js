@@ -37,8 +37,26 @@
                                     no e-mail da conta Resend.
        EMAIL_TESTE_PARA             opcional. Com ela, TODO aviso vai para este
                                     endereço em vez dos destinatários de
-                                    verdade, e o corpo diz para quem teria ido.
-                                    É o que torna o teste possível antes do DNS.
+                                    verdade — inclusive o do cliente — e o corpo
+                                    diz para quem teria ido. É o que torna o
+                                    teste possível antes do DNS.
+       EMAIL_RESPONDER_PARA         opcional, e só para o e-mail do CLIENTE. O
+                                    endereço da loja, para onde a resposta dele
+                                    vai. Sem ela o corpo não convida a
+                                    responder, porque a resposta iria para o
+                                    remetente automático e ninguém leria.
+
+   DOIS E-MAILS SAEM DAQUI, E ELES NÃO SE PARECEM
+       equipe   — quem o banco listar em destinatarios_do_aviso. É uma TAREFA:
+                  tem o botão da Central, para ver fotos, histórico e reabrir.
+                  O PDF assinado vai anexo, para resolver no celular.
+       cliente  — o e-mail que ele mesmo deu na ficha. É um RECIBO: o documento
+                  assinado e o que ele significa, nada mais. Sem link da
+                  Central, que ele não tem login para abrir.
+
+       Cada um tem a SUA reserva no banco (avisado_em e avisado_cliente_em).
+       Com uma reserva só, uma falha no segundo e-mail faria a Autentique
+       repetir o aviso e o primeiro sair duas vezes.
 
    NO PAINEL DA AUTENTIQUE
        Cadastre o endereço
@@ -61,6 +79,8 @@
    não nos interessa recebe 200 na hora, senão ela tenta de novo
    por 14 dias à toa.
    ============================================================ */
+
+import { anexoAssinado, CAMPOS_DE_ARQUIVO } from '../../lib/assinado.js';
 
 const AUTENTIQUE = 'https://api.autentique.com.br/v2/graphql';
 
@@ -287,7 +307,22 @@ async function documentoTerminou(env, evento) {
     await guardarRecado(env, ficha, { pdfAssinado: doc.files.signed });
   }
 
-  await avisarAEquipe(env, ficha, estado.ultimaAssinatura);
+  /* UMA BUSCA, DOIS E-MAILS. Baixar o mesmo PDF duas vezes
+     gastaria o dobro do tempo de CPU da invocação — que no
+     Cloudflare é contado e é curto — para entregar bytes
+     idênticos.
+
+     anexoAssinado() NUNCA ESTOURA: devolve null quando a
+     Autentique ainda não gerou o arquivo, quando ele é grande
+     demais, ou quando o download falha. Isto é de propósito, e é
+     a decisão que importa neste trecho: a assinatura já está
+     marcada no banco e o prazo contratual já começou. Derrubar o
+     aviso por causa do anexo trocaria um e-mail sem PDF por
+     nenhum e-mail. */
+  const anexo = await anexoAssinado(env.AUTENTIQUE_TOKEN, doc, ficha);
+
+  await avisarAEquipe(env, ficha, estado.ultimaAssinatura, anexo);
+  await avisarOCliente(env, ficha, estado.ultimaAssinatura, anexo);
 }
 
 
@@ -327,7 +362,11 @@ async function olharDocumento(token, id) {
       document(id: $id) {
         id
         name
-        files { signed }
+        # Os dois arquivos, não só o 'signed': o PAdES é o que vai
+        # anexo quando existe. A lista de campos vem do módulo para
+        # não descolar de quem a lê. (Comentário em GraphQL é '#';
+        # /* */ aqui dentro é erro de sintaxe, não comentário.)
+        ${CAMPOS_DE_ARQUIVO}
         signatures {
           public_id
           name
@@ -555,7 +594,7 @@ async function guardarRecado(env, ficha, acrescimo) {
         em vez de a assinatura virar silêncio.
    ------------------------------------------------------------ */
 
-async function avisarAEquipe(env, ficha, assinadoEm) {
+async function avisarAEquipe(env, ficha, assinadoEm, anexo) {
   const chave = String(env.RESEND_API_KEY || '').trim();
 
   if (!chave) {
@@ -570,29 +609,96 @@ async function avisarAEquipe(env, ficha, assinadoEm) {
   if (reservou !== true) return;   // já avisado antes
 
   try {
-    await mandarEmail(env, chave, ficha, gente, assinadoEm);
+    await mandarEmail(env, chave, ficha, gente, assinadoEm, anexo);
   } catch (e) {
-    await liberarAviso(env, ficha.id);
+    await liberarAviso(env, ficha.id, 'avisado_em');
     throw e;
   }
 }
 
-/* Devolve a reserva, para a próxima tentativa poder avisar. */
-async function liberarAviso(env, id) {
+
+/* ------------------------------------------------------------
+   O e-mail do cliente
+   ------------------------------------------------------------
+   A Autentique já manda a via assinada para quem assinou. Este
+   e-mail existe porque ela manda do domínio dela, com o texto
+   dela, e porque na vistoria REPROVADA o cliente não assina — ele
+   entra como cópia, e depender de um 'cc' para entregar o
+   documento que diz que a obra não foi aprovada é pouco.
+
+   ⚠️ SEM ANEXO, NÃO MANDA — e aqui a decisão é o contrário da do
+   aviso da equipe. A equipe tem a Central: um e-mail sem PDF
+   ainda serve, porque diz o que aconteceu e tem o botão. O
+   cliente não tem Central nenhuma; o e-mail É o anexo. Sem o
+   arquivo ele seria um aviso de que existe um documento que ele
+   não pode ver — e o cliente perderia a reserva por um e-mail que
+   não entregou nada.
+
+   Então: sem anexo, não reserva e não manda. A Autentique repete
+   o aviso em 60s, 120s e 300s, e nessas repetições o PDF
+   normalmente já existe. Se nem assim, o cliente ainda tem a via
+   que a Autentique mandou — nada se perdeu, só este reforço.
+   ------------------------------------------------------------ */
+async function avisarOCliente(env, ficha, assinadoEm, anexo) {
+  const chave = String(env.RESEND_API_KEY || '').trim();
+  if (!chave) return;   // o aviso da equipe já reclamou no log
+
+  const email = String(((ficha.dados || {}).email) || '').trim().toLowerCase();
+
+  /* Cliente que assinou por WhatsApp e não deu e-mail: não é erro
+     nenhum, é o caminho normal. Fica no log sem alarme. */
+  if (!emailDeGente(email)) {
+    console.log('[autentique] a ficha não tem e-mail do cliente: ' + ficha.id);
+    return;
+  }
+
+  if (!anexo) {
+    console.warn('[autentique] sem PDF assinado ainda; o cliente não foi avisado '
+      + 'nesta tentativa: ' + ficha.id);
+    return;
+  }
+
+  const reservou = await chamarBanco(env, 'marcar_cliente_avisado', { alvo: ficha.id });
+  if (reservou !== true) return;   // o cliente já recebeu
+
   try {
-    await fetch(String(env.SUPABASE_URL).replace(/\/+$/, '')
-      + '/rest/v1/formularios?id=eq.' + encodeURIComponent(id), {
-      method: 'PATCH',
-      headers: Object.assign({ prefer: 'return=minimal' }, cabecalhoDoBanco(env)),
-      body: JSON.stringify({ avisado_em: null })
-    });
+    await mandarEmailDoCliente(env, chave, ficha, email, assinadoEm, anexo);
   } catch (e) {
-    console.error('[autentique] não consegui liberar o aviso de ' + id);
+    await liberarAviso(env, ficha.id, 'avisado_cliente_em');
+    throw e;
   }
 }
 
 
-async function mandarEmail(env, chave, ficha, gente, assinadoEm) {
+/* Devolve a reserva, para a próxima tentativa poder avisar. A
+   coluna vai por parâmetro porque são duas reservas
+   independentes, e liberar a errada mandaria o e-mail que já
+   chegou de novo. */
+async function liberarAviso(env, id, coluna) {
+  try {
+    const corpo = {};
+    corpo[coluna] = null;
+
+    await fetch(String(env.SUPABASE_URL).replace(/\/+$/, '')
+      + '/rest/v1/formularios?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: Object.assign({ prefer: 'return=minimal' }, cabecalhoDoBanco(env)),
+      body: JSON.stringify(corpo)
+    });
+  } catch (e) {
+    console.error('[autentique] não consegui liberar ' + coluna + ' de ' + id);
+  }
+}
+
+/* O mesmo teste do /api/assinatura. Frouxo de propósito: validar
+   e-mail a rigor é folclore, e recusar um endereço estranho mas
+   verdadeiro custa mais que tentar e falhar. */
+function emailDeGente(bruto) {
+  return /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(String(bruto || '').trim());
+}
+
+
+async function mandarEmail(env, chave, ficha, gente, assinadoEm, anexo) {
   const remetente = String(env.EMAIL_REMETENTE || '').trim()
                  || 'Central de Peças <onboarding@resend.dev>';
 
@@ -604,23 +710,44 @@ async function mandarEmail(env, chave, ficha, gente, assinadoEm) {
   const teste = String(env.EMAIL_TESTE_PARA || '').trim();
   const para = teste ? [teste] : gente.map(function (p) { return p.email; });
 
+  const carta = {
+    from: remetente,
+    to: para,
+    subject: assunto(ficha),
+    html: corpoDoEmail(ficha, gente, assinadoEm, teste, anexo),
+    /* A versão em texto não é enfeite de acessibilidade: e-mail
+       só-HTML é sinal de spam para a maioria dos filtros, e estes
+       avisos já saem de um domínio compartilhado. Mandar as duas
+       partes é o jeito barato de não cair na lixeira. */
+    text: corpoEmTexto(ficha, gente, assinadoEm, teste, anexo)
+  };
+
+  if (anexo) carta.attachments = [anexoParaOResend(anexo)];
+
+  await postarNoResend(chave, carta);
+}
+
+
+/* O Resend recebe anexo como base64 dentro do próprio JSON. O
+   campo 'tipo' que o módulo devolve (pades ou signed) serve ao
+   corpo do e-mail e não vai no pedido — campo a mais ali é 422. */
+function anexoParaOResend(anexo) {
+  return {
+    filename: anexo.filename,
+    content: anexo.content,
+    content_type: 'application/pdf'
+  };
+}
+
+
+async function postarNoResend(chave, carta) {
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       authorization: 'Bearer ' + chave,
       'content-type': 'application/json'
     },
-    body: JSON.stringify({
-      from: remetente,
-      to: para,
-      subject: assunto(ficha),
-      html: corpoDoEmail(ficha, gente, assinadoEm, teste),
-      /* A versão em texto não é enfeite de acessibilidade: e-mail
-         só-HTML é sinal de spam para a maioria dos filtros, e
-         estes avisos já saem de um domínio compartilhado. Mandar
-         as duas partes é o jeito barato de não cair na lixeira. */
-      text: corpoEmTexto(ficha, gente, assinadoEm, teste)
-    })
+    body: JSON.stringify(carta)
   });
 
   if (!r.ok) {
@@ -693,7 +820,7 @@ function recadoDoDocumento(ficha, quando) {
    sem clicar em nada: de quem é, que o prazo começou, em que dia,
    e o que o cliente decidiu. O link é para conferir, não para
    descobrir. */
-function corpoDoEmail(ficha, gente, assinadoEm, teste) {
+function corpoDoEmail(ficha, gente, assinadoEm, teste, anexo) {
   const quando = assinadoEm
     ? new Date(assinadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     : 'hoje';
@@ -719,6 +846,10 @@ function corpoDoEmail(ficha, gente, assinadoEm, teste) {
     + 'padding:12px 14px;border-radius:8px;margin:0 0 18px">'
     + '<b>' + escapar(r.destaque) + '</b></p>'
     + '<p>' + r.frase + '</p>'
+    + '<p style="font-size:13.5px;color:#4a5054">' + escapar(sobreOAnexo(anexo)) + '</p>'
+    /* O link FICA, junto do anexo, porque não é a mesma coisa: o
+       anexo resolve agora, no celular; a Central é onde estão as
+       fotos, o histórico das rodadas e o botão de reabrir. */
     + '<p style="margin:22px 0 0"><a href="https://materiais.luminamkt.co/' + r.tela + '" '
     + 'style="background:#141618;color:#fff;text-decoration:none;padding:12px 18px;'
     + 'border-radius:8px;display:inline-block">Abrir na Central de Peças</a></p>'
@@ -730,7 +861,20 @@ function corpoDoEmail(ficha, gente, assinadoEm, teste) {
 
 /* O mesmo conteúdo, sem marcação. Quem lê em texto tem de
    receber a informação inteira, não um "abra no navegador". */
-function corpoEmTexto(ficha, gente, assinadoEm, teste) {
+/* O que dizer do anexo, nas duas versões do corpo. Quando o PDF
+   não veio, o e-mail CONTA ISSO em vez de ficar calado: um anexo
+   que a pessoa procura e não acha vira "o sistema está quebrado",
+   e a frase transforma isso em "está na Central". */
+function sobreOAnexo(anexo) {
+  if (anexo) {
+    return 'O documento assinado vai em anexo'
+      + (anexo.tipo === 'pades' ? ' (PDF com assinatura digital).' : '.');
+  }
+  return 'A Autentique ainda estava gerando o PDF assinado quando este aviso saiu. '
+    + 'Ele está disponível na Central de Peças.';
+}
+
+function corpoEmTexto(ficha, gente, assinadoEm, teste, anexo) {
   const quando = assinadoEm
     ? new Date(assinadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     : 'hoje';
@@ -757,12 +901,190 @@ function corpoEmTexto(ficha, gente, assinadoEm, teste) {
   linhas.push('');
   linhas.push(semMarcacao(r.frase));
   linhas.push('');
+  linhas.push(sobreOAnexo(anexo));
+  linhas.push('');
   linhas.push('Abrir na Central de Peças: https://materiais.luminamkt.co/' + r.tela);
   linhas.push('');
   linhas.push('Aviso automático da Central de Peças.');
 
   return linhas.join('\n');
 }
+
+/* ------------------------------------------------------------
+   O CORPO DO E-MAIL DO CLIENTE
+   ------------------------------------------------------------
+   Escrito para quem não trabalha aqui. Três regras, e cada uma
+   responde a um jeito de errar:
+
+     1. Nenhuma palavra de dentro. 'Ficha', 'parecer', 'pendência
+        de item', 'rodada', 'reaberta' são nossas. O cliente tem
+        móveis, uma montagem e uma loja.
+     2. Nenhum link da Central. Ele não tem login, e um botão que
+        pede senha a quem não tem conta é pior que nenhum botão.
+     3. O documento é o assunto, não um detalhe no fim. A primeira
+        coisa que o e-mail diz é o que foi decidido; a segunda é
+        que está anexado.
+   ------------------------------------------------------------ */
+
+function recadoParaOCliente(ficha, quando) {
+  const dados = ficha.dados || {};
+
+  if (ficha.tipo === 'vistoria') {
+    const n = pendenciasDa(ficha);
+    const reprovada = String(dados.parecer || '') === 'reprovada';
+
+    if (!n) {
+      return {
+        assunto: 'Vistoria da sua montagem — obra liberada',
+        destaque: 'A vistoria da montagem foi concluída e a obra está liberada.',
+        frase: 'Conferimos item por item com você em ' + quando
+             + ', e nada ficou pendente. O documento assinado segue em anexo.'
+      };
+    }
+
+    if (reprovada) {
+      return {
+        assunto: 'Vistoria da sua montagem',
+        destaque: 'A montagem não foi aprovada na vistoria de ' + quando + '.',
+        frase: (n === 1 ? 'Ficou 1 ponto a resolver' : 'Ficaram ' + n + ' pontos a resolver')
+             + ', e todos estão descritos no documento em anexo. '
+             + 'A obra não é considerada finalizada até que eles sejam resolvidos, '
+             + 'e a loja entra em contato para combinar o atendimento.'
+      };
+    }
+
+    return {
+      assunto: 'Vistoria da sua montagem — com assistência técnica',
+      destaque: 'A vistoria da montagem foi concluída em ' + quando + '.',
+      frase: (n === 1 ? '1 ponto ficou' : n + ' pontos ficaram')
+           + ' para a assistência técnica, com prazo de atendimento de até '
+           + '20 dias úteis, conforme contrato. O documento em anexo tem a lista '
+           + 'completa do que foi conferido e do que ficou para a assistência.'
+    };
+  }
+
+  /* Medição. O caminho 'corrigir' é o único em que o cliente não
+     assinou nada: ele recebe o parecer da loja. Dizer "você
+     assinou" ali seria falso, e falso num documento. */
+  const parecer = String(dados.parecerFinal || '');
+  const caminho = String(dados.caminhoInapto || '');
+
+  if (parecer === 'nao-aptos' && caminho === 'corrigir') {
+    return {
+      assunto: 'Parecer da medição do seu projeto',
+      destaque: 'A medição foi feita em ' + quando + ' e os ambientes ainda não '
+              + 'estão prontos para receber os móveis.',
+      frase: 'O documento em anexo descreve o que precisa ser ajustado e a nova '
+           + 'data combinada para a medição.'
+    };
+  }
+
+  if (parecer === 'nao-aptos') {
+    return {
+      assunto: 'Termo da medição do seu projeto',
+      destaque: 'O termo da medição foi assinado em ' + quando + '.',
+      frase: 'Os ambientes foram considerados não aptos e você optou por seguir '
+           + 'assim mesmo, assumindo os riscos descritos no documento. A partir da '
+           + 'assinatura começam a contar os prazos de produção, entrega e montagem. '
+           + 'O termo assinado segue em anexo.'
+    };
+  }
+
+  return {
+    assunto: 'Termo da medição do seu projeto',
+    destaque: 'O termo da medição foi assinado em ' + quando + '.',
+    frase: 'Os ambientes foram conferidos e estão aptos a receber os móveis. '
+         + 'A partir da assinatura começam a contar os prazos de produção, entrega '
+         + 'e montagem. O termo assinado segue em anexo.'
+  };
+}
+
+
+async function mandarEmailDoCliente(env, chave, ficha, email, assinadoEm, anexo) {
+  const remetente = String(env.EMAIL_REMETENTE || '').trim()
+                 || 'Central de Peças <onboarding@resend.dev>';
+
+  const teste = String(env.EMAIL_TESTE_PARA || '').trim();
+  const responder = String(env.EMAIL_RESPONDER_PARA || '').trim();
+
+  const loja = ficha.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos';
+  const quando = assinadoEm
+    ? new Date(assinadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    : 'hoje';
+
+  const r = recadoParaOCliente(ficha, quando);
+
+  const carta = {
+    from: remetente,
+    to: [teste || email],
+    subject: r.assunto + ' · Dalmóbile ' + loja,
+    html: corpoDoCliente(ficha, r, loja, responder, teste, email),
+    text: corpoDoClienteEmTexto(ficha, r, loja, responder, teste, email),
+    attachments: [anexoParaOResend(anexo)]
+  };
+
+  if (emailDeGente(responder)) carta.reply_to = responder;
+
+  await postarNoResend(chave, carta);
+}
+
+
+function corpoDoCliente(ficha, r, loja, responder, teste, email) {
+  const aviso = teste
+    ? '<p style="background:#fdf1e7;border:1px solid #f0cfae;padding:10px 12px;'
+      + 'border-radius:8px;font-size:13px;color:#8a4b12"><b>ENVIO DE TESTE.</b> '
+      + 'Na produção este e-mail iria para o cliente: ' + escapar(email) + '.</p>'
+    : '';
+
+  return '<div style="font:15px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;'
+    + 'max-width:520px;color:#141618">'
+    + aviso
+    + '<p style="margin:0 0 18px">Olá, ' + escapar(ficha.cliente || 'tudo bem') + '!</p>'
+    + '<p style="background:#f4f2ee;border:1px solid #e2ded6;padding:12px 14px;'
+    + 'border-radius:8px;margin:0 0 18px"><b>' + escapar(r.destaque) + '</b></p>'
+    + '<p style="margin:0 0 18px">' + escapar(r.frase) + '</p>'
+    + '<p style="margin:0 0 18px;font-size:13.5px;color:#4a5054">'
+    + 'Guarde o arquivo: ele é o seu comprovante'
+    + (ficha.contrato ? ' do contrato ' + escapar(ficha.contrato) : '') + '.</p>'
+    + '<p style="margin:26px 0 0;font-size:13.5px;color:#4a5054">'
+    + 'Dalmóbile ' + escapar(loja)
+    /* Convida a responder SÓ quando a resposta chega em algum
+       lugar. Sem a variável, o remetente é automático e um
+       "responda este e-mail" mandaria o cliente falar com
+       ninguém. */
+    + (emailDeGente(responder)
+        ? '<br>Qualquer dúvida, responda este e-mail e a loja recebe.'
+        : '<br>Qualquer dúvida, fale com a sua loja.')
+    + '</p></div>';
+}
+
+
+function corpoDoClienteEmTexto(ficha, r, loja, responder, teste, email) {
+  const linhas = [];
+
+  if (teste) {
+    linhas.push('*** ENVIO DE TESTE ***');
+    linhas.push('Na produção este e-mail iria para o cliente: ' + email);
+    linhas.push('');
+  }
+
+  linhas.push('Olá, ' + (ficha.cliente || 'tudo bem') + '!');
+  linhas.push('');
+  linhas.push(r.destaque);
+  linhas.push('');
+  linhas.push(r.frase);
+  linhas.push('');
+  linhas.push('Guarde o arquivo: ele é o seu comprovante'
+    + (ficha.contrato ? ' do contrato ' + ficha.contrato : '') + '.');
+  linhas.push('');
+  linhas.push('Dalmóbile ' + loja);
+  linhas.push(emailDeGente(responder)
+    ? 'Qualquer dúvida, responda este e-mail e a loja recebe.'
+    : 'Qualquer dúvida, fale com a sua loja.');
+
+  return linhas.join('\n');
+}
+
 
 function escapar(t) {
   return String(t == null ? '' : t)
