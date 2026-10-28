@@ -412,6 +412,18 @@ window.Campo = (function () {
     }
   }
 
+  /* Reabre a MESMA vistoria para uma rodada nova. Não cria
+     ficha: o que foi assinado vira versão imutável, com o
+     documento daquela vez guardado junto, e a ficha volta a ser
+     editável. */
+  async function reabrirVistoria(remoto, motivo) {
+    const r = await exigeServidor().rpc('reabrir_vistoria', {
+      alvo: remoto, motivo: motivo || null
+    });
+    if (r.error) throw new Error(r.error.message || 'Não consegui reabrir a vistoria.');
+    return r.data;
+  }
+
   async function reabrirMedicao(remoto, motivo) {
     const r = await exigeServidor().rpc('reabrir_medicao', { anterior: remoto, motivo: motivo || null });
     if (r.error) throw new Error(r.error.message || 'Não consegui reabrir a medição.');
@@ -738,7 +750,7 @@ window.Campo = (function () {
 
   /* Baixa o PDF assinado, pela nossa rota. Devolve o Blob — a
      tela decide se abre ou salva. */
-  async function baixarAssinado(remoto) {
+  async function baixarAssinado(remoto, versao) {
     const sb = temServidor();
     if (!sb) throw new Error('Sem internet. O documento assinado está no servidor.');
 
@@ -749,7 +761,9 @@ window.Campo = (function () {
     const r = await fetch('/api/documento', {
       method: 'POST',
       headers: { authorization: 'Bearer ' + sessao, 'content-type': 'application/json' },
-      body: JSON.stringify({ formulario: remoto })
+      body: JSON.stringify(versao
+        ? { formulario: remoto, versao: versao }
+        : { formulario: remoto })
     });
 
     if (!r.ok) {
@@ -779,6 +793,7 @@ window.Campo = (function () {
     anotarMarco: anotarMarco,
     enviarMarcos: enviarMarcos,
     reabrirMedicao: reabrirMedicao,
+    reabrirVistoria: reabrirVistoria,
     etiquetaParecer: etiquetaParecer,
     etiquetaEstado: etiquetaEstado,
     pintarEtiqueta: pintarEtiqueta,

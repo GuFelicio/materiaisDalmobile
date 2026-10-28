@@ -64,17 +64,37 @@ export async function onRequest(context) {
     /* Lido com o token do USUÁRIO: quem decide se ele alcança
        esta medição é o RLS, não uma segunda cópia da regra aqui.
        Sem acesso, a leitura volta vazia e acaba. */
+    /* Rodada anterior, quando pedida. A vistoria pode ser
+       reaberta, e aí o documento daquela vez não está mais na
+       ficha: está na versão. Sem isto, o PDF que o cliente
+       assinou na rodada 1 ficaria inalcançável depois da 2. */
+    const rodada = corpo.versao === undefined || corpo.versao === null
+      ? null : Number(corpo.versao);
+
+    if (rodada !== null && !(Number.isInteger(rodada) && rodada > 0)) {
+      throw falha('Versão inválida.', 400);
+    }
+
     const ficha = await buscarComoUsuario(url, secreta, sessao, alvo);
     if (!ficha) throw falha('Formulário não encontrado.', 404);
 
-    if (!ficha.autentique_id) {
-      throw falha('Esta medição ainda não foi enviada para assinatura.', 409);
+    /* A leitura da versão usa o token do USUÁRIO, como a da
+       ficha: quem decide o alcance é o RLS, não uma segunda
+       cópia da regra aqui. */
+    const documento = rodada === null
+      ? ficha.autentique_id
+      : await documentoDaVersao(url, secreta, sessao, alvo, rodada);
+
+    if (!documento) {
+      throw falha(rodada === null
+        ? 'Este documento ainda não foi enviado para assinatura.'
+        : 'Esta versão não tem documento assinado.', 409);
     }
 
-    const candidatos = await enderecosDoAssinado(token, ficha.autentique_id);
+    const candidatos = await enderecosDoAssinado(token, documento);
 
     if (!candidatos.length) {
-      throw falha(ficha.status === 'assinado'
+      throw falha(ficha.status === 'assinado' || rodada !== null
         ? 'A Autentique ainda está gerando o documento assinado. Tente de novo em instantes.'
         : 'O documento ainda não foi assinado por todos.', 409);
     }
@@ -235,6 +255,32 @@ function nomeDoArquivo(ficha, tipo) {
 /* ------------------------------------------------------------
    Banco
    ------------------------------------------------------------ */
+
+/* O documento de uma rodada encerrada. Devolve null quando a
+   versão não existe, não é alcançável ou não teve documento —
+   os três casos dão o mesmo recado, de propósito: dizer "existe,
+   mas você não vê" já conta alguma coisa. */
+async function documentoDaVersao(url, secreta, sessao, formulario, numero) {
+  const r = await fetch(url + '/rest/v1/formulario_versoes'
+    + '?select=autentique_id&limit=1'
+    + '&formulario=eq.' + encodeURIComponent(formulario)
+    + '&numero=eq.' + encodeURIComponent(numero), {
+    headers: {
+      apikey: secreta,
+      authorization: 'Bearer ' + sessao,
+      accept: 'application/json'
+    }
+  });
+
+  if (r.status === 401 || r.status === 403) {
+    throw falha('Sua sessão expirou. Entre de novo e tente mais uma vez.', 401);
+  }
+  if (!r.ok) throw falha('Não consegui ler o histórico agora.', 502);
+
+  const linhas = await r.json();
+  return (linhas && linhas[0] && linhas[0].autentique_id) || null;
+}
+
 
 async function buscarComoUsuario(url, secreta, sessao, id) {
   const r = await fetch(url + '/rest/v1/formularios'

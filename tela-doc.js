@@ -411,6 +411,10 @@
      ------------------------------------------------------------ */
   const MOTIVOS = {
     pdf: 'PDF gerado',
+    assinatura: 'documento assinado',
+    reabertura: 'rodada encerrada, vistoria reaberta',
+    recusa: 'assinatura recusada',
+    manual: 'registro manual',
     assinado: 'documento assinado',
     correcao: 'correção depois de assinado',
     reabertura: 'medição reaberta'
@@ -439,6 +443,32 @@
       (v.criada_por_nome ? ' · ' + v.criada_por_nome : '');
 
     d.append(topo, porque);
+
+    /* Rodada encerrada que teve documento ganha o botão dela.
+       Sem isto o histórico diria que a rodada existiu e não
+       haveria como abrir o PDF que o cliente assinou nela. */
+    if (!pendente && v.autentique_id) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn vazio largo';
+      b.style.marginTop = '8px';
+      b.textContent = 'Abrir o documento desta versão';
+      b.onclick = async function () {
+        b.disabled = true;
+        const antes = b.textContent;
+        b.textContent = 'Buscando…';
+        try {
+          const pdf = await C.baixarAssinado(atual.remoto, v.numero);
+          await C.entregar(null, pdf.blob, pdf.nome);
+        } catch (erro) {
+          alert(erro.message || 'Não consegui trazer o documento.');
+        } finally {
+          b.disabled = false;
+          b.textContent = antes;
+        }
+      };
+      d.appendChild(b);
+    }
 
     if (v.hash) {
       const dig = document.createElement('p');
@@ -481,7 +511,7 @@
     if (sb && atual.remoto) {
       try {
         const r = await sb.from('formulario_historico')
-          .select('numero, motivo, hash, criada_em, criada_por_nome')
+          .select('numero, motivo, hash, criada_em, criada_por_nome, autentique_id')
           .eq('formulario', atual.remoto)
           .order('numero', { ascending: false });
         if (r.error) falhou = r.error.message;
@@ -799,6 +829,7 @@
       caixa.classList.remove('oculto');
       el('resumo-assinatura').innerHTML = resumoDaAssinatura(atual.dados.assinatura);
       ligarBotaoDoAssinado();
+      ligarBotaoDeReabrir();
       return;
     }
 
@@ -820,6 +851,45 @@
     botao.textContent = e.fase === 'esperando' ? 'Aguardando sinal' : 'Falta preencher';
     botao.title = e.porque || '';
     el('salvar').className = 'btn';
+  }
+
+  /* Reabrir é para a rodada seguinte: feita a assistência, ou
+     corrigido o que reprovou, a MESMA vistoria é conferida de
+     novo e assinada de novo. Ficha nova faria o cliente receber
+     dois documentos sem relação visível entre eles. */
+  function ligarBotaoDeReabrir() {
+    const botao = el('reabrir');
+    if (!botao) return;
+
+    botao.hidden = atual.status !== 'assinado' && atual.status !== 'recusado';
+
+    botao.onclick = async function () {
+      const motivo = prompt('O que mudou? (vai no histórico)\n\n'
+        + 'Ex.: assistência executada, cliente aceitou após ajuste');
+      if (motivo === null) return;   /* desistiu */
+
+      botao.disabled = true;
+      const antes = botao.textContent;
+      botao.textContent = 'Reabrindo…';
+
+      try {
+        await C.reabrirVistoria(atual.remoto, motivo.trim());
+
+        /* A ficha mudou no servidor; trazer de lá é mais seguro
+           que adivinhar aqui o que a função fez. */
+        await sincronizarTudo();
+        await abrirFicha(atual.id);
+
+        alert('Vistoria reaberta. A rodada anterior ficou guardada no histórico, '
+            + 'com o documento assinado dela.');
+      } catch (erro) {
+        console.error(erro);
+        alert(erro.message || 'Não consegui reabrir a vistoria.');
+        botao.textContent = antes;
+      } finally {
+        botao.disabled = false;
+      }
+    };
   }
 
   function ligarBotaoDoAssinado() {
@@ -862,6 +932,8 @@
     if (atual.status === 'assinado') {
       linhas.push('<button type="button" class="btn vazio largo" id="baixar-assinado" '
         + 'style="margin-top:10px">Abrir o documento assinado</button>');
+      linhas.push('<button type="button" class="btn vazio largo" id="reabrir" '
+        + 'style="margin-top:8px">Reabrir para nova vistoria</button>');
     } else {
       linhas.push('<p>O documento assinado aparece aqui assim que o cliente assinar.</p>');
     }
