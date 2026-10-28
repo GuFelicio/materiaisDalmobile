@@ -678,6 +678,12 @@
     atual.dados.responsavel = el('f-responsavel').value.trim();
     atual.dados.observacoes = el('f-observacoes').value;
 
+    /* Quem conhece a receita é esta tela. A etiqueta na lista da
+       Central precisa saber quantos itens o documento tem para
+       não chamar de "incompleto" o que está pronto — e a Central
+       não carrega as receitas. */
+    atual.dados.totalDeItens = D.receita.contar(atual.dados).total;
+
     /* Só a vistoria com o cliente tem este campo. É o nome que
        vai na linha de assinatura do PDF. */
     if (el('f-cliente-assina')) {
@@ -792,6 +798,7 @@
       el('salvar').className = 'btn';
       caixa.classList.remove('oculto');
       el('resumo-assinatura').innerHTML = resumoDaAssinatura(atual.dados.assinatura);
+      ligarBotaoDoAssinado();
       return;
     }
 
@@ -815,6 +822,29 @@
     el('salvar').className = 'btn';
   }
 
+  function ligarBotaoDoAssinado() {
+    const botao = el('baixar-assinado');
+    if (!botao) return;
+
+    botao.onclick = async function () {
+      botao.disabled = true;
+      const antes = botao.textContent;
+      botao.textContent = 'Buscando…';
+      try {
+        /* Busca na hora, em vez de guardar o endereço: o link da
+           Autentique envelhece, e um botão que leva a um link
+           morto é pior que um botão que demora dois segundos. */
+        const pdf = await C.baixarAssinado(atual.remoto);
+        await C.entregar(null, pdf.blob, pdf.nome);
+      } catch (erro) {
+        alert(erro.message || 'Não consegui trazer o documento.');
+      } finally {
+        botao.disabled = false;
+        botao.textContent = antes;
+      }
+    };
+  }
+
   function resumoDaAssinatura(a) {
     const linhas = [];
     linhas.push('<p>' + (a.clienteAssina
@@ -825,6 +855,17 @@
       linhas.push('<p class="alerta">Documento de teste (sandbox): não tem validade.</p>');
     }
     if (a.aviso) linhas.push('<p class="alerta">' + C.escapar(a.aviso) + '</p>');
+
+    /* O botão só aparece depois que a Autentique avisou que
+       terminou. Antes disso não existe documento assinado para
+       buscar, e o botão só daria erro. */
+    if (atual.status === 'assinado') {
+      linhas.push('<button type="button" class="btn vazio largo" id="baixar-assinado" '
+        + 'style="margin-top:10px">Abrir o documento assinado</button>');
+    } else {
+      linhas.push('<p>O documento assinado aparece aqui assim que o cliente assinar.</p>');
+    }
+
     return linhas.join('');
   }
 

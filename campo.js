@@ -446,27 +446,59 @@ window.Campo = (function () {
       return { texto: 'sem parecer', classe: 'aviso' };
     }
 
-    if (doc.tipo === 'montagem') {
-      const itens = d.itens || {};
-      let nao = 0, faltam = 0;
+    if (doc.tipo === 'montagem' || doc.tipo === 'vistoria') {
+      const c = contarRespostas(d);
 
-      Object.keys(itens).forEach(function (k) {
-        const r = itens[k].resposta;
-        if (r === 'nao') nao += 1;
-        else if (!r) faltam += 1;
-      });
+      /* ⚠️ O TOTAL VEM DA FICHA, não de um número escrito aqui.
+         Estava fixo em 36 porque era quanto o checklist tinha. O
+         documento caiu para 21 e TODA montagem completa passou a
+         aparecer como "incompleto" — a etiqueta mentindo
+         justamente no caso em que estava tudo certo. Número de
+         itens é coisa da receita; esta função não tem como saber
+         e não deve fingir que sabe. */
+      if (c.faltam || c.respondidos < c.total) {
+        return { texto: 'incompleto', classe: 'aviso' };
+      }
 
-      /* Conta só o que está gravado: uma montagem sincronizada
-         com o checklist pela metade tem menos chaves que itens,
-         e dizer "tudo conforme" nesse caso seria mentira. */
-      const respondidos = Object.keys(itens).length - faltam;
+      if (doc.tipo === 'montagem') {
+        if (c.nao) return { texto: c.nao + ' não conforme', classe: 'erro' };
+        return { texto: 'tudo conforme', classe: 'ok' };
+      }
 
-      if (nao) return { texto: nao + ' não conforme', classe: 'erro' };
-      if (respondidos < 36) return { texto: 'incompleto', classe: 'aviso' };
-      return { texto: 'tudo conforme', classe: 'ok' };
+      /* A vistoria tem desfecho, não só contagem: é o que a
+         equipe procura na lista. */
+      if (!c.nao) return { texto: 'obra liberada', classe: 'ok' };
+
+      const parecer = String(d.parecer || '');
+      if (parecer === 'reprovada')   return { texto: 'obra reprovada', classe: 'erro' };
+      if (parecer === 'assistencia') return { texto: 'assistência solicitada', classe: 'aviso' };
+      return { texto: 'falta o parecer', classe: 'aviso' };
     }
 
     return null;   // checklist de eletros não tem parecer
+  }
+
+  /* Conta as respostas gravadas na ficha. 'total' sai de
+     totalDeItens, que a tela grava porque é ela quem conhece a
+     receita; sem ele, sobra contar as chaves, que é o melhor
+     palpite possível para uma ficha antiga. */
+  function contarRespostas(d) {
+    const itens = (d && d.itens) || {};
+    let nao = 0, faltam = 0;
+
+    Object.keys(itens).forEach(function (k) {
+      const r = (itens[k] || {}).resposta;
+      if (r === 'nao') nao += 1;
+      else if (!r) faltam += 1;
+    });
+
+    const chaves = Object.keys(itens).length;
+    return {
+      nao: nao,
+      faltam: faltam,
+      respondidos: chaves - faltam,
+      total: Number((d || {}).totalDeItens) || chaves
+    };
   }
 
   function etiquetaEstado(doc) {
