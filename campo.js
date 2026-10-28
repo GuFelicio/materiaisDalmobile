@@ -416,6 +416,36 @@ window.Campo = (function () {
      ficha: o que foi assinado vira versão imutável, com o
      documento daquela vez guardado junto, e a ficha volta a ser
      editável. */
+  /* Joga fora um pedido de assinatura que o cliente ainda não
+     assinou. O servidor descarta o documento na Autentique antes
+     de limpar o banco — a ordem importa, e quem garante é ele. */
+  async function cancelarAssinatura(remoto) {
+    const sb = temServidor();
+    if (!sb) throw new Error('Sem internet. Cancelar precisa falar com o servidor.');
+
+    const se = await sb.auth.getSession();
+    const sessao = se && se.data && se.data.session && se.data.session.access_token;
+    if (!sessao) throw new Error('Sua sessão expirou. Entre de novo.');
+
+    const corpo = new FormData();
+    corpo.append('formulario', remoto);
+    corpo.append('acao', 'cancelar');
+
+    const r = await fetch('/api/assinatura', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + sessao },
+      body: corpo
+    });
+
+    let dados = null;
+    try { dados = await r.json(); } catch (e) { dados = null; }
+
+    if (!r.ok || !dados || !dados.ok) {
+      throw new Error((dados && dados.erro) || 'Não consegui cancelar o pedido.');
+    }
+    return dados;
+  }
+
   async function reabrirVistoria(remoto, motivo) {
     const r = await exigeServidor().rpc('reabrir_vistoria', {
       alvo: remoto, motivo: motivo || null
@@ -741,7 +771,15 @@ window.Campo = (function () {
     try { dados = await r.json(); } catch (e) { dados = null; }
 
     if (!r.ok || !dados || !dados.ok) {
-      throw new Error((dados && dados.erro) || 'Não consegui enviar para assinatura.');
+      const e = new Error((dados && dados.erro) || 'Não consegui enviar para assinatura.');
+      /* O servidor diz que já existe documento e qual é. A tela
+         usa isso para se acertar, em vez de continuar oferecendo
+         um botão que vai ser recusado para sempre. */
+      if (dados && dados.jaEnviado) {
+        e.jaEnviado = true;
+        e.documento = dados.documento || null;
+      }
+      throw e;
     }
 
     return dados;
@@ -794,6 +832,7 @@ window.Campo = (function () {
     enviarMarcos: enviarMarcos,
     reabrirMedicao: reabrirMedicao,
     reabrirVistoria: reabrirVistoria,
+    cancelarAssinatura: cancelarAssinatura,
     etiquetaParecer: etiquetaParecer,
     etiquetaEstado: etiquetaEstado,
     pintarEtiqueta: pintarEtiqueta,

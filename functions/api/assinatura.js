@@ -100,8 +100,17 @@ export async function onRequest(context) {
          contrato existe para quem não deveria saber. */
       throw falha('Formulário não encontrado.', 404);
     }
+    if (pedido.cancelar) {
+      return await cancelar(url, secreta, sessao, token, ficha);
+    }
+
     if (ficha.autentique_id) {
-      throw falha('Este formulário já foi enviado para assinatura.', 409);
+      /* O id vai junto de propósito: quando a tela e o servidor
+         discordam — envio que chegou ao fim mas cuja resposta não
+         voltou — é com ele que a tela se acerta, em vez de ficar
+         oferecendo um botão que o banco vai recusar para sempre. */
+      throw falha('Este formulário já foi enviado para assinatura.', 409,
+                  { jaEnviado: true, documento: ficha.autentique_id });
     }
     if (ficha.status === 'apagado' || ficha.status === 'cancelado') {
       throw falha('Este formulário não está mais ativo.', 409);
@@ -159,7 +168,10 @@ export async function onRequest(context) {
 
   } catch (e) {
     return responder(
-      { erro: e.publico || 'Deu errado aqui. Tente de novo em instantes.' },
+      Object.assign(
+        { erro: e.publico || 'Deu errado aqui. Tente de novo em instantes.' },
+        e.extra || {}
+      ),
       e.status || 500
     );
   }
@@ -183,6 +195,12 @@ async function lerPedido(request, tetoMB) {
 
   const id = String(form.get('formulario') || '').trim();
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw falha('Formulário inválido.', 400);
+
+  /* Cancelar não manda PDF: é o contrário de mandar. Sai aqui,
+     antes de toda a conferência de arquivo. */
+  if (String(form.get('acao') || '').trim() === 'cancelar') {
+    return { formulario: id, cancelar: true };
+  }
 
   const arquivo = form.get('pdf');
   if (!arquivo || typeof arquivo.arrayBuffer !== 'function') {
@@ -659,8 +677,54 @@ function responder(dados, status) {
   });
 }
 
-function falha(publico, status) {
+/* ------------------------------------------------------------
+   Cancelar um pedido ainda não assinado
+   ------------------------------------------------------------
+   ⚠️ A ORDEM: joga fora na Autentique PRIMEIRO, limpa o banco
+   depois. Ao contrário, um erro no meio deixaria o cliente com
+   um link vivo para assinar uma versão abandonada — e um
+   documento assinado de algo que ninguém mais considera válido
+   é pior que documento nenhum.
+   ------------------------------------------------------------ */
+async function cancelar(url, secreta, sessao, token, ficha) {
+  if (ficha.status === 'assinado') {
+    throw falha('Esta ficha já foi assinada. Para uma nova rodada, use reabrir.', 409);
+  }
+  if (!ficha.autentique_id) {
+    throw falha('Esta ficha não tem pedido de assinatura em aberto.', 409);
+  }
+
+  await descartar(token, ficha.autentique_id);
+
+  const r = await fetch(url + '/rest/v1/rpc/cancelar_pedido_assinatura', {
+    method: 'POST',
+    headers: {
+      apikey: secreta,
+      authorization: 'Bearer ' + sessao,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({ alvo: ficha.id, doc_id: ficha.autentique_id })
+  });
+
+  if (!r.ok) {
+    const texto = await r.text();
+    if (/não tem acesso/i.test(texto)) {
+      throw falha('Você não tem acesso a este formulário.', 403);
+    }
+    /* O documento já foi para a lixeira; é o banco que ficou
+       para trás. Tentar de novo resolve, e dizer isso evita que
+       alguém conclua que o cancelamento não aconteceu. */
+    throw falha('Joguei o documento fora na Autentique, mas não consegui '
+              + 'registrar aqui. Tente cancelar de novo.', 502);
+  }
+
+  return responder({ ok: true, cancelado: ficha.autentique_id });
+}
+
+
+function falha(publico, status, extra) {
   const e = new Error(publico);
+  if (extra) e.extra = extra;
   e.publico = publico;
   e.status = status || 500;
   return e;

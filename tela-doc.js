@@ -830,6 +830,7 @@
       el('resumo-assinatura').innerHTML = resumoDaAssinatura(atual.dados.assinatura);
       ligarBotaoDoAssinado();
       ligarBotaoDeReabrir();
+      ligarBotaoDeCancelar();
       return;
     }
 
@@ -892,6 +893,41 @@
     };
   }
 
+  function ligarBotaoDeCancelar() {
+    const botao = el('cancelar-assinatura');
+    if (!botao) return;
+
+    botao.onclick = async function () {
+      /* Confirmação com o que acontece de verdade, e não um "tem
+         certeza?": o link que o cliente recebeu para de
+         funcionar, e isso é o que a pessoa precisa pesar. */
+      if (!confirm('Cancelar o pedido de assinatura?\n\n'
+          + 'O documento é jogado fora e o link que o cliente recebeu para de '
+          + 'funcionar. A ficha volta a ser editável, e depois você envia de novo.')) {
+        return;
+      }
+
+      botao.disabled = true;
+      const antes = botao.textContent;
+      botao.textContent = 'Cancelando…';
+
+      try {
+        await C.cancelarAssinatura(atual.remoto);
+        delete atual.dados.assinatura;
+        await guardar();
+        await sincronizarTudo();
+        await abrirFicha(atual.id);
+        alert('Pedido cancelado. Pode corrigir e enviar de novo.');
+      } catch (erro) {
+        console.error(erro);
+        alert(erro.message || 'Não consegui cancelar o pedido.');
+        botao.textContent = antes;
+      } finally {
+        botao.disabled = false;
+      }
+    };
+  }
+
   function ligarBotaoDoAssinado() {
     const botao = el('baixar-assinado');
     if (!botao) return;
@@ -917,9 +953,11 @@
 
   function resumoDaAssinatura(a) {
     const linhas = [];
-    linhas.push('<p>' + (a.clienteAssina
-      ? 'Enviada para o cliente assinar, por ' + C.escapar(a.canal || 'WhatsApp') + '.'
-      : 'Assinada pela Dalmóbile e enviada ao cliente por e-mail.') + '</p>');
+    linhas.push('<p>' + (a.recuperado
+      ? 'Enviada para assinatura num envio anterior, recuperado do servidor.'
+      : (a.clienteAssina
+          ? 'Enviada para o cliente assinar, por ' + C.escapar(a.canal || 'WhatsApp') + '.'
+          : 'Assinada pela Dalmóbile e enviada ao cliente por e-mail.')) + '</p>');
     if (a.em) linhas.push('<p>' + C.escapar(dataLonga(a.em)) + '</p>');
     if (a.sandbox) {
       linhas.push('<p class="alerta">Documento de teste (sandbox): não tem validade.</p>');
@@ -936,6 +974,11 @@
         + 'style="margin-top:8px">Reabrir para nova vistoria</button>');
     } else {
       linhas.push('<p>O documento assinado aparece aqui assim que o cliente assinar.</p>');
+      /* Enviado e ainda não assinado: é a única janela em que dá
+         para corrigir. Sem este botão a ficha fica sem saída —
+         reenviar é recusado e reabrir exige estar assinada. */
+      linhas.push('<button type="button" class="btn vazio largo" id="cancelar-assinatura" '
+        + 'style="margin-top:10px">Cancelar o pedido e corrigir</button>');
     }
 
     return linhas.join('');
@@ -999,7 +1042,26 @@
 
       } catch (erro) {
         console.error(erro);
-        alert(erro.message || 'Não consegui enviar para assinatura.');
+
+        /* O servidor sabe que já foi enviado e o aparelho não —
+           envio que chegou ao fim mas cuja resposta não voltou.
+           Anotar aqui faz a tela parar de oferecer um botão que
+           seria recusado para sempre. */
+        if (erro.jaEnviado) {
+          atual.dados.assinatura = {
+            documento: erro.documento || null,
+            em: C.agora(),
+            canal: null,
+            clienteAssina: null,
+            recuperado: true
+          };
+          await guardar();
+          alert('Esta vistoria já tinha sido enviada para assinatura — o envio anterior '
+              + 'chegou ao servidor, mas a resposta não voltou para o aparelho. '
+              + 'Acertei a tela. Para corrigir e mandar de novo, cancele o pedido.');
+        } else {
+          alert(erro.message || 'Não consegui enviar para assinatura.');
+        }
         botao.textContent = antes;
       } finally {
         botao.disabled = false;
