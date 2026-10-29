@@ -28,7 +28,7 @@
    baixou da primeira vez.
    ============================================================ */
 
-const VERSAO = 'dalmobile-campo-v12';
+const VERSAO = 'dalmobile-campo-v13';
 
 /* O que precisa existir no aparelho para a tela funcionar
    sozinha. Se algum destes faltar, falta função: sem as fontes

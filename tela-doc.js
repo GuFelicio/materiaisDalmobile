@@ -409,16 +409,81 @@
      cliente viu o documento, que é a que foi gerada na obra, sem
      sinal.
      ------------------------------------------------------------ */
+  /* ⚠️ 'reabertura' estava DUAS VEZES aqui, e a segunda ganhava:
+     toda vistoria reaberta aparecia no histórico como "medição
+     reaberta". Chave repetida em objeto literal não dá erro
+     nenhum — a última cala a primeira, em silêncio. */
   const MOTIVOS = {
     pdf: 'PDF gerado',
     assinatura: 'documento assinado',
-    reabertura: 'rodada encerrada, vistoria reaberta',
-    recusa: 'assinatura recusada',
-    manual: 'registro manual',
+    recusa: 'assinatura recusada pelo cliente',
+    reabertura: 'rodada encerrada, ' + D.umaPalavra + ' reaberta',
+    manual: 'pedido de assinatura cancelado',
     assinado: 'documento assinado',
-    correcao: 'correção depois de assinado',
-    reabertura: 'medição reaberta'
+    correcao: 'correção depois de assinado'
   };
+
+  /* ------------------------------------------------------------
+     O que aquela rodada concluiu, e quem assinou
+     ------------------------------------------------------------
+     São duas coisas diferentes e o documento é diferente:
+
+         liberada / com assistência  → o CLIENTE assina
+         reprovada                   → a DALMÓBILE assina, e o
+                                       cliente recebe
+
+     Sem esta linha o histórico mostrava duas rodadas iguais, com
+     dois botões iguais, e saber qual era qual exigia baixar as
+     duas.
+
+     Lê o parecer DAQUELA versão, que a visão do banco traz — não
+     o parecer de agora. O de agora é da rodada em andamento, e
+     usá-lo aqui faria o histórico mentir sobre o passado.
+     ------------------------------------------------------------ */
+  function desfechoDaVersao(v) {
+    if (v.status_no_momento === 'recusado') {
+      return 'o cliente recusou a assinatura';
+    }
+
+    if (v.status_no_momento !== 'assinado') return '';
+
+    if (D.tipo === 'vistoria') {
+      const p = v.parecer_no_momento || '';
+      if (p === 'reprovada')   return 'obra reprovada · assinada pela Dalmóbile';
+      if (p === 'assistencia') return 'aprovada com assistência · assinada pelo cliente';
+      return 'obra liberada · assinada pelo cliente';
+    }
+
+    const pf = v.parecer_final_no_momento || '';
+    if (pf === 'nao-aptos' && v.caminho_no_momento === 'corrigir') {
+      return 'ambientes não aptos · assinada pela Dalmóbile';
+    }
+    if (pf === 'nao-aptos') return 'não aptos, prosseguindo · assinada pelo cliente';
+    if (pf === 'aptos')     return 'ambientes aptos · assinada pelo cliente';
+    return 'assinada';
+  }
+
+  /* ------------------------------------------------------------
+     Quais rodadas ganham o botão de baixar
+     ------------------------------------------------------------
+     UM BOTÃO POR DOCUMENTO, e não um por versão que tenha id.
+     As duas regras abaixo existem porque a conta não é a mesma:
+
+       'reabertura' carrega o id da rodada que acabou de fechar —
+       o MESMO id que já está na versão de assinatura ou de
+       recusa logo abaixo. Botão ali seria o segundo botão para o
+       mesmo arquivo, e dois botões iguais fazem a pessoa
+       desconfiar de que são arquivos diferentes.
+
+       'manual' é pedido de assinatura CANCELADO. O documento foi
+       descartado na Autentique de propósito, antes de qualquer
+       assinatura. O id fica guardado como rastro — mas o arquivo
+       não existe mais, e um botão ali só entregaria erro.
+     ------------------------------------------------------------ */
+  function temDocumentoParaBaixar(v) {
+    if (!v.autentique_id) return false;
+    return v.motivo === 'assinatura' || v.motivo === 'recusa';
+  }
 
   function cartaoDeVersao(v, pendente) {
     const d = document.createElement('div');
@@ -444,10 +509,19 @@
 
     d.append(topo, porque);
 
+    /* Quem assinou aquela rodada, logo abaixo do motivo. */
+    const desfecho = pendente ? '' : desfechoDaVersao(v);
+    if (desfecho) {
+      const q = document.createElement('p');
+      q.className = 'porque desfecho';
+      q.textContent = desfecho;
+      d.appendChild(q);
+    }
+
     /* Rodada encerrada que teve documento ganha o botão dela.
        Sem isto o histórico diria que a rodada existiu e não
        haveria como abrir o PDF que o cliente assinou nela. */
-    if (!pendente && v.autentique_id) {
+    if (!pendente && temDocumentoParaBaixar(v)) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'btn vazio largo';
@@ -511,7 +585,14 @@
     if (sb && atual.remoto) {
       try {
         const r = await sb.from('formulario_historico')
-          .select('numero, motivo, hash, criada_em, criada_por_nome, autentique_id')
+          /* O parecer daquela rodada vem junto: é ele que diz se
+             quem assinou foi o cliente ou a Dalmóbile. Sem estas
+             colunas o cartão não tem como saber, e a consulta
+             calada seria pior que um erro — o histórico ficaria
+             com duas rodadas indistinguíveis. */
+          .select('numero, motivo, status_no_momento, hash, criada_em, '
+                + 'criada_por_nome, autentique_id, parecer_no_momento, '
+                + 'parecer_final_no_momento, caminho_no_momento')
           .eq('formulario', atual.remoto)
           .order('numero', { ascending: false });
         if (r.error) falhou = r.error.message;
@@ -865,7 +946,16 @@
     botao.hidden = atual.status !== 'assinado' && atual.status !== 'recusado';
 
     botao.onclick = async function () {
-      const motivo = prompt('O que mudou? (vai no histórico)\n\n'
+      /* O aviso de que nada se perde vem ANTES, não depois. Quem
+         está com o dedo no botão precisa saber que reabrir
+         acrescenta uma rodada — não substitui a anterior. Estava
+         só no alerta de sucesso, quando já não servia para
+         decidir nada. */
+      const motivo = prompt(
+        'Reabrir acrescenta uma rodada. A rodada atual fica guardada no '
+        + 'histórico, com o documento assinado dela, e continua disponível '
+        + 'para baixar. Nada é apagado.\n\n'
+        + 'O que mudou? (vai no histórico)\n\n'
         + 'Ex.: assistência executada, cliente aceitou após ajuste');
       if (motivo === null) return;   /* desistiu */
 
