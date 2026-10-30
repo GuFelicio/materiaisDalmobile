@@ -408,7 +408,38 @@
   }
   .pessoa .acoes button:hover:not(:disabled) { border-color: var(--line-2); color: var(--ink); }
   .pessoa .acoes button:disabled { opacity: .4; cursor: default; }
-  #montadores-novo { display: flex; gap: 8px; margin: 10px 0 14px; }
+  /* A caixa de criar cargo usa a mesma forma da de montadores: a
+     pessoa já aprendeu aquela, e inventar uma segunda só para
+     esta seria custo sem ganho. */
+  #montadores-novo, #cargos-novo { display: flex; gap: 8px; margin: 10px 0 14px; }
+  #cargos-novo input {
+    flex: 1; min-width: 0; padding: 9px 11px; font: inherit; font-size: 14px;
+    border: 1px solid var(--line); border-radius: 9px; background: var(--card);
+    color: var(--ink);
+  }
+  #cargos-novo .botao {
+    margin: 0; white-space: nowrap; width: auto; flex: 0 0 auto; padding: 9px 18px;
+    font-size: 14px;
+  }
+
+  /* A matriz. Linha por item, com a caixinha à esquerda e o nome
+     do grupo acima — a mesma leitura do resto do painel. */
+  #matriz-lista .bloco { margin-top: 16px; }
+  #matriz-lista .bloco > h4 {
+    margin: 0 0 6px; font-size: 12.5px; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  #matriz-lista label {
+    display: flex; align-items: flex-start; gap: 9px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 9px; background: var(--card);
+    margin-bottom: 6px; cursor: pointer; font-size: 14px;
+  }
+  #matriz-lista label.escondido { opacity: .55; }
+  #matriz-lista label input { margin-top: 2px; flex: 0 0 auto; }
+  #matriz-lista label .onde { display: block; color: var(--muted); font-size: 12.5px; }
+  #matriz-lista label.travado { opacity: .5; cursor: not-allowed; }
+  .pessoa .cargo-sel { max-width: 15ch; }
+
   #montadores-novo input {
     flex: 1; min-width: 0; padding: 9px 11px; font: inherit; font-size: 14px;
     border: 1px solid var(--line); border-radius: 9px; background: var(--card);
@@ -539,6 +570,24 @@
         <div id="contas-admin">
         <h3 class="seccao-titulo" style="margin-top:26px">Cargos</h3>
         <div id="contas-lista"></div>
+
+        <h3 class="seccao-titulo" style="margin-top:26px">O que cada cargo vê</h3>
+        <p class="seccao-sub">Cargo é vitrine: decide o que aparece no Central, e
+           não o que a pessoa pode fazer. Quem edita a ficha de quem continua
+           sendo a gerência e a administração, acima.</p>
+
+        <div id="cargos-novo">
+          <input id="cargo-nome" type="text" placeholder="Nome do cargo (ex.: Montador)" autocomplete="off">
+          <button type="button" class="botao" id="cargo-add">Criar cargo</button>
+        </div>
+        <div id="cargos-lista"></div>
+
+        <div id="matriz-caixa" class="oculto">
+          <p class="seccao-sub" style="margin-top:18px">
+            Desmarque o que este cargo <b>não</b> deve ver. Item novo nasce
+            marcado — ninguém fica sem trabalhar por permissão esquecida.</p>
+          <div id="matriz-lista"></div>
+        </div>
 
         <h3 class="seccao-titulo" style="margin-top:26px">Documentos</h3>
         <div id="docs-lista"></div>
@@ -897,9 +946,9 @@ const BIBLIOTECA = [
     grupo: 'Catálogos',
     itens: [
       { nome: 'Catálogos digitais', descricao: 'Catálogos para follow up, conversas e retargeting de clientes e arquitetos!',
-        url: 'https://drive.google.com/open?id=1DpfL3YHfD6J_kaLfUaUydZYLjZodMzjs&usp=drive_fs', tipo: 'PASTA', lojas: ['sjc'] },
+        url: 'https://drive.google.com/open?id=1DpfL3YHfD6J_kaLfUaUydZYLjZodMzjs&usp=drive_fs', tipo: 'PASTA', lojas: ['sjc'], id: 'catalogos-sjc' },
       { nome: 'Catálogos digitais', descricao: 'Catálogos para follow up, conversas e retargeting de clientes e arquitetos!',
-        url: 'https://drive.google.com/open?id=17M8sNhcZ1B9dU68VBV6jBoG4eC91Hru4&usp=drive_fs', tipo: 'PASTA', lojas: ['cgt'] }
+        url: 'https://drive.google.com/open?id=17M8sNhcZ1B9dU68VBV6jBoG4eC91Hru4&usp=drive_fs', tipo: 'PASTA', lojas: ['cgt'], id: 'catalogos-cgt' }
     ]
   },
 
@@ -907,11 +956,11 @@ const BIBLIOTECA = [
     grupo: 'Documentos',
     itens: [
       { nome: 'Apresentação Clientes', descricao: 'Apresentação para clientes finais.',
-        url: 'https://docs.google.com/presentation/d/1PuTSYx9Cppav-oxWyV0ZeeKR7cD9EUty/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
+        url: 'https://docs.google.com/presentation/d/1PuTSYx9Cppav-oxWyV0ZeeKR7cD9EUty/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'], id: 'apres-clientes' },
       { nome: 'Apresentação Arquitetos', descricao: 'Apresentação para arquitetos e designers.',
-        url: 'https://docs.google.com/presentation/d/1tiisjXgxjbPDemCt1t3hRtxlbuojQtUY/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
+        url: 'https://docs.google.com/presentation/d/1tiisjXgxjbPDemCt1t3hRtxlbuojQtUY/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'], id: 'apres-arquitetos' },
         { nome: 'Manual de Garantia e Uso', descricao: 'Manual de Garantia e de como usar os moveis adquiridos na Dalmóbile.',
-        url: 'https://drive.google.com/file/d/1iLPazH48KGWEQF2S_6f6W4vMjbDQxEUx/view?usp=sharing', tipo: 'DOC', lojas: ['sjc', 'cgt'] },
+        url: 'https://drive.google.com/file/d/1iLPazH48KGWEQF2S_6f6W4vMjbDQxEUx/view?usp=sharing', tipo: 'DOC', lojas: ['sjc', 'cgt'], id: 'manual-garantia' },
     ]
   },
 
@@ -919,11 +968,11 @@ const BIBLIOTECA = [
     grupo: 'Marca',
     itens: [
       { nome: 'Logos Dalmóbile SJC', descricao: 'PNG, SVG e versões monocromáticas',
-        url: 'https://drive.google.com/open?id=16QJlW34b9kPl47M7AxYqTpumMCP6ZrQE&usp=drive_fs', tipo: 'PASTA', lojas: ['sjc'] },
+        url: 'https://drive.google.com/open?id=16QJlW34b9kPl47M7AxYqTpumMCP6ZrQE&usp=drive_fs', tipo: 'PASTA', lojas: ['sjc'], id: 'logos-sjc' },
       { nome: 'Logos Dalmóbile Caraguá', descricao: 'PNG, SVG e versões monocromáticas',
-        url: 'https://drive.google.com/open?id=1OJwXeozI0Dq_jSfCG-kJdZOxvK_PKLeW&usp=drive_fs', tipo: 'PASTA', lojas: ['cgt'] },
+        url: 'https://drive.google.com/open?id=1OJwXeozI0Dq_jSfCG-kJdZOxvK_PKLeW&usp=drive_fs', tipo: 'PASTA', lojas: ['cgt'], id: 'logos-cgt' },
       { nome: 'Logo para grupos WhatsApp', descricao: 'Imagem a ser usada para criação de grupos do WhatsApp',
-        url: 'https://drive.google.com/open?id=15BSCDXM9exNADgrRK0R5ZBQ-ohQ3Ay0t&usp=drive_fs', tipo: 'PDF', lojas: ['sjc', 'cgt'] }
+        url: 'https://drive.google.com/open?id=15BSCDXM9exNADgrRK0R5ZBQ-ohQ3Ay0t&usp=drive_fs', tipo: 'PDF', lojas: ['sjc', 'cgt'], id: 'logo-grupos-wpp' }
     ]
   },
 
@@ -955,7 +1004,7 @@ const LINKS = [
     grupo: 'Sistemas',
     itens: [
       { nome: 'Acompanhe seu pedido', descricao: 'Pedidos, produção e assistência.',
-        url: 'https://www.dalmobile.com.br/pedidos', tipo: 'SISTEMA', lojas: ['sjc', 'cgt'] }
+        url: 'https://www.dalmobile.com.br/pedidos', tipo: 'SISTEMA', lojas: ['sjc', 'cgt'], id: 'acompanhe-pedido' }
     ]
   },
 
@@ -963,9 +1012,9 @@ const LINKS = [
     grupo: 'Atendimento',
     itens: [
       { nome: 'WhatsApp da loja', descricao: '(12) 99604-9888',
-        url: 'https://wa.me/5512996049888', tipo: 'ZAP', lojas: ['sjc'] },
+        url: 'https://wa.me/5512996049888', tipo: 'ZAP', lojas: ['sjc'], id: 'zap-loja-sjc' },
       { nome: 'WhatsApp da loja', descricao: '(12) 99602-1234',
-        url: 'https://wa.me/5512996021234', tipo: 'ZAP', lojas: ['cgt'] }
+        url: 'https://wa.me/5512996021234', tipo: 'ZAP', lojas: ['cgt'], id: 'zap-loja-cgt' }
     ]
   },
 
@@ -976,17 +1025,17 @@ const LINKS = [
          apontado para a Cloudflare, então o endereço sem ele pode
          não abrir. Link daqui sempre com www. */
       { nome: 'Site da loja', descricao: 'dalmobilesjc.com.br',
-        url: 'https://www.dalmobilesjc.com.br', tipo: 'SITE', lojas: ['sjc'] },
+        url: 'https://www.dalmobilesjc.com.br', tipo: 'SITE', lojas: ['sjc'], id: 'site-sjc' },
       { nome: 'Site da loja', descricao: 'dalmobilecaraguatatuba.com.br',
-        url: 'https://www.dalmobilecaraguatatuba.com.br', tipo: 'SITE', lojas: ['cgt'] },
+        url: 'https://www.dalmobilecaraguatatuba.com.br', tipo: 'SITE', lojas: ['cgt'], id: 'site-cgt' },
       { nome: 'Instagram', descricao: '',
-        url: 'https://www.instagram.com/dalmobilesjc/', tipo: 'INSTA', lojas: ['sjc'] },
+        url: 'https://www.instagram.com/dalmobilesjc/', tipo: 'INSTA', lojas: ['sjc'], id: 'insta-sjc' },
       { nome: 'Instagram', descricao: '',
-        url: 'https://www.instagram.com/dalmobilecaraguatatuba/', tipo: 'INSTA', lojas: ['cgt'] },
+        url: 'https://www.instagram.com/dalmobilecaraguatatuba/', tipo: 'INSTA', lojas: ['cgt'], id: 'insta-cgt' },
       { nome: 'Google da loja', descricao: 'Ficha e avaliações no Google Maps.',
-        url: 'https://share.google/cb3Mv7FKAaIYkgO5T', tipo: 'LINK', lojas: ['sjc'] },
+        url: 'https://share.google/cb3Mv7FKAaIYkgO5T', tipo: 'LINK', lojas: ['sjc'], id: 'google-sjc' },
       { nome: 'Google da loja', descricao: 'Ficha e avaliações no Google Maps.',
-        url: 'https://share.google/XUm8CN7QvrHzCDSml', tipo: 'LINK', lojas: ['cgt'] }
+        url: 'https://share.google/XUm8CN7QvrHzCDSml', tipo: 'LINK', lojas: ['cgt'], id: 'google-cgt' }
     ]
   },
 
@@ -996,9 +1045,9 @@ const LINKS = [
     grupo: 'Organização',
     itens: [
       { nome: 'Indicação de projetos para foto', descricao: 'Planilha onde o gerente indica os projetos.',
-        url: 'https://docs.google.com/spreadsheets/d/1bBdiH9enwBuSwx1p8ZiQaeyUOadWBLHi8iTiqKL7394?usp=drive_fs', tipo: 'PLANILHA', lojas: ['sjc'], cargo: 'gerencia' },
+        url: 'https://docs.google.com/spreadsheets/d/1bBdiH9enwBuSwx1p8ZiQaeyUOadWBLHi8iTiqKL7394?usp=drive_fs', tipo: 'PLANILHA', lojas: ['sjc'], cargo: 'gerencia', id: 'foto-indicacao-sjc' },
       { nome: 'Indicação de projetos para foto', descricao: 'Planilha onde o gerente indica os projetos.',
-        url: 'https://docs.google.com/spreadsheets/d/1IIXFdWzPXpNNjRQ0NK0rvivBrHieE5jplqPHsVkNPw4?usp=drive_fs', tipo: 'PLANILHA', lojas: ['cgt'], cargo: 'gerencia' },
+        url: 'https://docs.google.com/spreadsheets/d/1IIXFdWzPXpNNjRQ0NK0rvivBrHieE5jplqPHsVkNPw4?usp=drive_fs', tipo: 'PLANILHA', lojas: ['cgt'], cargo: 'gerencia', id: 'foto-indicacao-cgt' },
     ]
   },
 
@@ -1139,10 +1188,53 @@ function montarHub() {
   desenharGrade(el('grade-posvenda'), (m) => m.fase === 'posvenda');
 }
 
+/* ------------------------------------------------------------
+   As abas que cada cargo vê
+   ------------------------------------------------------------
+   'Contas' NÃO entra na matriz, de propósito: ela é permissão,
+   não vitrine. Quem abre é admin ou gerente, e o conteúdo é
+   trancado no banco — deixar você liberá-la por cargo pareceria
+   dar acesso sem dar, que é a pior forma de errar aqui.
+
+   E nunca esconde TODAS: se a matriz escondesse as quatro, a
+   pessoa abriria o Central e não teria o que fazer, sem nada na
+   tela explicando por quê. 'Gerar' é o piso.
+   ------------------------------------------------------------ */
+const ABAS_DA_MATRIZ = ['gerar', 'materiais', 'links', 'posvenda'];
+
+function aplicarMatrizNasAbas() {
+  const visiveis = ABAS_DA_MATRIZ.filter(function (nome) {
+    return !itemOculto('aba-' + nome);
+  });
+
+  const mostrar = visiveis.length ? visiveis : ['gerar'];
+  if (!visiveis.length) {
+    console.warn('[cargos] o cargo esconde todas as abas; mantive a Gerar.');
+  }
+
+  ABAS_DA_MATRIZ.forEach(function (nome) {
+    const b = abas.querySelector('button[data-aba="' + nome + '"]');
+    if (b) b.classList.toggle('oculto', mostrar.indexOf(nome) < 0);
+  });
+
+  /* Se a aba aberta acabou de sumir, vai para a primeira que
+     sobrou — senão fica um painel aberto sem aba acesa. */
+  const aberta = abas.querySelector('button[aria-selected="true"]');
+  const nomeAberto = aberta && aberta.dataset.aba;
+  if (nomeAberto && ABAS_DA_MATRIZ.indexOf(nomeAberto) >= 0
+      && mostrar.indexOf(nomeAberto) < 0) {
+    trocarAba(mostrar[0]);
+  }
+}
+
 function desenharGrade(alvo, filtro) {
   alvo.innerHTML = '';
 
   CATALOGO.filter(filtro).forEach((material) => {
+    /* A matriz esconde peça e tela igual: o id do catálogo é a
+       chave, e é o mesmo id que aparece no painel. */
+    if (itemOculto(material.id)) return;
+
     const botao = document.createElement('button');
     botao.className = 'item';
     botao.type = 'button';
@@ -1219,8 +1311,31 @@ function montarAtalhos() {
    desenhadas antes disso, e elas precisam dele existindo. */
 const EU = {
   pronto: false, id: null, email: '', nome: '',
-  loja: '', admin: false, gerente: false, motivo: ''
+  loja: '', admin: false, gerente: false, motivo: '',
+
+  /* O cargo de VITRINE, e o que ele não vê. Não confundir com
+     admin/gerente, que são permissão: o cargo não dá nem tira
+     acesso a dado nenhum, só decide o que aparece na tela.
+
+     'ocultos' nasce vazio e 'matrizPronta' nasce falsa, e a
+     diferença entre as duas importa: vazio-com-matriz-pronta quer
+     dizer "este cargo vê tudo", e vazio-sem-matriz quer dizer
+     "ainda não sei". No segundo caso vale a regra antiga do
+     código, senão um item de gerência apareceria para o consultor
+     na janela entre o deploy e o SQL. */
+  cargo: null, ocultos: [], matrizPronta: false
 };
+
+/* ⚠️ O GUARDA DO ADMINISTRADOR MORA AQUI, e não em cada lugar
+   que pergunta. Eu o tinha posto só no podeVerItem, e com isso o
+   catálogo e as abas passavam reto: o administrador que estivesse
+   num cargo restritivo perdia a aba Contas — justamente o painel
+   onde desfaria o engano. Três caminhos perguntam, então a
+   resposta tem de ser de um só lugar. */
+function itemOculto(id) {
+  if (EU.admin) return false;
+  return !!id && EU.ocultos.indexOf(id) >= 0;
+}
 
 /**
  * Item marcado com cargo: 'gerencia' some da tela do consultor.
@@ -1234,11 +1349,19 @@ const EU = {
  * Drive deixa abrir o arquivo.
  */
 function podeVerItem(item, loja) {
-  if (item.cargo !== 'gerencia') return true;
+  /* Administrador vê tudo, e isso é decidido antes de qualquer
+     matriz: um administrador que se escondesse um item por engano
+     perderia o caminho até o painel onde desfaria o engano. */
   if (EU.admin) return true;
 
-  /* O gerente vê os da loja dele, e só enquanto estiver olhando
-     a loja dele — trocar o seletor para a outra não revela nada. */
+  /* A matriz manda, quando ela chegou. */
+  if (EU.matrizPronta) return !itemOculto(item.id);
+
+  /* Não chegou: vale a regra antiga, que é mais restritiva. Ela
+     fica aqui como PONTE, não como segunda fonte de verdade —
+     some quando o supabase-cargos-visiveis.sql estiver rodado em
+     todos os ambientes. */
+  if (item.cargo !== 'gerencia') return true;
   return EU.gerente && !!EU.loja && EU.loja === loja;
 }
 
@@ -1968,7 +2091,17 @@ async function descobrirQuemSou() {
   /* Sem .single(): com ele, linha inexistente vira "erro", e some
      a diferença entre "não é admin" e "não tem perfil". */
   let { data, error } = await auth.cliente
-    .from('perfis').select('id, nome, loja, admin, gerente').eq('id', EU.id).limit(1);
+    .from('perfis').select('id, nome, loja, admin, gerente, cargo').eq('id', EU.id).limit(1);
+
+  /* A coluna 'cargo' só existe depois do
+     supabase-cargos-visiveis.sql. Sem esta volta, a página inteira
+     morria num ambiente que ainda não rodou o arquivo — e morrer
+     por causa da vitrine seria desproporcional. */
+  if (error && /cargo/i.test(error.message || '')) {
+    const r0 = await auth.cliente
+      .from('perfis').select('id, nome, loja, admin, gerente').eq('id', EU.id).limit(1);
+    data = r0.data; error = r0.error;
+  }
 
   /* Antes de rodar o supabase-cargos.sql a coluna gerente não
      existe. A página não pode morrer por causa disso. */
@@ -1994,7 +2127,28 @@ async function descobrirQuemSou() {
   EU.loja    = p.loja || '';
   EU.admin   = p.admin === true;
   EU.gerente = p.gerente === true;
+  EU.cargo   = p.cargo || null;
   EU.pronto  = true;
+
+  /* A matriz do MEU cargo, numa chamada. A função do banco já
+     resolve "admin vê tudo" e "cargo desativado volta a ver
+     tudo", então aqui não há regra repetida.
+
+     Falha é tratada como "não sei", nunca como "vê tudo": sem
+     isto, banco fora do ar afrouxaria a tela em silêncio. */
+  try {
+    const r = await auth.cliente.rpc('meus_itens_ocultos');
+    if (!r.error) {
+      EU.ocultos = (r.data || []).map(function (x) {
+        return typeof x === 'string' ? x : (x && x.item) || '';
+      }).filter(Boolean);
+      EU.matrizPronta = true;
+    } else if (!/does not exist|não existe/i.test(r.error.message || '')) {
+      console.warn('[cargos] a matriz não veio: ' + r.error.message);
+    }
+  } catch (e) {
+    console.warn('[cargos] a matriz não veio.', e);
+  }
 
   if (!EU.motivo) {
     EU.motivo = EU.admin ? ''
@@ -2026,8 +2180,16 @@ async function descobrirQuemSou() {
   }
 
   /* Até aqui os itens de gerência estavam escondidos de todo
-     mundo. Agora que se sabe quem é, desenha de novo. */
+     mundo. Agora que se sabe quem é, desenha de novo.
+
+     As TRÊS chamadas importam: atalhos (Materiais e Links), hub
+     (as peças e as telas) e abas. Eu tinha redesenhado só os
+     atalhos, e com isso a matriz não alcançava nem o catálogo nem
+     as abas — elas ficavam como estavam no primeiro desenho, de
+     antes de o banco responder. */
   montarAtalhos();
+  montarHub();
+  aplicarMatrizNasAbas();
 
   /* O gerente passa a abrir esta aba para cuidar dos montadores.
      O resto dela continua só do administrador — quem decide é o
@@ -2081,8 +2243,19 @@ async function carregarCargos() {
 
   const auth = window.dalmobileAuth;
 
-  const { data, error } = await auth.cliente
-    .from('perfis').select('id, email, nome, loja, admin, gerente').order('email');
+  /* 'cargo' entra no select, senão o seletor de cada cartão
+     nasceria sempre em "vê tudo" e gravaria por cima do que
+     estava — o jeito mais silencioso de desfazer configuração. */
+  let { data, error } = await auth.cliente
+    .from('perfis').select('id, email, nome, loja, admin, gerente, cargo').order('email');
+
+  /* Antes do supabase-cargos-visiveis.sql a coluna não existe. A
+     lista de contas não pode sumir por causa da vitrine. */
+  if (error && /cargo/i.test(error.message || '')) {
+    const r0 = await auth.cliente
+      .from('perfis').select('id, email, nome, loja, admin, gerente').order('email');
+    data = r0.data; error = r0.error;
+  }
 
   if (error) {
     contasLista.innerHTML = '';
@@ -2118,10 +2291,366 @@ async function carregarCargos() {
     contasLista.appendChild(aviso);
   }
 
+  /* Os cargos ANTES dos cartões: cartaoPessoa() lê CARGOS para
+     montar o seletor, e com a lista vazia ele não apareceria. */
+  await carregarCargosDeVitrine();
+
   gente.forEach((p) => contasLista.appendChild(cartaoPessoa(p)));
 
   carregarDocumentos();
 }
+
+
+/* ============================================================
+   CARGOS E A MATRIZ DE VISIBILIDADE
+   ------------------------------------------------------------
+   ⚠️ ISTO É VITRINE, NÃO PERMISSÃO, e a separação é o ponto do
+   recurso. Permissão continua nas caixinhas de gerência e
+   administração logo acima, que mandam nas regras do banco. O
+   cargo decide o que aparece no Central e mais nada.
+
+   Por que separado: errar a vitrine esconde um atalho e alguém
+   reclama no mesmo dia. Errar a permissão expõe ficha de cliente,
+   e ninguém reclama — porque quem viu o que não devia não vai
+   contar. Um clique só, mexendo nas duas, misturaria os dois
+   preços.
+
+   A LISTA DO QUE SE PODE ESCONDER SAI DAQUI, DO CÓDIGO, e as
+   marcas do que ESTÁ escondido saem do banco. É de propósito:
+   quem sabe o endereço de cada item é esta página. Cadastrar
+   item no banco antes de poder escondê-lo seria trabalho dobrado
+   para a mesma cerca.
+   ============================================================ */
+
+/* 'Contas' não entra: é permissão, e liberá-la por cargo
+   pareceria dar acesso sem dar. */
+const ABAS_PARA_A_MATRIZ = [
+  { id: 'aba-gerar',     nome: 'Gerar' },
+  { id: 'aba-materiais', nome: 'Materiais' },
+  { id: 'aba-links',     nome: 'Links' },
+  { id: 'aba-posvenda',  nome: 'Pós venda' }
+];
+
+let CARGOS = [];
+let OCULTOS = {};          /* { cargoId: Set de itens } */
+let cargoAberto = null;
+
+const cargosLista = el('cargos-lista');
+const matrizCaixa = el('matriz-caixa');
+const matrizLista = el('matriz-lista');
+
+/* Os grupos da matriz, montados do que a página já tem em mão. */
+function gruposDaMatriz() {
+  const deCatalogo = function (filtro) {
+    return CATALOGO.filter(filtro).map(function (m) {
+      return { id: m.id, nome: m.nome, onde: m.descricao || '' };
+    });
+  };
+
+  const deBiblioteca = function (fonte) {
+    const fora = [];
+    fonte.forEach(function (grupo) {
+      (grupo.itens || []).forEach(function (item) {
+        /* Item sem id não entra: sem id não há como guardar a
+           marca, e uma caixinha que não guarda nada é pior que
+           caixinha nenhuma. */
+        if (!item.id) return;
+        fora.push({
+          id: item.id,
+          nome: item.nome,
+          onde: grupo.grupo + ' · ' + item.lojas.map(nomeDaLoja).join(' e ')
+        });
+      });
+    });
+    return fora;
+  };
+
+  return [
+    { titulo: 'Abas do Central', itens: ABAS_PARA_A_MATRIZ.map(function (a) {
+        return { id: a.id, nome: a.nome, onde: '' }; }) },
+    { titulo: 'Peças e telas', itens: deCatalogo(function (m) { return m.fase !== 'posvenda'; }) },
+    { titulo: 'Pós venda',     itens: deCatalogo(function (m) { return m.fase === 'posvenda'; }) },
+    { titulo: 'Materiais',     itens: deBiblioteca(BIBLIOTECA) },
+    { titulo: 'Links',         itens: deBiblioteca(LINKS) }
+  ].filter(function (g) { return g.itens.length; });
+}
+
+
+async function carregarCargosDeVitrine() {
+  const auth = window.dalmobileAuth;
+
+  const [c, o] = await Promise.all([
+    auth.cliente.from('cargos').select('id, nome, ordem, ativo').order('ordem'),
+    auth.cliente.from('cargo_oculta').select('cargo, item')
+  ]);
+
+  if (c.error) {
+    cargosLista.innerHTML = '';
+    const aviso = document.createElement('div');
+    aviso.className = 'cartao-aviso atencao';
+    aviso.innerHTML = '<h3>Os cargos ainda não existem no banco</h3>';
+    const t = document.createElement('p');
+    /* Recado que diz O QUE FAZER. 'relation does not exist' não
+       ajuda ninguém às onze da noite. */
+    t.textContent = /does not exist|não existe/i.test(c.error.message || '')
+      ? 'Rode o supabase-cargos-visiveis.sql no SQL Editor do Supabase. '
+        + 'Até então, o Central segue com a regra antiga, escrita no código.'
+      : c.error.message;
+    aviso.appendChild(t);
+    cargosLista.appendChild(aviso);
+    matrizCaixa.classList.add('oculto');
+    return;
+  }
+
+  CARGOS = c.data || [];
+
+  OCULTOS = {};
+  (o.data || []).forEach(function (linha) {
+    (OCULTOS[linha.cargo] = OCULTOS[linha.cargo] || {})[linha.item] = true;
+  });
+
+  desenharCargos();
+}
+
+
+function desenharCargos() {
+  cargosLista.innerHTML = '';
+
+  if (!CARGOS.length) {
+    const vazio = document.createElement('p');
+    vazio.className = 'vazio-busca';
+    vazio.textContent = 'Nenhum cargo ainda. Crie um acima para começar.';
+    cargosLista.appendChild(vazio);
+    matrizCaixa.classList.add('oculto');
+    return;
+  }
+
+  CARGOS.forEach(function (c) {
+    const cartao = document.createElement('div');
+    cartao.className = 'pessoa' + (c.ativo ? '' : ' inativo');
+
+    const cabeca = document.createElement('div');
+    cabeca.className = 'cabeca';
+    const nome = document.createElement('span');
+    nome.className = 'nome';
+    nome.textContent = c.nome;
+    cabeca.appendChild(nome);
+    if (!c.ativo) cabeca.appendChild(selo('alerta', 'desativado'));
+
+    const quantos = Object.keys(OCULTOS[c.id] || {}).length;
+    const sub = document.createElement('p');
+    sub.className = 'sub';
+    sub.textContent = quantos
+      ? (quantos === 1 ? '1 item escondido' : quantos + ' itens escondidos')
+      : 'vê tudo';
+
+    const acoes = document.createElement('div');
+    acoes.className = 'acoes';
+
+    acoes.appendChild(botaoCargo(cargoAberto === c.id ? 'fechar' : 'o que vê', false, function () {
+      cargoAberto = cargoAberto === c.id ? null : c.id;
+      desenharCargos();
+      desenharMatriz();
+    }));
+
+    acoes.appendChild(botaoCargo('renomear', false, async function (b) {
+      const novo = prompt('Novo nome para o cargo:', c.nome);
+      if (novo === null) return;
+      if (btrim(novo).length < 2) { alert('O nome precisa de pelo menos 2 letras.'); return; }
+      await gravarCargo(b, c.id, { nome: btrim(novo) });
+    }));
+
+    /* Desativar em vez de apagar. Apagar o cargo tiraria o cargo
+       de todas as pessoas nele (on delete set null) e elas
+       voltariam a ver tudo de uma vez, sem ninguém pedir.
+       Desativado faz a mesma coisa de propósito e com volta. */
+    acoes.appendChild(botaoCargo(c.ativo ? 'desativar' : 'reativar', false, async function (b) {
+      if (c.ativo && !confirm('Desativar "' + c.nome + '"?\n\n'
+          + 'Quem está neste cargo volta a ver tudo enquanto ele estiver '
+          + 'desativado. Nada é apagado, e reativar devolve as marcas.')) return;
+      await gravarCargo(b, c.id, { ativo: !c.ativo });
+    }));
+
+    cartao.append(cabeca, sub, acoes);
+    cargosLista.appendChild(cartao);
+  });
+
+  desenharMatriz();
+}
+
+
+function desenharMatriz() {
+  if (!cargoAberto) { matrizCaixa.classList.add('oculto'); return; }
+
+  const cargo = CARGOS.filter(function (c) { return c.id === cargoAberto; })[0];
+  if (!cargo) { cargoAberto = null; matrizCaixa.classList.add('oculto'); return; }
+
+  matrizCaixa.classList.remove('oculto');
+  matrizLista.innerHTML = '';
+
+  const escondidos = OCULTOS[cargo.id] || {};
+
+  gruposDaMatriz().forEach(function (grupo) {
+    const bloco = document.createElement('div');
+    bloco.className = 'bloco';
+
+    const h = document.createElement('h4');
+    h.textContent = grupo.titulo;
+    bloco.appendChild(h);
+
+    grupo.itens.forEach(function (item) {
+      const rot = document.createElement('label');
+      const caixa = document.createElement('input');
+      caixa.type = 'checkbox';
+      caixa.checked = !escondidos[item.id];
+      if (!caixa.checked) rot.className = 'escondido';
+
+      const texto = document.createElement('span');
+      texto.innerHTML = '';
+      const t1 = document.createElement('b');
+      t1.textContent = item.nome;
+      texto.appendChild(t1);
+      if (item.onde) {
+        const t2 = document.createElement('span');
+        t2.className = 'onde';
+        t2.textContent = item.onde;
+        texto.appendChild(t2);
+      }
+
+      caixa.addEventListener('change', function () {
+        trocarMarca(cargo.id, item.id, caixa, rot);
+      });
+
+      rot.append(caixa, texto);
+      bloco.appendChild(rot);
+    });
+
+    matrizLista.appendChild(bloco);
+  });
+}
+
+
+/* Marcado = vê. Desmarcado = linha na tabela. A tabela guarda só
+   exceção, e é isso que faz item novo nascer visível. */
+async function trocarMarca(cargoId, itemId, caixa, rot) {
+  const auth = window.dalmobileAuth;
+  const esconder = !caixa.checked;
+
+  caixa.disabled = true;
+
+  const r = esconder
+    ? await auth.cliente.from('cargo_oculta').insert({ cargo: cargoId, item: itemId })
+    : await auth.cliente.from('cargo_oculta').delete()
+        .eq('cargo', cargoId).eq('item', itemId);
+
+  caixa.disabled = false;
+
+  if (r.error) {
+    /* Desfaz na tela. Caixinha que fica marcada depois de o banco
+       recusar é a pior mentira possível num painel de permissão —
+       a pessoa sai achando que configurou. */
+    caixa.checked = !caixa.checked;
+    alert('Não consegui gravar: ' + r.error.message);
+    return;
+  }
+
+  OCULTOS[cargoId] = OCULTOS[cargoId] || {};
+  if (esconder) OCULTOS[cargoId][itemId] = true;
+  else delete OCULTOS[cargoId][itemId];
+
+  rot.className = esconder ? 'escondido' : '';
+
+  /* O contador do cartão acima muda junto. Redesenhar a lista
+     inteira fecharia a matriz; então só o cartão. */
+  atualizarContador(cargoId);
+}
+
+function atualizarContador(cargoId) {
+  const quantos = Object.keys(OCULTOS[cargoId] || {}).length;
+  const cartoes = cargosLista.querySelectorAll('.pessoa');
+  const i = CARGOS.findIndex(function (c) { return c.id === cargoId; });
+  if (i < 0 || !cartoes[i]) return;
+  const sub = cartoes[i].querySelector('.sub');
+  if (sub) {
+    sub.textContent = quantos
+      ? (quantos === 1 ? '1 item escondido' : quantos + ' itens escondidos')
+      : 'vê tudo';
+  }
+}
+
+
+async function gravarCargo(botaoEl, id, campos) {
+  const auth = window.dalmobileAuth;
+  const antes = botaoEl.textContent;
+  botaoEl.disabled = true;
+  botaoEl.textContent = 'salvando…';
+
+  const r = await auth.cliente.from('cargos').update(campos).eq('id', id);
+
+  botaoEl.disabled = false;
+  botaoEl.textContent = antes;
+
+  if (r.error) { alert('Não consegui gravar: ' + r.error.message); return; }
+  await carregarCargosDeVitrine();
+}
+
+
+/* O id sai do nome, uma vez, na criação — e nunca muda depois,
+   nem quando o nome muda. Se o id seguisse o nome, renomear
+   'Montador' para 'Equipe de montagem' apagaria todas as marcas
+   daquele cargo em silêncio. */
+function idDoNome(nome) {
+  return btrim(nome).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+}
+
+function btrim(t) { return String(t == null ? '' : t).trim(); }
+
+async function criarCargo() {
+  const campo = el('cargo-nome');
+  const b = el('cargo-add');
+  const nome = btrim(campo.value);
+
+  if (nome.length < 2) { alert('O nome precisa de pelo menos 2 letras.'); return; }
+
+  let id = idDoNome(nome);
+  if (id.length < 2) { alert('Esse nome não gera um identificador válido. Use letras.'); return; }
+
+  /* Nome repetido não é erro de banco (só o id é único), e dois
+     cargos com o mesmo nome na tela é o começo de marcar o
+     errado. */
+  if (CARGOS.some(function (c) { return c.id === id; })) {
+    alert('Já existe um cargo com esse nome.');
+    return;
+  }
+
+  b.disabled = true;
+  const antes = b.textContent;
+  b.textContent = 'criando…';
+
+  const maior = CARGOS.reduce(function (m, c) { return Math.max(m, c.ordem || 0); }, 0);
+  const r = await window.dalmobileAuth.cliente
+    .from('cargos').insert({ id: id, nome: nome, ordem: maior + 10 });
+
+  b.disabled = false;
+  b.textContent = antes;
+
+  if (r.error) { alert('Não consegui criar: ' + r.error.message); return; }
+
+  campo.value = '';
+  await carregarCargosDeVitrine();
+}
+
+(function ligarCargos() {
+  const b = el('cargo-add');
+  const campo = el('cargo-nome');
+  if (!b || !campo) return;
+  b.addEventListener('click', criarCargo);
+  campo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); criarCargo(); }
+  });
+})();
 
 
 /* ============================================================
@@ -2300,6 +2829,45 @@ function cartaoPessoa(p) {
     gravar(sel, p.id, { loja: sel.value || null });
   });
   acoes.appendChild(sel);
+
+  /* --- cargo de vitrine ---
+     Ao lado da loja porque as duas respondem "quem é esta
+     pessoa", e longe dos botões de gerência e administração, que
+     respondem "o que ela pode fazer". A separação na tela é a
+     mesma do banco, e é de propósito.
+
+     Só aparece quando os cargos existem: antes do SQL, um
+     seletor vazio só faria a pessoa procurar o que não há. */
+  if (CARGOS.length) {
+    const selCargo = document.createElement('select');
+    selCargo.className = 'cargo-sel';
+
+    const semCargo = document.createElement('option');
+    semCargo.value = '';
+    semCargo.textContent = '— vê tudo —';
+    selCargo.appendChild(semCargo);
+
+    CARGOS.forEach(function (c) {
+      const o = document.createElement('option');
+      o.value = c.id;
+      o.textContent = c.nome + (c.ativo ? '' : ' (desativado)');
+      selCargo.appendChild(o);
+    });
+    selCargo.value = p.cargo || '';
+
+    /* Administrador vê tudo por decisão do banco, então marcar
+       cargo nele não teria efeito. Travar o seletor diz isso sem
+       precisar de texto. */
+    if (p.admin) {
+      selCargo.disabled = true;
+      selCargo.title = 'Administrador vê tudo, independente de cargo.';
+    }
+
+    selCargo.addEventListener('change', () => {
+      gravar(selCargo, p.id, { cargo: selCargo.value || null });
+    });
+    acoes.appendChild(selCargo);
+  }
 
   /* --- gerência --- */
   acoes.appendChild(botaoCargo(
