@@ -650,6 +650,11 @@
 <script src="vendor/pdf-lib.min.js"></script>
 <script src="vendor/fontkit.umd.min.js"></script>
 <script src="pecas.js"></script>
+<!-- Aba temporária da ação de novembro/2026. Ela se retira sozinha
+     depois de 30/11 (a data está dentro do arquivo). Para tirar do
+     repositório: apague black-friday.js, esta linha e a chamada de
+     BlackFriday.montar() no iniciarCargos. Não há mais nada. -->
+<script src="black-friday.js"></script>
 <script>
 /* ============================================================
    CONFIGURAÇÃO
@@ -2195,6 +2200,12 @@ async function descobrirQuemSou() {
   montarAtalhos();
   montarHub();
   aplicarMatrizNasAbas();
+
+  /* A aba da ação de novembro/2026 entra aqui, depois da matriz:
+     ela precisa do perfil para saber se o cargo a esconde e para
+     preencher o "Seu nome" do gerador. Montada antes, apareceria
+     para quem a tem escondida — e aqui some, nunca aparece. */
+  if (window.BlackFriday) BlackFriday.montar();
 
   /* O gerente passa a abrir esta aba para cuidar dos montadores.
      O resto dela continua só do administrador — quem decide é o

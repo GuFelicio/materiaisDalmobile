@@ -253,8 +253,15 @@ window.Pecas = (function () {
     return fontesProntas;
   }
 
+  /* 'light' entrou para o título da peça da Condição de Fábrica,
+     que no KV é de traço fino. Quem registra a Krub-Light é o
+     black-friday.js, e só se o arquivo existir na raiz — por isso
+     o peso não ganha carregamento aqui: pedir 'light' sem a fonte
+     registrada cai no 300 sintético do navegador, que é feio mas
+     não quebra a peça. Quem não tem a fonte manda 'medium'. */
   function fonteDe(peso, corpo) {
-    return (peso === 'bold' ? '700 ' : '500 ') + corpo + 'px KrubPeca';
+    const pesos = { light: '300 ', bold: '700 ' };
+    return (pesos[peso] || '500 ') + corpo + 'px KrubPeca';
   }
 
   /* Escreve ancorando a MANCHA, não a caneta.
@@ -1289,6 +1296,34 @@ window.Pecas = (function () {
     'entrega': entrega,
 
     /* exposto para a tela de conferência */
-    _medidas: { 'boas-vindas-impresso': BOAS_VINDAS }
+    _medidas: { 'boas-vindas-impresso': BOAS_VINDAS },
+
+    /* ------------------------------------------------------------
+       A maquinaria de canvas, emprestada para quem desenha peça
+       fora deste arquivo (hoje: black-friday.js).
+
+       Está exposta porque a alternativa era copiar: a quebra de
+       linha com peso por pedaço, o recorte da tinta da logo e o
+       carregamento da Krub são uns 150 linhas que levaram tempo
+       para acertar — e cada uma delas guarda uma correção que
+       ninguém lembraria de repetir na cópia. A logo recortada é o
+       exemplo: copiada sem o recorte, a peça nova põe Caraguá 85 px
+       mais alta que SJC e parece certa sozinha.
+
+       O underline avisa que é de dentro de casa: a assinatura pode
+       mudar junto com este arquivo, sem aviso. Quem usa está no
+       mesmo repositório.
+       ------------------------------------------------------------ */
+    _ajudantes: {
+      carregarFontes: carregarFontes,
+      fonteDe: fonteDe,
+      imagemDe: imagemDe,
+      logoRecortada: logoRecortada,
+      emPedacos: emPedacos,
+      arrumarBloco: arrumarBloco,
+      escreverLinha: escreverLinha,
+      semAcento: semAcento,
+      LOGOS: LOGOS
+    }
   };
 })();

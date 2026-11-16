@@ -1,0 +1,39 @@
+IMAGENS DA AÇÃO DE NOVEMBRO/2026 — Condição de Fábrica
+======================================================
+
+Esta pasta é lida pela aba Black Friday do Central (black-friday.js).
+Ela sai do ar junto com a aba, depois de 30/11/2026.
+
+O QUE PRECISA ESTAR AQUI
+------------------------
+Os mesmos oito arquivos nas DUAS pastas, sjc/ e cgt/. O nome é
+igual nas duas; o que muda é a logo aplicada na arte, e é a pasta
+que diz qual loja é.
+
+  sjc/                        cgt/
+    w1-reservado.jpg            w1-reservado.jpg
+    w2-na-conversa.jpg          w2-na-conversa.jpg
+    w3-convite.jpg              w3-convite.jpg
+    w4-faltam-5.jpg             w4-faltam-5.jpg
+    w4-faltam-3.jpg             w4-faltam-3.jpg
+    w4-falta-1.jpg              w4-falta-1.jpg
+    w5-ultimo-dia.jpg           w5-ultimo-dia.jpg
+    foto-sjc.jpg                foto-cgt.jpg
+
+As sete w*.jpg são as imagens de WhatsApp, exportadas do
+whatsapp_consultores.jsx em JPG 1080x1350, qualidade 80.
+
+A foto-<loja>.jpg é a foto que entra na peça com o nome do
+cliente — pode ser a mesma foto_detalhe dos scripts. Ela é
+recortada em "cover" nos 62% de cima da peça, então o assunto
+precisa estar perto do centro.
+
+⚠️ NOME ERRADO NÃO DÁ ERRO NA TELA
+O cartão aparece com o espaço da imagem vazio e o botão Baixar
+responde "Falhou". Ninguém é avisado. Confira os nomes letra por
+letra antes de publicar — minúsculas e hífen, como está acima.
+
+A peça com o nome do cliente ainda sai sem a foto: a área fica
+clara e o texto é desenhado por cima. Foi feita assim de
+propósito, para a falta de um arquivo não impedir o consultor de
+mandar a peça.
