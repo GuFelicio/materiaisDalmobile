@@ -159,13 +159,13 @@ window.BlackFriday = (function () {
         { nome: 'W1 Reservado',
           texto: 'Oi, [Nome]! Separei isto para o seu projeto. Posso te ligar hoje para explicar?' },
         { nome: 'W2 Na conversa',
-          texto: '[Nome], o seu projeto pode entrar nessa condição. Os números eu te passo por telefone. Qual o melhor horário?' },
+          texto: '[Nome], o seu projeto pode entrar nessa condição.  Vamos conversar para que eu te explique como pode ficar?' },
         { nome: 'W3 Convite',
           texto: 'Fica o convite para quarta, [Nome]. Me diz o melhor horário que eu deixo reservado.' },
         { nome: 'W4 Contagem',
-          texto: 'Faltam poucos dias, [Nome]. Quer que eu reserve um horário para fecharmos?' },
+          texto: 'Faltam poucos dias pra acabar a nossa Black November Dalmobile, [Nome]. Quer que eu reserve um horário para fecharmos?' },
         { nome: 'W5 Último dia',
-          texto: '[Nome], hoje é o último dia. Ainda dá tempo: te ligo agora?' }
+          texto: '[Nome], hoje é o último dia com condições especiais para fecharmos seu projeto! Ainda dá tempo, vamos marcar nossa reunião?' }
       ]
     },
 
