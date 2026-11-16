@@ -76,11 +76,11 @@ window.BlackFriday = (function () {
     /* --- B1 · topo --- */
     topo: {
       rotulo: 'BLACK FRIDAY · ATÉ 28 DE NOVEMBRO',
-      titulo: 'Tudo para fechar projetos na Condição de Fábrica',
+      titulo: 'Condições especiais para fechar projetos na Black November Dalmobile',
       apoio: 'Mensagens prontas, imagens para o WhatsApp e a peça com o ' +
              'nome do cliente. A condição vale nas duas lojas, para toda a ' +
              'linha Dalmóbile. Para o cliente, o nome é sempre Condição de ' +
-             'Fábrica.'
+             'Fábrica ou Black November Dalmobile.'
     },
 
     /* --- B2 · a caixa que não recolhe ---
@@ -91,9 +91,12 @@ window.BlackFriday = (function () {
     regras: {
       titulo: 'Antes de falar com o cliente',
       itens: [
-        { forte: 'A condição é de 12%:',},
-        { forte: 'O número só sai por ligação ou na loja.',
-          resto: ' Nunca por escrito: nem no WhatsApp, nem em imagem, nem em e-mail.' },
+        { forte: 'A condição é de 12% de desconto em projetos que estão na casa!',},
+        { forte: 'O pedido precisa ser implantado até dia 30/11. ',
+          resto: ' O pagamento fica com prazo limite para 07/12.' },
+        { forte: 'O número de desconto só sai por ligação ou na loja.',
+          resto: ' Nunca por escrito: nem no WhatsApp, nem em imagem, nem em e-mail. Caso as negociações já estejam sendo feitas via WhatsApp, abrir excessão.' },
+      
         { forte: 'Para o cliente, o nome é "Condição de Fábrica" ou "Black November Dalmobile".',
           resto: ' Não use "Black Friday" nem "promoção".' },
         { forte: 'Puxe o fechamento para o quanto antes.',
@@ -131,14 +134,14 @@ window.BlackFriday = (function () {
              'quem chama o cliente é a sua mensagem.',
       itens: [
         { nome: 'Mensagem 1 · Abertura', quando: '16 a 19/11',
-          texto: 'Oi, [Nome], tudo bem? Aqui é [Consultor], da Dalmóbile. A fábrica ' +
-                 'abriu uma Condição de Fábrica que vale até o dia 28 de novembro, e o ' +
-                 'seu projeto [da cozinha] pode entrar nela. Prefiro te explicar por ' +
-                 'telefone ou aqui na loja, porque muda o valor final. Qual horário fica ' +
-                 'bom pra você nesta semana?' },
+          texto: 'Oi, [Nome], como vai? Aqui é [Consultor], da Dalmóbile. A fábrica ' +
+                 'abriu uma condição muito especial que vale até o dia 28 de novembro, e o ' +
+                 'seu projeto [da cozinha] pode fazer parte dessa condição especial. Gostaria de ter um tempo para ' +
+                 'te explicar melhor por telefone ou aqui na loja, porque muda o valor final. Qual horário fica ' +
+                 'bom pra você esta semana?' },
         { nome: 'Mensagem 2 · Convite', quando: '23 e 24/11',
           texto: 'Oi, [Nome]! Na quarta, dia 25, a loja vai dedicar o dia inteiro a quem ' +
-                 'quer fechar o projeto dentro da Condição de Fábrica.Posso reservar um horário pra você e acertarmos os ' +
+                 'quer fechar o projeto dentro da condição especial da Black November Dalmobile. Posso reservar um horário pra você e acertarmos os ' +
                  'detalhes do seu [ambiente]?' },
         { nome: 'Mensagem 3 · Última chamada', quando: '26 e 27/11',
           texto: '[Nome], passando pra lembrar: sábado, dia 28, é o último dia da ' +
