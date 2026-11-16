@@ -91,16 +91,13 @@ window.BlackFriday = (function () {
     regras: {
       titulo: 'Antes de falar com o cliente',
       itens: [
-        { forte: 'A condição é de 12%:',
-          resto: ' 5% da fábrica e 7% da loja. O restante da negociação fica a seu critério.' },
+        { forte: 'A condição é de 12%:',},
         { forte: 'O número só sai por ligação ou na loja.',
           resto: ' Nunca por escrito: nem no WhatsApp, nem em imagem, nem em e-mail.' },
-        { forte: 'Para o cliente, o nome é "Condição de Fábrica".',
+        { forte: 'Para o cliente, o nome é "Condição de Fábrica" ou "Black November Dalmobile".',
           resto: ' Não use "Black Friday" nem "promoção".' },
         { forte: 'Puxe o fechamento para o quanto antes.',
           resto: ' O dia 28 é o último empurrão, não a meta.' },
-        { forte: 'Fechou? Mande para implantação no mesmo dia.',
-          resto: '' },
         { forte: 'Pagamento:',
           resto: ' segue a regra da fábrica, até 07/12.' },
         { forte: 'Não fale de 30/11 nem de 07/12 com o cliente.',
@@ -141,8 +138,7 @@ window.BlackFriday = (function () {
                  'bom pra você nesta semana?' },
         { nome: 'Mensagem 2 · Convite', quando: '23 e 24/11',
           texto: 'Oi, [Nome]! Na quarta, dia 25, a loja vai dedicar o dia inteiro a quem ' +
-                 'quer fechar o projeto dentro da Condição de Fábrica. A gente chama de ' +
-                 'Dia Grafite. Posso reservar um horário pra você e acertarmos os ' +
+                 'quer fechar o projeto dentro da Condição de Fábrica.Posso reservar um horário pra você e acertarmos os ' +
                  'detalhes do seu [ambiente]?' },
         { nome: 'Mensagem 3 · Última chamada', quando: '26 e 27/11',
           texto: '[Nome], passando pra lembrar: sábado, dia 28, é o último dia da ' +
