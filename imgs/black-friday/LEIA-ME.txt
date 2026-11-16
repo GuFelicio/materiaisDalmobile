@@ -37,3 +37,15 @@ A peça com o nome do cliente ainda sai sem a foto: a área fica
 clara e o texto é desenhado por cima. Foi feita assim de
 propósito, para a falta de um arquivo não impedir o consultor de
 mandar a peça.
+
+CHEGARAM EM 16/11/2026
+----------------------
+Os 16 arquivos entraram nesta data, e a Krub-Light.ttf foi para a
+raiz junto. A prova 8 da suíte de tela (teste-bf-8-arquivos.mjs)
+passou a buscar cada um deles no servidor e a exigir 200 com bytes
+de JPEG de verdade — é ela que denuncia o nome errado, que a tela
+não denuncia.
+
+A w*.jpg saiu 1080x1350 e a foto-<loja>.jpg saiu 1200x1600. A foto
+é maior de propósito: ela é recortada em cover, e sobra para o
+recorte não subir de escala.
