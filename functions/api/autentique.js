@@ -40,6 +40,12 @@
                                     verdade — inclusive o do cliente — e o corpo
                                     diz para quem teria ido. É o que torna o
                                     teste possível antes do DNS.
+       GOOGLE_CLIENT_ID             opcional (as três juntas). Sem elas, o
+       GOOGLE_CLIENT_SECRET         arquivamento no Drive da Dalmóbile não
+       GOOGLE_REFRESH_TOKEN         acontece e o resto segue igual. ⚠️ Secret
+       GOOGLE_PASTA_RAIZ            opcional. O id de uma pasta que já exista,
+                                    para o app guardar dentro dela em vez de
+                                    criar a raiz dele.
        EMAIL_RESPONDER_PARA         opcional, e só para o e-mail do CLIENTE. O
                                     endereço da loja, para onde a resposta dele
                                     vai. Sem ela o corpo não convida a
@@ -47,6 +53,7 @@
                                     remetente automático e ninguém leria.
 
    DOIS E-MAILS SAEM DAQUI, E ELES NÃO SE PARECEM
+   TRÊS DESTINOS, UMA DESCIDA DO ARQUIVO
        equipe   — quem o banco listar em destinatarios_do_aviso. É uma TAREFA:
                   tem o botão da Central, para ver fotos, histórico e reabrir.
                   O PDF assinado vai anexo, para resolver no celular.
@@ -54,9 +61,13 @@
                   assinado e o que ele significa, nada mais. Sem link da
                   Central, que ele não tem login para abrir.
 
-       Cada um tem a SUA reserva no banco (avisado_em e avisado_cliente_em).
-       Com uma reserva só, uma falha no segundo e-mail faria a Autentique
-       repetir o aviso e o primeiro sair duas vezes.
+       Drive    — uma pasta por contrato, na conta da Dalmóbile. É o ARQUIVO:
+                  ninguém lê, ele fica. Pode falhar sem prejuízo, porque a
+                  assinatura já está registrada e o arquivo segue na Autentique.
+
+       Cada um tem a SUA reserva no banco (avisado_em, avisado_cliente_em e a
+       linha em arquivos_assinados). Com uma reserva só, uma falha no segundo
+       destino faria a Autentique repetir o aviso e o primeiro sair duas vezes.
 
    NO PAINEL DA AUTENTIQUE
        Cadastre o endereço
@@ -80,7 +91,8 @@
    por 14 dias à toa.
    ============================================================ */
 
-import { anexoAssinado, CAMPOS_DE_ARQUIVO } from '../../lib/assinado.js';
+import { anexoAssinado, emBase64, CAMPOS_DE_ARQUIVO } from '../../lib/assinado.js';
+import { arquivarNoDrive, temDrive } from '../../lib/drive.js';
 
 const AUTENTIQUE = 'https://api.autentique.com.br/v2/graphql';
 
@@ -307,22 +319,218 @@ async function documentoTerminou(env, evento) {
     await guardarRecado(env, ficha, { pdfAssinado: doc.files.signed });
   }
 
-  /* UMA BUSCA, DOIS E-MAILS. Baixar o mesmo PDF duas vezes
-     gastaria o dobro do tempo de CPU da invocação — que no
+  /* UMA BUSCA, TRÊS DESTINOS. Baixar o mesmo PDF três vezes
+     gastaria o triplo do tempo de CPU da invocação — que no
      Cloudflare é contado e é curto — para entregar bytes
      idênticos.
 
      anexoAssinado() NUNCA ESTOURA: devolve null quando a
-     Autentique ainda não gerou o arquivo, quando ele é grande
-     demais, ou quando o download falha. Isto é de propósito, e é
-     a decisão que importa neste trecho: a assinatura já está
-     marcada no banco e o prazo contratual já começou. Derrubar o
-     aviso por causa do anexo trocaria um e-mail sem PDF por
-     nenhum e-mail. */
-  const anexo = await anexoAssinado(env.AUTENTIQUE_TOKEN, doc, ficha);
+     Autentique ainda não gerou o arquivo ou quando o download
+     falha. Isto é de propósito, e é a decisão que importa neste
+     trecho: a assinatura já está marcada no banco e o prazo
+     contratual já começou. Derrubar o aviso por causa do anexo
+     trocaria um e-mail sem PDF por nenhum e-mail.
+
+     A RODADA vai no nome do arquivo, e vem de dados.rodada — que
+     é o contador de verdade, posto pelo reabrir_vistoria. NÃO do
+     número da versão: aquele conta todas as versões, inclusive as
+     de 'pdf gerado', e daria 5 numa obra que está na segunda
+     rodada. */
+  const rodada = Number(((ficha.dados || {}).rodada)) || 1;
+  const anexo = await anexoAssinado(env.AUTENTIQUE_TOKEN, doc, ficha, rodada);
+
+  /* UMA conversão para os dois e-mails. Pode voltar null acima do
+     teto de 8 MB; aí o e-mail sai sem anexo e o Drive recebe
+     igual, porque multipart não tem esse teto. */
+  if (anexo) anexo.base64 = emBase64(anexo.bytes);
 
   await avisarAEquipe(env, ficha, estado.ultimaAssinatura, anexo);
   await avisarOCliente(env, ficha, estado.ultimaAssinatura, anexo);
+
+  /* O Drive por último, de propósito. Ele é o destino que pode
+     falhar sem prejuízo: a assinatura está registrada, os dois
+     e-mails saíram, e o arquivo continua na Autentique. Primeiro
+     o que informa gente, depois o que arquiva. */
+  await arquivarOAssinado(env, ficha, anexo, id, rodada);
+}
+
+
+/* ------------------------------------------------------------
+   O arquivo no Drive da Dalmóbile
+   ------------------------------------------------------------
+   Uma pasta por contrato, na conta do cliente. Os bytes são os
+   MESMOS que foram nos e-mails — uma descida só.
+
+   ⚠️ A RESERVA É O QUE IMPEDE A DUPLICATA, e sem ela isto estaria
+   quebrado desde o primeiro dia. A Autentique repete o aviso em
+   60s, 120s e 300s e avisa que pode mandar o mesmo evento mais de
+   uma vez. O Drive aceita nome repetido sem reclamar, porque
+   identifica por id — então três avisos virariam três arquivos
+   iguais na pasta, e ninguém saberia qual é o bom.
+
+   A reserva é o próprio insert, com o id do documento como chave
+   primária: é atômica, sem janela entre conferir e marcar.
+
+   ⚠️ E ISTO NÃO PODE DERRUBAR O WEBHOOK. Se estourasse, a
+   Autentique receberia 500 e repetiria — mas as reservas dos
+   e-mails já estão gastas, então a repetição não reenviaria
+   e-mail (certo) e tentaria o Drive de novo (certo). O que NÃO
+   pode é a exceção subir e a rota devolver 500 por causa do
+   arquivamento: o aviso já foi processado com sucesso em tudo que
+   importa. Por isso o try/catch envolve o bloco inteiro.
+   ------------------------------------------------------------ */
+async function arquivarOAssinado(env, ficha, anexo, docId, rodada) {
+  if (!temDrive(env)) return;   /* sem as variáveis, nem tenta */
+
+  if (!anexo) {
+    console.warn('[drive] sem PDF nesta tentativa; o arquivamento fica para a '
+      + 'repetição da Autentique: ' + ficha.id);
+    return;
+  }
+
+  try {
+    /* Reserva com o hash e o nome JÁ GRAVADOS. Assim a impressão
+       digital do assinado fica registrada mesmo que o envio ao
+       Drive falhe — ela é do arquivo, não do destino, e é o que
+       permite conferir depois se alguém trocou a cópia. */
+    /* TRÊS RESPOSTAS, não duas:
+         'nova'     — reservou agora, pode enviar
+         'pendente' — a reserva existe mas o id não foi gravado.
+                      Uma tentativa anterior morreu no meio, e o
+                      arquivo PODE já estar no Drive. Enviar de
+                      novo é seguro porque o módulo procura pelo
+                      nome antes de subir.
+         'feita'    — já tem id. Nada a fazer.
+
+       Com booleano, 'pendente' virava 'feita' e o arquivo ficava
+       no Drive sem o sistema saber onde — perdido à vista de
+       todos. */
+    const reserva = await chamarBanco(env, 'reservar_arquivo', {
+      doc_id: docId,
+      o_hash: anexo.hash,
+      o_nome: anexo.nome,
+      a_roda: rodada
+    });
+
+    if (reserva === 'feita') return;
+
+    if (reserva !== 'nova' && reserva !== 'pendente') {
+      console.warn('[drive] a reserva respondeu algo inesperado: ' + reserva);
+      return;
+    }
+
+    const guardado = await arquivarNoDrive(env, anexo, ficha,
+                                           marcasDoArquivo(ficha, rodada, anexo));
+
+    if (!guardado) {
+      /* Devolve a reserva para a repetição tentar de novo. A
+         função recusa devolver reserva já cumprida, então isto
+         nunca pode causar envio dobrado. */
+      await chamarBanco(env, 'liberar_arquivo', { doc_id: docId });
+      return;
+    }
+
+    /* ⚠️ SE ISTO FALHAR, o arquivo está no Drive e o banco não
+       sabe. Por isso NÃO devolve a reserva aqui: devolver faria a
+       repetição subir de novo. A reserva fica 'pendente', e a
+       próxima tentativa acha o arquivo pelo nome e grava o id
+       sem duplicar. */
+    await chamarBanco(env, 'registrar_drive', { doc_id: docId, file_id: guardado.id });
+
+  } catch (e) {
+    /* Daqui para cima NADA pode estourar: a assinatura já está
+       registrada e o prazo contratual já começou.
+
+       E aqui NÃO se devolve a reserva, de propósito. Uma exceção
+       neste ponto pode ter vindo depois do envio (o registro do
+       id falhando, por exemplo), e devolver a reserva faria a
+       repetição subir o arquivo outra vez. Deixar 'pendente' é o
+       estado certo: a próxima tentativa acha o que subiu e grava
+       o id. */
+    console.error('[drive] o arquivamento falhou: ' + (e && e.message)
+      + ' — a reserva fica pendente e a próxima tentativa resolve.');
+  }
+}
+
+
+/* ------------------------------------------------------------
+   O que vai escrito no arquivo, para o outro lado entender
+   ------------------------------------------------------------
+   'description' é o que a equipe lê na tela do Drive.
+   'properties' é chave-valor que qualquer um com acesso ao
+   arquivo consegue ler por API — é por aqui que um outro sistema
+   recebe o estado sem precisar perguntar a ninguém.
+
+   ⚠️ O ESTADO VAI COMO ELE É, NUNCA COLAPSADO EM DOIS VALORES.
+   O parecer da vistoria tem três desfechos que chegam a
+   assinatura, e o do meio — aprovada COM ASSISTÊNCIA — é
+   aprovação SEM obra liberada. Virar "Aprovado" faria o outro
+   lado acreditar que a obra acabou com pendência aberta, que é
+   exatamente a contradição que o parecer existe para impedir.
+   Virar "Reprovado" seria igualmente falso: o cliente assinou e
+   aprovou.
+
+   Por isso vão os dois: o estado no nosso vocabulário e um
+   booleano que não dá para interpretar errado. Quem recebe
+   decide; nós não escondemos a diferença.
+   ------------------------------------------------------------ */
+function marcasDoArquivo(ficha, rodada, anexo) {
+  const d = ficha.dados || {};
+  const prop = {
+    tipo:     String(ficha.tipo || ''),
+    contrato: String(ficha.contrato || ''),
+    cliente:  String(ficha.cliente || ''),
+    loja:     ficha.loja === 'cgt' ? 'Caraguatatuba' : 'São José dos Campos',
+    rodada:   String(rodada)
+  };
+
+  let frase;
+
+  if (ficha.tipo === 'vistoria') {
+    const n = pendenciasDa(ficha);
+    const escolhido = String(d.parecer || '');
+
+    prop.estado = n === 0 ? 'aprovada' : (escolhido || 'indefinido');
+    prop.obra_liberada = n === 0 ? 'true' : 'false';
+    prop.pendencias = String(n);
+    prop.quem_assinou = (n > 0 && escolhido === 'reprovada') ? 'dalmobile' : 'cliente';
+
+    frase = n === 0
+      ? 'Vistoria de montagem — obra liberada, sem pendência. Assinada pelo cliente.'
+      : (escolhido === 'reprovada'
+          ? 'Vistoria de montagem — obra REPROVADA, ' + n + ' pendência(s). '
+            + 'Assinada pela Dalmóbile; o cliente recebeu. A obra NÃO está liberada.'
+          : 'Vistoria de montagem — aprovada COM ASSISTÊNCIA, ' + n + ' pendência(s), '
+            + '20 dias úteis. Assinada pelo cliente. A obra NÃO está liberada.');
+
+  } else {
+    const parecer = String(d.parecerFinal || '');
+    const caminho = String(d.caminhoInapto || '');
+    const corrigir = parecer === 'nao-aptos' && caminho === 'corrigir';
+
+    prop.estado = corrigir ? 'suspensao' : parecer;
+    /* Na medição o que importa não é "aprovado": é se a
+       assinatura fez os prazos começarem a contar. */
+    prop.prazos_iniciados = corrigir ? 'false' : 'true';
+    prop.quem_assinou = corrigir ? 'dalmobile' : 'cliente';
+
+    frase = corrigir
+      ? 'Termo de medição — ambientes NÃO aptos, a corrigir, com nova data. '
+        + 'Assinado pela Dalmóbile; o cliente recebeu. Os prazos NÃO começaram.'
+      : (parecer === 'aptos'
+          ? 'Termo de medição — ambientes aptos. Assinado pelo cliente. '
+            + 'Os prazos de produção, entrega e montagem começaram a contar.'
+          : 'Termo de medição — ambientes não aptos, cliente prosseguiu assumindo '
+            + 'os riscos. Assinado pelo cliente. Os prazos começaram a contar.');
+  }
+
+  /* O hash vem do ANEXO, que é quem baixou os bytes. Eu tinha
+     escrito ficha.__hash aqui — campo que não existe em lugar
+     nenhum, e que gravaria string vazia em todo arquivo sem dar
+     erro nenhum. */
+  prop.hash_sha256 = String((anexo && anexo.hash) || '');
+
+  return { descricao: frase, propriedades: prop };
 }
 
 
@@ -722,7 +930,8 @@ async function mandarEmail(env, chave, ficha, gente, assinadoEm, anexo) {
     text: corpoEmTexto(ficha, gente, assinadoEm, teste, anexo)
   };
 
-  if (anexo) carta.attachments = [anexoParaOResend(anexo)];
+  const paraOResend = anexo ? anexoParaOResend(anexo) : null;
+  if (paraOResend) carta.attachments = [paraOResend];
 
   await postarNoResend(chave, carta);
 }
@@ -731,10 +940,21 @@ async function mandarEmail(env, chave, ficha, gente, assinadoEm, anexo) {
 /* O Resend recebe anexo como base64 dentro do próprio JSON. O
    campo 'tipo' que o módulo devolve (pades ou signed) serve ao
    corpo do e-mail e não vai no pedido — campo a mais ali é 422. */
+/* O base64 vem pronto, de UMA conversão feita no documentoTerminou.
+   Convertendo aqui, os dois e-mails converteriam o mesmo arquivo
+   duas vezes — até 8 MB cada, duas passadas de CPU numa rota onde
+   o Cloudflare conta CPU por invocação.
+
+   E a conversão não acontece na DESCIDA do arquivo de propósito:
+   o Resend quer base64, o Drive quer bytes crus. Convertendo lá,
+   o caminho do Drive teria de desconverter para voltar onde já
+   estava. */
 function anexoParaOResend(anexo) {
+  if (!anexo || !anexo.base64) return null;
+
   return {
-    filename: anexo.filename,
-    content: anexo.content,
+    filename: anexo.nome,
+    content: anexo.base64,
     content_type: 'application/pdf'
   };
 }
@@ -1020,7 +1240,7 @@ async function mandarEmailDoCliente(env, chave, ficha, email, assinadoEm, anexo)
     subject: r.assunto + ' · Dalmóbile ' + loja,
     html: corpoDoCliente(ficha, r, loja, responder, teste, email),
     text: corpoDoClienteEmTexto(ficha, r, loja, responder, teste, email),
-    attachments: [anexoParaOResend(anexo)]
+    attachments: [anexoParaOResend(anexo)].filter(Boolean)
   };
 
   if (emailDeGente(responder)) carta.reply_to = responder;
