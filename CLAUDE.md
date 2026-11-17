@@ -95,6 +95,32 @@ deixaria de controlar as telas de obra e o offline morreria.
 | `tela-itens.js` | montagem, vistoria | Os blocos, itens, fotos e os campos acrescentados à mão |
 | `lib/assinado.js` | `/api/documento`, `/api/autentique` | Achar, baixar e nomear o PDF assinado na Autentique. **Fora de `functions/` de propósito:** lá dentro cada arquivo vira uma rota |
 
+### A aba temporária (sai sozinha)
+
+| Arquivo | O que é |
+|---|---|
+| `creative-black.js` | A aba **Creative Black**: o kit dos consultores da ação de novembro/2026. Mensagens prontas, imagens de WhatsApp por loja e a peça em canvas com o nome do cliente |
+
+Ela é **um arquivo e duas linhas no `index.html`** (a tag `<script>` e a
+chamada de `CreativeBlack.montar()` no `iniciarCargos`) de propósito: a ação
+acaba e a retirada tem de ser trivial. O CSS nasce dentro dela, e ela se
+inscreve sozinha na matriz de vitrine — nada mais no repositório sabe que ela
+existiu.
+
+A data de saída é `FIM_CREATIVE_BLACK`, fim de 30/11/2026 em Brasília. Depois
+dela a aba não é escondida: **não é construída.** Não precisa de ninguém para
+se retirar do menu.
+
+⚠️ **Os nomes não são intercambiáveis.** "Creative Black" é o nome da campanha
+da fábrica e pode chegar ao cliente. O que a **peça desenha** é sempre
+"Condição de Fábrica", e o percentual aparece **só** na caixa de regras, que é
+texto da tela e nunca passa pelo canvas. O nome da aba já mudou duas vezes
+em duas semanas; se mudar de novo, o que não muda é isso.
+
+A varredura que garante que um nome velho não ficou para trás é a **prova 9**
+da suíte de tela. Ela trabalha com exceção nomeada, não com zero ocorrências
+— porque a regra que proíbe um termo precisa escrevê-lo.
+
 ### Geradores de PDF e de peça
 
 | Arquivo | O que gera |
@@ -119,7 +145,12 @@ deixaria de controlar as telas de obra e o offline morreria.
 ### Assets (buscados por string em tempo de execução — cuidado ao mover)
 
 `Krub-Medium.ttf`, `Krub-Bold.ttf` (as fontes dos PDFs e das peças),
+`Krub-Light.ttf` (só o título da peça da Creative Black — **opcional**: sem
+ela o título cai no peso 500 e a peça não quebra),
 `imgs/dalmoSJC_preto_1.png`, `imgs/logoDalmo_caraguaPreto.png`,
+`imgs/creative-black/sjc/` e `.../cgt/` (as 7 imagens de WhatsApp e a
+`foto-<loja>.jpg` da peça, com o mesmo nome nas duas pastas — quem diz a loja
+é a pasta, nunca o nome; há um `LEIA-ME.txt` lá com a lista exata),
 `bases-sjc.pdf`, `bases-cgt.pdf` (os PDFs base do orçamento),
 `vendor/pdf-lib.min.js`, `vendor/fontkit.umd.min.js`.
 
@@ -313,7 +344,14 @@ de um novo desfaz o novo, em silêncio**, porque vários se sobrepõem com
 16  supabase-aviso-cliente.sql        ⚠️ refaz reabrir_vistoria do nº 14
 17  supabase-historico-assinado.sql   ⚠️ refaz marcar_recusa do nº 8
 18  supabase-cargos-visiveis.sql      ⚠️ refaz travar_cargos do nº 11
+19  supabase-creative-black.sql       muda o id da aba na vitrine
 ```
+
+O nº 19 não é como os outros: ele não cria nem substitui nada, só move
+linhas de `cargo_oculta` de `aba-blackfriday` para `aba-creative-black`. Tem
+dois passos — o PASSO 1 **antes** do deploy, a limpeza **depois** — e sai do
+repositório junto com a aba, depois de 30/11/2026. Por não ter
+`create or replace`, ele não desfaz nenhum dos 18 se rodar fora de ordem.
 
 **`supabase-o-que-ja-rodou.sql`** lê o banco e diz, arquivo por arquivo, o
 que já está aplicado — `rodou`, `FALTA` ou `INCOMPLETO`. Não muda nada.
@@ -401,9 +439,20 @@ não fazia nada (NFD vs NFC). `git add -A imgsRef` funciona.
 usuário aprovar, então `commit` e `pull` deixam `.lock` dentro do `.git` e o
 comando seguinte — inclusive o dele no VS Code — falha com "File exists".
 
-**Claude não tem credencial do GitHub.** O arranjo é: **Claude commita e
-avisa "falta o push"; o Gu dá o push.** Já aconteceu eu dizer "commitado no
-repositório" com três commits que nunca subiram.
+**Commitado não é subido.** Já aconteceu eu dizer "commitado no repositório"
+com três commits que nunca subiram — o commit é local, e ninguém vê nada até
+o push. **Conferir é um comando:** `git log --oneline origin/main..HEAD` tem
+de voltar vazio, e depois de um `git fetch`, não antes.
+
+O push **sai desta máquina** (conferido em 17/nov/2026: há credencial
+configurada no git). Esta linha já disse o contrário e o arranjo era "Claude
+commita e avisa, o Gu sobe" — vale como combinado, não como limitação. Então a
+regra que sobra é de autorização, não de capacidade: **só dar push quando o Gu
+pedir.**
+
+⚠️ **O push dispara o deploy do Cloudflare Pages.** Se a mudança precisar de
+um arquivo SQL rodado antes, o SQL vem primeiro — depois do push é tarde, e
+o código novo já está no ar perguntando ao banco por coisa que não existe.
 
 ---
 
