@@ -7,6 +7,19 @@ Ela sai do ar junto com a aba, depois de 30/11/2026.
 
 O QUE PRECISA ESTAR AQUI
 ------------------------
+A ARTE DA PEÇA — na raiz desta pasta, uma vez só
+------------------------------------------------
+  fundo.jpg       1080 x 1350, o fundo preto granulado
+  lettering.png   1300 x 297, o lettering "creative black",
+                  com fundo TRANSPARENTE
+
+Estes dois não têm versão por loja. O que distingue a loja na peça
+é a logo, e o código a pinta de branco na hora, a partir da logo
+PRETA que já existe em imgs/. Não há arquivo de logo branca, e não
+deve haver: seria mais um asset buscado por string para faltar.
+
+AS IMAGENS DE WHATSAPP — duas vezes, uma por loja
+-------------------------------------------------
 Os mesmos oito arquivos nas DUAS pastas, sjc/ e cgt/. O nome é
 igual nas duas; o que muda é a logo aplicada na arte, e é a pasta
 que diz qual loja é.
@@ -26,18 +39,27 @@ whatsapp_consultores.jsx em JPG 1080x1350, qualidade 80.
 
 A foto-<loja>.jpg é a foto que entra na peça com o nome do
 cliente — pode ser a mesma foto_detalhe dos scripts. Ela é
-recortada em "cover" nos 62% de cima da peça, então o assunto
-precisa estar perto do centro.
+recortada em "cover" num retângulo de 900 x 646 no meio da peça,
+então o assunto precisa estar perto do centro.
 
 ⚠️ NOME ERRADO NÃO DÁ ERRO NA TELA
 O cartão aparece com o espaço da imagem vazio e o botão Baixar
 responde "Falhou". Ninguém é avisado. Confira os nomes letra por
 letra antes de publicar — minúsculas e hífen, como está acima.
 
-A peça com o nome do cliente ainda sai sem a foto: a área fica
-clara e o texto é desenhado por cima. Foi feita assim de
-propósito, para a falta de um arquivo não impedir o consultor de
-mandar a peça.
+A peça com o nome do cliente sai mesmo faltando arquivo, e cada
+falta tem a sua reserva:
+
+  sem fundo.jpg        fundo preto liso (#0B0A09)
+  sem lettering.png    "CREATIVE BLACK" em Krub-Light, no mesmo
+                       lugar
+  sem foto-<loja>.jpg  retângulo #1A1A1A no lugar da foto
+  sem a logo           a peça sai sem ela
+  sem Krub-Light.ttf   a data sai no 300 sintético do navegador
+
+Foi feita assim de propósito: o consultor está com o cliente na
+linha, e arquivo que não subiu é problema nosso, não dele. Toda
+falta aparece no console do navegador.
 
 CHEGARAM EM 16/11/2026
 ----------------------
@@ -50,3 +72,15 @@ não denuncia.
 A w*.jpg saiu 1080x1350 e a foto-<loja>.jpg saiu 1200x1600. A foto
 é maior de propósito: ela é recortada em cover, e sobra para o
 recorte não subir de escala.
+
+A ARTE DA PEÇA CHEGOU EM 17/11/2026
+-----------------------------------
+fundo.jpg e lettering.png entraram nesta data, e a peça com o nome
+do cliente passou do layout claro para o KV da fábrica — a mesma
+arte da w5-ultimo-dia.jpg.
+
+A prova 11 da suíte (teste-cb-11-peca-kv.mjs) confere que os dois
+são desenhados, e a prova 12 confere que a peça AINDA SAI com os
+dois faltando. Essa segunda é a que importa mais: a primeira pega
+o caminho errado, a segunda pega alguém que resolveu "simplificar"
+as reservas.

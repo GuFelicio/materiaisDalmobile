@@ -270,58 +270,105 @@ window.CreativeBlack = (function () {
   }
 
   /* ============================================================
-     A PEÇA — 1080 × 1350
+     A PEÇA — 1080 × 1350, no KV Creative Black
      ------------------------------------------------------------
-     Desenhada em canvas, no padrão do pecas.js, e emprestando a
-     maquinaria dele por Pecas._ajudantes: as fontes, o recorte da
-     tinta da logo e a quebra de linha com peso por pedaço.
+     A mesma arte da imagem w5-ultimo-dia.jpg: fundo granulado,
+     metade de baixo em grafite, lettering da campanha em cima,
+     foto no meio e o nome do cliente embaixo.
+
+     Desenhada em canvas, emprestando do pecas.js por
+     Pecas._ajudantes as fontes, o carregamento de imagem e o
+     recorte da tinta da logo.
 
      ⚠️ A REGRA QUE NÃO PODE QUEBRAR: nada aqui desenha valor,
      percentual ou a palavra "desconto". O que o canvas escreve é
      só o que está em MOLDE, e MOLDE não tem número de dinheiro
      nenhum. O percentual vive na caixa de regras (B2), que é
-     texto de tela.
+     texto de tela. A prova 5 confere espiando o fillText.
+
+     ⚠️ TODA FALTA DE ARQUIVO É ABSORVIDA, e isso não é zelo
+     excessivo: o consultor está com o cliente na linha. Fundo,
+     lettering, foto e logo têm cada um a sua reserva, e cada
+     falta deixa registro no console.warn. Peça feia ainda serve;
+     peça que não sai, não.
      ============================================================ */
 
   const PECA = {
     largura: 1080,
     altura: 1350,
 
-    /* A foto ocupa os 62% de cima. O resto é o painel claro. */
-    foto: { altura: 0.62 },
+    /* O KV da fábrica: fundo granulado inteiro, e a metade de
+       baixo em grafite. O grafite começa ACIMA do pé da foto, de
+       propósito — a foto cai por cima dele e é essa sobreposição
+       que dá a profundidade da arte. Por isso a ordem de desenho
+       (fundo, grafite, foto) não pode ser trocada. */
+    grafite: { de: 810, cor: '#262626' },
+    fundoLiso: '#0B0A09',
 
-    margem: 88,
-    fundo: '#F4F1EC',
+    lettering: { largura: 646, direita: 990, topo: 96 },
 
-    rotulo: { corpo: 26, espacamento: 0.18, cor: '#6B6560', doTopo: 88 },
+    /* Reserva para quando o lettering.png não vier. */
+    letteringTexto: { corpo: 40, espacamento: 0.2 },
 
-    titulo: {
-      corpo: 58, corpoMinimo: 46, entrelinha: 1.12,
-      cor: '#1E1C1A', linhas: 3, doRotulo: 78
+    foto: { x: 90, y: 278, largura: 900, altura: 646, vazia: '#1A1A1A' },
+
+    faixa: {
+      x: 90, y: 974, largura: 900, altura: 62,
+      contorno: 1.2, corpo: 27, espacamento: 0.52
     },
 
-    data: { corpo: 30, cor: '#1E1C1A', daUltimaLinha: 66 },
+    frase: {
+      x: 90, base: 1090, entrelinha: 38,
+      corpo: 22, corpoMinimo: 17, espacamento: 0.36,
+      larguraMaxima: 900,
+      fio: { depois: 40, espessura: 2, ate: 1080 }
+    },
 
-    rodape: { corpo: 24, cor: '#6B6560', doPe: 88, logoAltura: 44 }
+    data: { x: 90, base: 1254, corpo: 42, espacamento: 0.12 },
+
+    consultor: {
+      x: 90, base: 1290, corpo: 15, espacamento: 0.3, cor: '#CDC8C0'
+    },
+
+    logo: { direita: 990, altura: 56 },
+
+    tinta: '#FFFFFF'
   };
 
-  /* O que o canvas escreve, inteiro. O asterisco marca o negrito,
-     como no pós-visita e no agendamento. */
+  /* O que o canvas escreve, inteiro.
+
+     ⚠️ Nada aqui tem número de dinheiro, percentual nem a palavra
+     "desconto". A data diz 28/11 — dois números que são dia e
+     mês, e que não formam a sequência "12". O percentual vive na
+     caixa de regras (B2), que é texto de tela e não passa por
+     aqui. A prova 5 confere isso espiando o fillText. */
   const MOLDE = {
-    rotulo: 'CONDIÇÃO DE FÁBRICA',
-    data: 'Até 28 de novembro',
-    cargo: 'Consultor(a) de Vendas',
-    semAmbiente: '*{nome}*, o seu projeto entra na *condição especial de fábrica.*',
-    comAmbiente: '*{nome}*, o projeto {artigo} {ambiente} entra na ' +
-                 '*condição especial de fábrica.*'
+    faixa: 'CONDIÇÃO ESPECIAL DE FÁBRICA',
+    letteringReserva: 'CREATIVE BLACK',
+    data: 'ATÉ 28/11',
+    cargo: 'CONSULTOR(A) DE VENDAS',
+    fecho: 'ENTRA NA CONDIÇÃO ESPECIAL.',
+    semAmbiente: 'O SEU PROJETO',
+    comAmbiente: 'O PROJETO {ARTIGO} {AMBIENTE}'
+  };
+
+  /* Os caminhos da arte da campanha. Ficam juntos porque é o que
+     se procura quando a peça sai errada. */
+  const ARTE = {
+    fundo: 'imgs/creative-black/fundo.jpg',
+    lettering: 'imgs/creative-black/lettering.png'
   };
 
   const LIMITE_NOME = 24;
 
-  /* A Krub-Light é opcional: o título fica mais perto do KV com
-     ela, mas a peça não pode deixar de sair porque um arquivo de
-     fonte não foi para o repositório. Tentamos carregar uma vez;
-     se não vier, o título sai em Medium e ninguém fica sem peça. */
+  /* A Krub-Light é opcional. Ela é o peso da DATA ("ATÉ 28/11") e
+     do lettering de reserva. Se o arquivo não estiver na raiz, o
+     navegador sintetiza um 300 a partir da Medium: fica mais
+     gordo que a arte da fábrica, mas sai. A peça não pode deixar
+     de sair porque um arquivo de fonte não subiu.
+
+     Tentamos carregar UMA vez e guardamos a promessa — inclusive
+     a que falhou. Tentar a cada peça faria um 404 por clique. */
   let luzPronta = null;
   function carregarLuz() {
     if (luzPronta) return luzPronta;
@@ -332,45 +379,143 @@ window.CreativeBlack = (function () {
     return luzPronta;
   }
 
-  /* Escreve com espaçamento entre letras.
-     Feito à mão em vez de ctx.letterSpacing porque o Safari só
+  /* ------------------------------------------------------------
+     Escrita com espaçamento entre letras
+     ------------------------------------------------------------
+     Feita à mão em vez de ctx.letterSpacing porque o Safari só
      passou a aceitar a propriedade na 17.4, e o consultor abre
-     isto no iPhone que tem. Sem o espaçamento o rótulo não
-     quebra — ele só sai apertado, errado em relação ao KV, e
-     ninguém reclamaria. Falha calada, então é feita à mão. */
-  function escreverEspacado(ctx, texto, x, base, espaco) {
-    const letras = String(texto).split('');
+     isto no iPhone que tem. Sem o espaçamento nada quebra — o
+     texto só sai apertado, errado em relação ao KV, e ninguém
+     reclamaria. Falha calada, então é feita à mão.
+
+     Trabalha em PEDAÇOS ({t, peso}) porque na frase o nome do
+     cliente é negrito e o resto não, na mesma linha.
+     ------------------------------------------------------------ */
+
+  /* Onde a linha termina, para quem precisa (o fio, a
+     centralização da faixa). Devolve o cursor final. */
+  function escreverPedacos(ctx, pedacos, x, base, corpo, espaco, A) {
     let cursor = x;
+    let primeira = true;
 
-    letras.forEach(function (letra, i) {
-      /* Como no escreverNaMancha do pecas.js: a primeira letra é
-         ancorada pela tinta, não pela caneta, senão o rótulo
-         começa num lugar diferente conforme a letra inicial. */
-      if (i === 0) cursor += ctx.measureText(letra).actualBoundingBoxLeft;
-      ctx.fillText(letra, cursor, base);
-      cursor += ctx.measureText(letra).width + espaco;
+    pedacos.forEach(function (p) {
+      ctx.font = A.fonteDe(p.peso, corpo);
+
+      String(p.t).split('').forEach(function (letra) {
+        /* Como no escreverNaMancha do pecas.js: a primeira letra
+           é ancorada pela TINTA, não pela caneta, senão a linha
+           começa num lugar diferente conforme a letra inicial. */
+        if (primeira) {
+          cursor += ctx.measureText(letra).actualBoundingBoxLeft;
+          primeira = false;
+        }
+        ctx.fillText(letra, cursor, base);
+        cursor += ctx.measureText(letra).width + espaco;
+      });
     });
+
+    /* O vão depois da última letra não é parte da linha: ele é
+       espaço ENTRE letras, e contá-lo faria o fio nascer 0.36em
+       mais à direita do que devia. */
+    return cursor - espaco;
   }
 
-  /* Monta o título já com os marcadores trocados, para a quebra
-     de linha medir o nome real e não o tamanho de "{nome}". */
-  function textoDoTitulo(dados) {
+  /* Quanto a linha vai ocupar, antes de escrever.
+     ctx.measureText da string inteira NÃO serve: ela não conhece
+     o espaçamento, e erraria por 0.36em vezes o número de letras
+     — numa frase de 30 letras isso é mais de 200 px, e a conta
+     que decide se o nome cabe daria sempre "cabe". */
+  function larguraPedacos(ctx, pedacos, corpo, espaco, A) {
+    let total = 0;
+
+    pedacos.forEach(function (p) {
+      ctx.font = A.fonteDe(p.peso, corpo);
+      String(p.t).split('').forEach(function (letra) {
+        total += ctx.measureText(letra).width + espaco;
+      });
+    });
+
+    return total > 0 ? total - espaco : 0;
+  }
+
+  function escreverEspacado(ctx, texto, x, base, corpo, espaco, A, peso) {
+    return escreverPedacos(ctx, [{ t: texto, peso: peso || 'medium' }],
+                           x, base, corpo, espaco, A);
+  }
+
+  /* ------------------------------------------------------------
+     A frase da peça, em duas linhas
+     ------------------------------------------------------------
+     A linha 1 muda com o ambiente; a linha 2 é fixa. O nome vai
+     em negrito, COM a vírgula — a vírgula pertence ao nome
+     visualmente, e deixá-la no peso do resto faz um degrau
+     esquisito logo no começo da frase.
+
+     Ambiente que o mapa não conhece cai na frase sem ambiente,
+     que está sempre certa. É o mesmo artigoDoAmbiente de antes:
+     chutar o gênero por terminação acertaria "cozinha" e erraria
+     "closet", calado, na peça que vai para o cliente.
+     ------------------------------------------------------------ */
+  function frasePeca(dados) {
     const artigo = artigoDoAmbiente(dados.ambiente);
+    const nome = String(dados.nome).trim().toUpperCase();
 
-    if (!artigo) return MOLDE.semAmbiente.replace('{nome}', dados.nome);
+    const resto = artigo
+      ? MOLDE.comAmbiente
+          .replace('{ARTIGO}', artigo.toUpperCase())
+          .replace('{AMBIENTE}', String(dados.ambiente).trim().toUpperCase())
+      : MOLDE.semAmbiente;
 
-    return MOLDE.comAmbiente
-      .replace('{nome}', dados.nome)
-      .replace('{artigo}', artigo)
-      .replace('{ambiente}', String(dados.ambiente).trim().toLowerCase());
+    return [
+      [{ t: nome + ',', peso: 'bold' }, { t: ' ' + resto, peso: 'medium' }],
+      [{ t: MOLDE.fecho, peso: 'medium' }]
+    ];
   }
 
+  /* ------------------------------------------------------------
+     A logo, em branco
+     ------------------------------------------------------------
+     As logos do repositório são PRETAS, e o KV é escuro. Em vez
+     de um arquivo novo (que vira mais um asset buscado por
+     string, mais uma coisa para faltar), a tinta é trocada num
+     canvas auxiliar.
+
+     'source-in' mantém o alfa do que já está desenhado e
+     substitui a cor. Pintar por cima com 'source-atop' deixaria
+     halo cinza nas bordas antialiasadas da logo; o 'source-in'
+     respeita o alfa de cada pixel e a borda sai limpa.
+     ------------------------------------------------------------ */
+  function logoBranca(lg, altura) {
+    const largura = Math.max(1, Math.round(altura * (lg.sl / lg.sa)));
+    const alta = Math.max(1, Math.round(altura));
+
+    const c = document.createElement('canvas');
+    c.width = largura;
+    c.height = alta;
+    const x = c.getContext('2d');
+
+    x.drawImage(lg.img, lg.sx, lg.sy, lg.sl, lg.sa, 0, 0, largura, alta);
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = '#FFFFFF';
+    x.fillRect(0, 0, largura, alta);
+
+    return { tela: c, largura: largura, altura: alta };
+  }
+
+  /* ------------------------------------------------------------
+     A peça
+     ------------------------------------------------------------
+     Toda falta de arquivo é absorvida: a peça NUNCA pode deixar
+     de sair. O consultor está com o cliente na linha, e um
+     arquivo de arte que não subiu é problema nosso, não dele.
+     Cada falta deixa registro no console.warn e segue.
+     ------------------------------------------------------------ */
   async function desenhar(dados) {
     const A = Pecas._ajudantes;
     const loja = dados.loja === 'cgt' ? 'cgt' : 'sjc';
 
     await A.carregarFontes();
-    const temLuz = await carregarLuz();
+    await carregarLuz();
 
     const tela = document.createElement('canvas');
     tela.width = PECA.largura;
@@ -378,15 +523,53 @@ window.CreativeBlack = (function () {
     const ctx = tela.getContext('2d');
     ctx.textBaseline = 'alphabetic';
 
-    /* ---------- o painel, primeiro ----------
-       Pintado antes da foto para que uma foto que não carregue
-       deixe a peça inteira clara, e não um retângulo preto em
-       cima. Peça feia ainda serve; peça com tarja preta, não. */
-    ctx.fillStyle = PECA.fundo;
+    /* ---------- 1. o fundo ----------
+       O liso entra ANTES de tentar a imagem: assim, se ela não
+       vier, o que sobra é o preto da campanha e não um canvas
+       transparente que o PNG salvaria como quadriculado. */
+    ctx.fillStyle = PECA.fundoLiso;
     ctx.fillRect(0, 0, PECA.largura, PECA.altura);
 
-    /* ---------- a foto ---------- */
-    const alturaFoto = Math.round(PECA.altura * PECA.foto.altura);
+    try {
+      const fundo = await A.imagemDe(ARTE.fundo);
+      ctx.drawImage(fundo, 0, 0, PECA.largura, PECA.altura);
+    } catch (e) {
+      console.warn('[creative-black] não carreguei ' + ARTE.fundo, e);
+    }
+
+    /* ---------- 2. o grafite da metade de baixo ---------- */
+    ctx.fillStyle = PECA.grafite.cor;
+    ctx.fillRect(0, PECA.grafite.de, PECA.largura, PECA.altura - PECA.grafite.de);
+
+    /* ---------- 3. o lettering ---------- */
+    try {
+      const lt = await A.imagemDe(ARTE.lettering);
+      const largura = PECA.lettering.largura;
+      const altura = largura * (lt.naturalHeight / lt.naturalWidth);
+      ctx.drawImage(lt, PECA.lettering.direita - largura, PECA.lettering.topo,
+                    largura, altura);
+    } catch (e) {
+      /* Reserva em texto. Não é igual ao lettering da fábrica,
+         mas diz o nome da campanha no lugar certo — melhor que um
+         vazio que ninguém entende. */
+      console.warn('[creative-black] não carreguei ' + ARTE.lettering, e);
+
+      ctx.fillStyle = PECA.tinta;
+      const corpo = PECA.letteringTexto.corpo;
+      const espaco = corpo * PECA.letteringTexto.espacamento;
+      ctx.font = A.fonteDe('light', corpo);
+      const larg = larguraPedacos(ctx, [{ t: MOLDE.letteringReserva, peso: 'light' }],
+                                  corpo, espaco, A);
+      escreverEspacado(ctx, MOLDE.letteringReserva,
+                       PECA.lettering.direita - larg,
+                       PECA.lettering.topo + corpo,
+                       corpo, espaco, A, 'light');
+    }
+
+    /* ---------- 4. a foto ----------
+       Por cima do grafite de propósito: é a sobreposição que dá a
+       profundidade do KV. */
+    const F = PECA.foto;
     const caminhoFoto = 'imgs/creative-black/' + loja + '/foto-' + loja + '.jpg';
 
     try {
@@ -394,91 +577,120 @@ window.CreativeBlack = (function () {
 
       /* "cover": cobre a área toda, centralizada, sem distorcer —
          a mesma conta do recorte de foto do aniversário. */
-      const escala = Math.max(foto.naturalWidth / PECA.largura,
-                              foto.naturalHeight / alturaFoto);
-      const larguraFonte = PECA.largura * escala;
-      const alturaFonte = alturaFoto * escala;
+      const escala = Math.max(foto.naturalWidth / F.largura,
+                              foto.naturalHeight / F.altura);
+      const larguraFonte = F.largura * escala;
+      const alturaFonte = F.altura * escala;
 
       ctx.drawImage(
         foto,
         (foto.naturalWidth - larguraFonte) / 2,
         (foto.naturalHeight - alturaFonte) / 2,
         larguraFonte, alturaFonte,
-        0, 0, PECA.largura, alturaFoto
+        F.x, F.y, F.largura, F.altura
       );
     } catch (e) {
       /* A foto é da arte, não do cliente: se faltar, o consultor
          não tem o que fazer a respeito, e a peça com o nome ainda
-         é útil. Fica o registro no console e a área clara. */
+         é útil. Fica o registro e um retângulo no lugar. */
       console.warn('[creative-black] não carreguei ' + caminhoFoto, e);
+      ctx.fillStyle = F.vazia;
+      ctx.fillRect(F.x, F.y, F.largura, F.altura);
     }
 
-    const esquerda = PECA.margem;
-    const larguraUtil = PECA.largura - PECA.margem * 2;
+    /* ---------- 5. a faixa ---------- */
+    const FX = PECA.faixa;
 
-    /* ---------- o rótulo ---------- */
-    ctx.fillStyle = PECA.rotulo.cor;
-    ctx.font = A.fonteDe('medium', PECA.rotulo.corpo);
-    const baseRotulo = alturaFoto + PECA.rotulo.doTopo;
-    escreverEspacado(ctx, MOLDE.rotulo, esquerda, baseRotulo,
-                     PECA.rotulo.corpo * PECA.rotulo.espacamento);
+    ctx.strokeStyle = PECA.tinta;
+    ctx.lineWidth = FX.contorno;
+    /* O meio-pixel alinha o contorno de 1.2 px à grade: sem ele o
+       traço cai entre dois pixels e sai cinza-claro dos dois
+       lados, parecendo mais fino do que a arte pede. */
+    ctx.strokeRect(FX.x + 0.5, FX.y + 0.5, FX.largura - 1, FX.altura - 1);
 
-    /* ---------- o título ---------- */
-    let palavras = A.emPedacos(textoDoTitulo(dados));
+    const espacoFaixa = FX.corpo * FX.espacamento;
+    const pedacosFaixa = [{ t: MOLDE.faixa, peso: 'bold' }];
 
-    /* O que não é negrito vira Light — mas só quando a fonte
-       entrou. Sem ela, 'medium' é o peso que existe. */
-    if (temLuz) {
-      palavras = palavras.map(function (palavra) {
-        return palavra.map(function (p) {
-          return p.peso === 'medium' ? { t: p.t, peso: 'light' } : p;
-        });
-      });
+    ctx.font = A.fonteDe('bold', FX.corpo);
+    const largFaixa = larguraPedacos(ctx, pedacosFaixa, FX.corpo, espacoFaixa, A);
+    const mFaixa = ctx.measureText(MOLDE.faixa);
+
+    ctx.fillStyle = PECA.tinta;
+    escreverPedacos(ctx, pedacosFaixa,
+                    FX.x + (FX.largura - largFaixa) / 2,
+                    /* Centralizado na altura pela TINTA do texto,
+                       não pela linha de base: em caixa alta não há
+                       descida, e centralizar pela base deixaria o
+                       texto visivelmente baixo dentro da faixa. */
+                    FX.y + (FX.altura + mFaixa.actualBoundingBoxAscent) / 2,
+                    FX.corpo, espacoFaixa, A);
+
+    /* ---------- 6. a frase ---------- */
+    const FR = PECA.frase;
+    const linhas = frasePeca(dados);
+
+    /* O nome tem até 24 caracteres e o ambiente é livre, então a
+       linha 1 pode passar de 900 px. As DUAS linhas descem juntas
+       de corpo: tamanhos diferentes na mesma frase leem como
+       erro de diagramação, não como ajuste. */
+    let corpoFrase = FR.corpo;
+    while (corpoFrase > FR.corpoMinimo
+           && larguraPedacos(ctx, linhas[0], corpoFrase,
+                             corpoFrase * FR.espacamento, A) > FR.larguraMaxima) {
+      corpoFrase -= 1;
     }
 
-    const arranjo = A.arrumarBloco(ctx, palavras, {
-      corpo: PECA.titulo.corpo,
-      corpoMinimo: PECA.titulo.corpoMinimo,
-      larguraMaxima: larguraUtil,
-      linhas: PECA.titulo.linhas
+    const espacoFrase = corpoFrase * FR.espacamento;
+    ctx.fillStyle = PECA.tinta;
+
+    const fins = linhas.map(function (linha, i) {
+      return escreverPedacos(ctx, linha, FR.x, FR.base + i * FR.entrelinha,
+                             corpoFrase, espacoFrase, A);
     });
 
-    const entrelinha = arranjo.corpo * PECA.titulo.entrelinha;
-    const baseTitulo = baseRotulo + PECA.titulo.doRotulo;
+    /* O fio, saindo da linha 2 até a borda. */
+    const baseLinha2 = FR.base + FR.entrelinha;
+    ctx.font = A.fonteDe('medium', corpoFrase);
+    const altoLinha2 = ctx.measureText(MOLDE.fecho).actualBoundingBoxAscent;
 
-    ctx.fillStyle = PECA.titulo.cor;
-    arranjo.linhas.forEach(function (linha, i) {
-      A.escreverLinha(ctx, linha, esquerda,
-                      baseTitulo + i * entrelinha, arranjo.corpo);
-    });
+    ctx.fillStyle = PECA.tinta;
+    ctx.fillRect(fins[1] + FR.fio.depois,
+                 Math.round(baseLinha2 - altoLinha2 / 2 - FR.fio.espessura / 2),
+                 FR.fio.ate - (fins[1] + FR.fio.depois),
+                 FR.fio.espessura);
 
-    /* ---------- a data ----------
-       Ancorada na ÚLTIMA linha do título, não na primeira: um
-       título de duas linhas sobe a data junto, em vez de deixar o
-       buraco que apareceria num ponto fixo. Mesma lição do fecho
-       do card de boas-vindas. */
-    const ultimaLinha = baseTitulo + (arranjo.linhas.length - 1) * entrelinha;
+    /* ---------- 7. a data ---------- */
+    const D = PECA.data;
+    ctx.fillStyle = PECA.tinta;
+    ctx.font = A.fonteDe('light', D.corpo);
+    const altoData = ctx.measureText(MOLDE.data).actualBoundingBoxAscent;
+    escreverEspacado(ctx, MOLDE.data, D.x, D.base,
+                     D.corpo, D.corpo * D.espacamento, A, 'light');
 
-    ctx.fillStyle = PECA.data.cor;
-    ctx.font = A.fonteDe('medium', PECA.data.corpo);
-    ctx.fillText(MOLDE.data, esquerda, ultimaLinha + PECA.data.daUltimaLinha);
+    /* ---------- 8. o consultor ---------- */
+    const C = PECA.consultor;
+    const rodape = String(dados.consultor).trim().toUpperCase()
+                 + ' · ' + MOLDE.cargo;
 
-    /* ---------- o rodapé ---------- */
-    const baseRodape = PECA.altura - PECA.rodape.doPe;
+    ctx.fillStyle = C.cor;
+    escreverEspacado(ctx, rodape, C.x, C.base,
+                     C.corpo, C.corpo * C.espacamento, A);
 
-    ctx.fillStyle = PECA.rodape.cor;
-    ctx.font = A.fonteDe('medium', PECA.rodape.corpo);
-    ctx.fillText(dados.consultor + ' · ' + MOLDE.cargo, esquerda, baseRodape);
+    /* ---------- 9. a logo, em branco, na altura da data ---------- */
+    try {
+      /* O recorte da tinta do pecas.js vem primeiro: sem ele a de
+         Caraguá — que tem 85 px vazios embaixo — sairia mais alta
+         que a de SJC, e cada uma pareceria certa sozinha. */
+      const lg = await A.logoRecortada(A.LOGOS[loja]);
+      const br = logoBranca(lg, PECA.logo.altura);
 
-    /* A logo passa pelo recorte da tinta do pecas.js. Sem ele, a
-       de Caraguá — que tem 85 px vazios embaixo — sairia mais
-       alta que a de SJC, e cada uma pareceria certa sozinha. */
-    const lg = await A.logoRecortada(A.LOGOS[loja]);
-    const larguraLogo = PECA.rodape.logoAltura * (lg.sl / lg.sa);
-    ctx.drawImage(lg.img, lg.sx, lg.sy, lg.sl, lg.sa,
-                  PECA.largura - PECA.margem - larguraLogo,
-                  baseRodape - PECA.rodape.logoAltura,
-                  larguraLogo, PECA.rodape.logoAltura);
+      ctx.drawImage(br.tela,
+                    PECA.logo.direita - br.largura,
+                    Math.round(D.base - altoData / 2 - br.altura / 2),
+                    br.largura, br.altura);
+    } catch (e) {
+      console.warn('[creative-black] não carreguei a logo de ' + loja, e);
+    }
 
     return {
       ok: true,
