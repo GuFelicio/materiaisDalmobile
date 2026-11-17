@@ -131,9 +131,15 @@ logo, calado. É o motivo de a arrumação em pastas ter sido descartada.
 `imgsRef/` são referências visuais de trabalho — não fazem parte do site,
 mas hoje são publicadas junto com ele.
 
-**`marca.png` (118 KB na raiz) não é referenciado por código nenhum.**
-Conferido em nov/2026: as ocorrências de "marca" no código são um campo de
-formulário (modelo/marca do eletro), outra coisa. Candidato a sair.
+⚠️ **`marca.png` (116 KB na raiz) É USADO — não apague.** Ele é a etiqueta
+aplicada no canto inferior direito de cada foto de ambiente da apresentação:
+`projeto.html` o declara em `MARCA.arquivo`, com `MARCA.usar = true`.
+
+Esta linha já disse o contrário, e a correção fica registrada porque o engano
+é fácil de repetir: buscar `marca` no código acha o campo "modelo/marca" do
+eletro e dá a impressão de que o arquivo está solto. Quem decide é a busca por
+`marca.png`. Apagar não daria erro — as fotos sairiam sem etiqueta, caladas,
+exatamente como o resto dos assets buscados por string.
 
 ---
 
@@ -417,7 +423,6 @@ repositório" com três commits que nunca subiram.
 - Os itens acrescentados à mão não aparecem marcados como "acrescentado" no
   PDF.
 - Os aniversariantes ainda saem do Apps Script.
-- `_to_delete/` tem dois PNGs **rastreados no git** — apagar é um commit.
 
 ---
 
