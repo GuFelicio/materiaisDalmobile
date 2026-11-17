@@ -251,6 +251,47 @@
   .amb .mini label.rot { margin-bottom: 4px; }
   .amb select { padding: 12px 11px; font-size: 15px; min-height: 46px; }
 
+  /* ---------- histórico de versões ---------- */
+
+  .historico { margin-top: 22px; }
+  .versao {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+    padding: 11px 13px; margin-top: 8px;
+  }
+  /* ⚠️ DUAS CLASSES DO CARTÃO JÁ EXISTEM NESTA TELA com outro
+     dono, e por isso estas duas regras desfazem o que herdam.
+     Os nomes são os mesmos da montagem e da vistoria de
+     propósito — o cartão é o mesmo painel — mas lá eles estavam
+     livres e aqui não:
+
+       .topo   é o cabeçalho da página: padding de 24px e borda
+               embaixo. Herdado, cada cartão sairia com um risco
+               horizontal no meio.
+       .porque é o botão "por quê?" do checklist: negrito,
+               sublinhado, cursor de mão e 26px de recuo.
+               Herdado, o motivo da versão pareceria clicável e
+               não levaria a lugar nenhum. */
+  .versao .topo {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 0; border-bottom: 0; margin-bottom: 0;
+  }
+  .versao .numero { font-weight: 700; font-size: 14px; }
+  .versao .quando { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+  .versao .porque {
+    font-size: 13.5px; color: var(--ink-2); margin: 3px 0 0;
+    font-weight: 400; text-decoration: none; cursor: auto; padding: 0;
+  }
+  /* O desfecho é a linha que diz QUEM assinou aquela rodada. Em
+     negrito porque é por ela que se escolhe entre dois botões
+     "Abrir o documento desta versão" iguais. */
+  .versao .desfecho { font-weight: 600; color: var(--ink); margin-top: 4px; }
+  .versao .digital {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--muted); margin-top: 5px; word-break: break-all;
+  }
+  .versao.pendente { border-style: dashed; }
+  .historico .recado { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 8px; }
+
   /* ---------- barra fixa ---------- */
 
   .barra { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(242,242,240,.96);
@@ -415,6 +456,13 @@
     <div id="caixa-assinatura" class="painel oculto" style="margin-top:18px">
       <h2>Assinatura</h2>
       <div id="resumo-assinatura"></div>
+    </div>
+
+    <div class="historico" id="historico">
+      <button type="button" class="btn vazio largo" id="ver-historico" aria-expanded="false">
+        Histórico de versões
+      </button>
+      <div id="historico-lista" hidden></div>
     </div>
 
     <p class="nota oculto" id="veio-de" style="margin-bottom:14px"></p>
@@ -873,6 +921,8 @@
     el('f-whatsapp').value  = C.mascararWhatsapp(m.dados.whatsapp || '');
     el('f-email').value     = m.dados.email || '';
 
+    fecharHistorico();
+
     desenharAmbientes();
     desenharChecklist();
     pintarParecerFinal();
@@ -1251,6 +1301,254 @@
 
     nota.innerHTML = 'Marque o parecer final para saber qual documento vai sair.';
   }
+
+
+  /* ============================================================
+     6b. Histórico de versões
+     ------------------------------------------------------------
+     A medição já gravava uma versão a cada PDF gerado, com a
+     impressão digital do arquivo — faltava onde olhar.
+
+     É o mesmo painel da montagem e da vistoria, REESCRITO aqui e
+     não importado do tela-doc.js: aquele arquivo dirige a tela
+     inteira das outras duas, e aqui ele só atropelaria o que já
+     existe. A diferença de dados é uma só, e é o motivo de
+     desfechoDaVersao() não ser igual: na medição o parecer é
+     parecerFinal + caminhoInapto, não parecer.
+
+     Duas origens, e as duas importam: o que já subiu (servidor)
+     e o que ainda está na fila do aparelho. Mostrar só o que
+     subiu esconderia justamente a versão do momento em que o
+     cliente viu o documento, que é a gerada na obra, sem sinal.
+     ============================================================ */
+
+  /* ⚠️ Chave repetida em objeto literal não dá erro nenhum — a
+     última cala a primeira, em silêncio. Foi assim que toda
+     vistoria reaberta apareceu como "medição reaberta" durante
+     um tempo. Motivo novo aqui: confira que o nome não está
+     escrito duas vezes. */
+  const MOTIVOS_VERSAO = {
+    pdf: 'PDF gerado',
+    assinatura: 'documento assinado',
+    recusa: 'assinatura recusada pelo cliente',
+    reabertura: 'rodada encerrada, medição reaberta',
+    manual: 'pedido de assinatura cancelado',
+    assinado: 'documento assinado',
+    correcao: 'correção depois de assinado'
+  };
+
+  /* ------------------------------------------------------------
+     O que aquela rodada concluiu, e quem assinou
+     ------------------------------------------------------------
+     São coisas diferentes e o documento é diferente:
+
+         aptos / não aptos prosseguindo → o CLIENTE assina
+         não aptos a corrigir           → a DALMÓBILE assina, e o
+                                          cliente recebe por
+                                          e-mail
+
+     Lê o parecer DAQUELA versão, que a visão do banco traz — não
+     o parecer de agora. O de agora é da medição em andamento, e
+     usá-lo aqui faria o histórico mentir sobre o passado.
+     ------------------------------------------------------------ */
+  function desfechoDaVersao(v) {
+    if (v.status_no_momento === 'recusado') {
+      return 'o cliente recusou a assinatura';
+    }
+
+    if (v.status_no_momento !== 'assinado') return '';
+
+    const pf = v.parecer_final_no_momento || '';
+    if (pf === 'nao-aptos' && v.caminho_no_momento === 'corrigir') {
+      return 'ambientes não aptos · assinada pela Dalmóbile';
+    }
+    if (pf === 'nao-aptos') return 'não aptos, prosseguindo · assinada pelo cliente';
+    if (pf === 'aptos')     return 'ambientes aptos · assinada pelo cliente';
+    return 'assinada';
+  }
+
+  /* ------------------------------------------------------------
+     Quais rodadas ganham o botão de baixar
+     ------------------------------------------------------------
+     UM BOTÃO POR DOCUMENTO, e não um por versão que tenha id.
+
+       'reabertura' carrega o id da rodada que acabou de fechar —
+       o MESMO id que já está na versão de assinatura ou de
+       recusa logo abaixo. Botão ali seria o segundo botão para o
+       mesmo arquivo, e dois botões iguais fazem a pessoa
+       desconfiar de que são arquivos diferentes.
+
+       'manual' é pedido de assinatura CANCELADO. O documento foi
+       descartado na Autentique de propósito, antes de qualquer
+       assinatura. O id fica como rastro — mas o arquivo não
+       existe mais, e um botão ali só entregaria erro.
+     ------------------------------------------------------------ */
+  function temDocumentoParaBaixar(v) {
+    if (!v.autentique_id) return false;
+    return v.motivo === 'assinatura' || v.motivo === 'recusa';
+  }
+
+  function dataLonga(iso) {
+    const d = new Date(iso);
+    if (!iso || isNaN(d)) return 'sem data';
+    return d.toLocaleDateString('pt-BR') + ' às ' +
+           d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function recadoDoHistorico(caixa, texto) {
+    const p = document.createElement('p');
+    p.className = 'recado';
+    p.textContent = texto;
+    caixa.appendChild(p);
+  }
+
+  function cartaoDeVersao(v, pendente) {
+    const d = document.createElement('div');
+    d.className = 'versao' + (pendente ? ' pendente' : '');
+
+    const topo = document.createElement('div');
+    topo.className = 'topo';
+
+    const num = document.createElement('span');
+    num.className = 'numero';
+    num.textContent = pendente ? 'a subir' : 'versão ' + v.numero;
+
+    const quando = document.createElement('span');
+    quando.className = 'quando';
+    quando.textContent = dataLonga(pendente ? v.em : v.criada_em);
+
+    topo.append(num, quando);
+
+    const porque = document.createElement('p');
+    porque.className = 'porque';
+    porque.textContent = (MOTIVOS_VERSAO[v.motivo] || v.motivo || 'sem motivo registrado') +
+      (v.criada_por_nome ? ' · ' + v.criada_por_nome : '');
+
+    d.append(topo, porque);
+
+    /* Quem assinou aquela rodada, logo abaixo do motivo. */
+    const desfecho = pendente ? '' : desfechoDaVersao(v);
+    if (desfecho) {
+      const q = document.createElement('p');
+      q.className = 'porque desfecho';
+      q.textContent = desfecho;
+      d.appendChild(q);
+    }
+
+    /* Rodada encerrada que teve documento ganha o botão dela.
+       Sem isto o histórico diria que a rodada existiu e não
+       haveria como abrir o PDF que o cliente assinou nela. */
+    if (!pendente && temDocumentoParaBaixar(v)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn vazio largo';
+      b.style.marginTop = '8px';
+      b.textContent = 'Abrir o documento desta versão';
+      b.onclick = async function () {
+        b.disabled = true;
+        const antes = b.textContent;
+        b.textContent = 'Buscando…';
+        try {
+          const pdf = await C.baixarAssinado(atual.remoto, v.numero);
+          await C.entregar(null, pdf.blob, pdf.nome);
+        } catch (erro) {
+          avisar(erro.message || 'Não consegui trazer o documento.');
+        } finally {
+          b.disabled = false;
+          b.textContent = antes;
+        }
+      };
+      d.appendChild(b);
+    }
+
+    if (v.hash) {
+      const dig = document.createElement('p');
+      dig.className = 'digital';
+      /* Os 16 primeiros bastam para conferir à vista se o papel
+         na mão é esta versão; o resto só ocuparia a tela. */
+      dig.textContent = 'impressão digital ' + String(v.hash).slice(0, 16);
+      d.appendChild(dig);
+    }
+
+    return d;
+  }
+
+  async function desenharHistorico() {
+    const caixa = el('historico-lista');
+    caixa.innerHTML = '';
+    if (!atual) return;
+
+    /* A fila do aparelho primeiro: é o que acabou de acontecer. */
+    const fila = atual.marcos || [];
+
+    const sb = C.temServidor();
+    let subidas = [];
+    let falhou = null;
+
+    if (sb && atual.remoto) {
+      try {
+        const r = await sb.from('formulario_historico')
+          /* O parecer daquela rodada vem junto: é ele que diz se
+             quem assinou foi o cliente ou a Dalmóbile. Sem estas
+             colunas o cartão não tem como saber, e duas rodadas
+             ficariam indistinguíveis na tela. */
+          .select('numero, motivo, status_no_momento, hash, criada_em, '
+                + 'criada_por_nome, autentique_id, '
+                + 'parecer_final_no_momento, caminho_no_momento')
+          .eq('formulario', atual.remoto)
+          .order('numero', { ascending: false });
+        if (r.error) falhou = r.error.message;
+        else subidas = r.data || [];
+      } catch (e) {
+        falhou = e.message;
+      }
+    }
+
+    fila.slice().reverse().forEach(function (m) {
+      caixa.appendChild(cartaoDeVersao(m, true));
+    });
+    subidas.forEach(function (v) { caixa.appendChild(cartaoDeVersao(v, false)); });
+
+    if (!fila.length && !subidas.length) {
+      recadoDoHistorico(caixa, falhou
+        ? 'Não consegui ler o histórico agora: ' + falhou
+        : (!atual.remoto
+            ? 'Esta medição ainda não subiu. A primeira versão nasce quando o PDF for gerado.'
+            : 'Nenhuma versão ainda. Elas nascem quando o PDF é gerado.'));
+      return;
+    }
+
+    if (!sb || !atual.remoto) {
+      recadoDoHistorico(caixa, 'Sem conexão: aparecem só as versões guardadas neste aparelho. ' +
+                               'As que já subiram aparecem quando houver sinal.');
+    } else if (falhou) {
+      recadoDoHistorico(caixa, 'As versões do servidor não vieram agora: ' + falhou);
+    }
+  }
+
+  /* Fecha o histórico ao trocar de ficha: aberto, ele mostraria
+     as versões da medição anterior até alguém tocar de novo. */
+  function fecharHistorico() {
+    const caixa = el('historico-lista');
+    if (!caixa) return;
+    caixa.hidden = true;
+    caixa.innerHTML = '';
+    el('ver-historico').setAttribute('aria-expanded', 'false');
+  }
+
+  el('ver-historico').onclick = async function () {
+    const caixa = el('historico-lista');
+    const abrindo = caixa.hidden;
+
+    caixa.hidden = !abrindo;
+    el('ver-historico').setAttribute('aria-expanded', String(abrindo));
+
+    if (abrindo) {
+      caixa.innerHTML = '';
+      recadoDoHistorico(caixa, 'Carregando...');
+      await desenharHistorico();
+    }
+  };
 
 
   /* ============================================================
