@@ -1,28 +1,35 @@
 /* ============================================================
-   ABA "BLACK FRIDAY" — kit dos consultores, nov/2026
+   ABA "CREATIVE BLACK" — kit dos consultores, nov/2026
    ------------------------------------------------------------
-   ⚠️ O NOME "BLACK FRIDAY" É SÓ DA ABA, E SÓ APARECE PARA DENTRO.
+   ⚠️ COMO CADA NOME PODE SER USADO.
 
-   Tudo o que chega ao cliente — texto copiado, imagem mandada,
-   peça gerada, nome do arquivo baixado — diz "Condição de
-   Fábrica", e nunca "Black Friday" nem "promoção". Não é capricho
-   de redação: a Dalmóbile vende móvel planejado de ticket alto, e
-   "Black Friday" põe o projeto na mesma prateleira da liquidação
-   de fim de ano. A condição é da fábrica, para quem fecha agora,
+   "Creative Black" é o nome da campanha da fábrica. Textos,
+   imagens e peça falam em "Condição de Fábrica", e o nome da
+   liquidação de fim de ano ("Black Friday") não aparece para o
+   cliente.
+
+   Não é capricho de redação: a Dalmóbile vende móvel planejado
+   de ticket alto, e esse nome põe o projeto na mesma prateleira
+   da liquidação. A condição é da fábrica, para quem fecha agora,
    e é assim que ela tem de chegar.
 
    Então, se um dia alguém for "padronizar" os nomes aqui: o nome
    da aba pode mudar à vontade; o que está dentro das strings de
    TEXTOS e o que o canvas desenha, não.
 
+   O termo proibido aparece de propósito em dois lugares deste
+   arquivo — aqui e na regra que manda não usá-lo — porque regra
+   que proíbe uma palavra precisa dizer qual é. A prova 9 conhece
+   estes dois lugares pelo texto e cai se ele surgir num terceiro.
+
    ------------------------------------------------------------
    POR QUE TUDO NUM ARQUIVO SÓ
 
    A ação acaba em 30/11/2026. Um arquivo só, com os textos, a
    montagem da tela e o gerador juntos, faz a retirada ser
-   trivial: apague black-friday.js e as DUAS linhas que o
+   trivial: apague creative-black.js e as DUAS linhas que o
    index.html tem por causa dele (a tag <script> e a chamada de
-   BlackFriday.montar() dentro do iniciarCargos). Nada mais no
+   CreativeBlack.montar() dentro do iniciarCargos). Nada mais no
    repositório sabe que esta aba existiu — o CSS também nasce
    daqui, de propósito.
 
@@ -31,7 +38,7 @@
    Esta aba é de loja, com rede, e as imagens são pesadas.
    ============================================================ */
 
-window.BlackFriday = (function () {
+window.CreativeBlack = (function () {
   'use strict';
 
   /* ------------------------------------------------------------
@@ -51,15 +58,15 @@ window.BlackFriday = (function () {
      e o 30 são de propósito: o fechamento de sábado ainda é
      lançado na segunda, e o consultor precisa da aba para isso.
      ------------------------------------------------------------ */
-  const FIM_BLACK_FRIDAY = new Date('2026-12-01T03:00:00Z');
+  const FIM_CREATIVE_BLACK = new Date('2026-12-01T03:00:00Z');
 
   function dentroDoPrazo(agora) {
-    return (agora || new Date()) < FIM_BLACK_FRIDAY;
+    return (agora || new Date()) < FIM_CREATIVE_BLACK;
   }
 
   /* A chave da aba na matriz de vitrine. O prefixo 'aba-' é o que
      o index.html já usa para as outras cinco. */
-  const CHAVE_ABA = 'aba-blackfriday';
+  const CHAVE_ABA = 'aba-creative-black';
 
   /* ============================================================
      OS TEXTOS
@@ -75,12 +82,12 @@ window.BlackFriday = (function () {
 
     /* --- B1 · topo --- */
     topo: {
-      rotulo: 'BLACK FRIDAY · ATÉ 28 DE NOVEMBRO',
-      titulo: 'Condições especiais para fechar projetos na Black November Dalmobile',
+      rotulo: 'CREATIVE BLACK · ATÉ 28 DE NOVEMBRO',
+      titulo: 'Condições especiais para fechar projetos na Creative Black',
       apoio: 'Mensagens prontas, imagens para o WhatsApp e a peça com o ' +
              'nome do cliente. A condição vale nas duas lojas, para toda a ' +
              'linha Dalmóbile. Para o cliente, o nome é sempre Condição de ' +
-             'Fábrica ou Black November Dalmobile.'
+             'Fábrica ou Creative Black.'
     },
 
     /* --- B2 · a caixa que não recolhe ---
@@ -97,7 +104,7 @@ window.BlackFriday = (function () {
         { forte: 'O número de desconto só sai por ligação ou na loja.',
           resto: ' Nunca por escrito: nem no WhatsApp, nem em imagem, nem em e-mail. Caso as negociações já estejam sendo feitas via WhatsApp, abrir excessão.' },
       
-        { forte: 'Para o cliente, o nome é "Condição de Fábrica" ou "Black November Dalmobile".',
+        { forte: 'Para o cliente, fale em "Creative Black" ou "Condição de Fábrica".',
           resto: ' Não use "Black Friday" nem "promoção".' },
         { forte: 'Puxe o fechamento para o quanto antes.',
           resto: ' O dia 28 é o último empurrão, não a meta.' },
@@ -141,7 +148,7 @@ window.BlackFriday = (function () {
                  'bom pra você esta semana?' },
         { nome: 'Mensagem 2 · Convite', quando: '23 e 24/11',
           texto: 'Oi, [Nome]! Na quarta, dia 25, a loja vai dedicar o dia inteiro a quem ' +
-                 'quer fechar o projeto dentro da condição especial da Black November Dalmobile. Posso reservar um horário pra você e acertarmos os ' +
+                 'quer fechar o projeto dentro da condição especial da Creative Black. Posso reservar um horário pra você e acertarmos os ' +
                  'detalhes do seu [ambiente]?' },
         { nome: 'Mensagem 3 · Última chamada', quando: '26 e 27/11',
           texto: '[Nome], passando pra lembrar: sábado, dia 28, é o último dia da ' +
@@ -163,7 +170,7 @@ window.BlackFriday = (function () {
         { nome: 'W3 Convite',
           texto: 'Fica o convite para quarta, [Nome]. Me diz o melhor horário que eu deixo reservado.' },
         { nome: 'W4 Contagem',
-          texto: 'Faltam poucos dias pra acabar a nossa Black November Dalmobile, [Nome]. Quer que eu reserve um horário para fecharmos?' },
+          texto: 'Faltam poucos dias pra acabar a nossa Creative Black, [Nome]. Quer que eu reserve um horário para fecharmos?' },
         { nome: 'W5 Último dia',
           texto: '[Nome], hoje é o último dia com condições especiais para fecharmos seu projeto! Ainda dá tempo, vamos marcar nossa reunião?' }
       ]
@@ -194,7 +201,7 @@ window.BlackFriday = (function () {
     },
 
     /* --- B6 · as imagens ---
-       Os arquivos existem duas vezes, em imgs/black-friday/sjc/ e
+       Os arquivos existem duas vezes, em imgs/creative-black/sjc/ e
        .../cgt/, com o mesmo nome: cada loja tem a sua logo
        aplicada na arte, exportada do Illustrator. É o caminho que
        muda, nunca o nome. */
@@ -380,7 +387,7 @@ window.BlackFriday = (function () {
 
     /* ---------- a foto ---------- */
     const alturaFoto = Math.round(PECA.altura * PECA.foto.altura);
-    const caminhoFoto = 'imgs/black-friday/' + loja + '/foto-' + loja + '.jpg';
+    const caminhoFoto = 'imgs/creative-black/' + loja + '/foto-' + loja + '.jpg';
 
     try {
       const foto = await A.imagemDe(caminhoFoto);
@@ -403,7 +410,7 @@ window.BlackFriday = (function () {
       /* A foto é da arte, não do cliente: se faltar, o consultor
          não tem o que fazer a respeito, e a peça com o nome ainda
          é útil. Fica o registro no console e a área clara. */
-      console.warn('[black-friday] não carreguei ' + caminhoFoto, e);
+      console.warn('[creative-black] não carreguei ' + caminhoFoto, e);
     }
 
     const esquerda = PECA.margem;
@@ -548,7 +555,7 @@ window.BlackFriday = (function () {
     } catch (e) {
       /* Cancelar o menu do sistema cai aqui e não é erro. */
       if (e && e.name !== 'AbortError') {
-        console.warn('[black-friday] compartilhar falhou', e);
+        console.warn('[creative-black] compartilhar falhou', e);
       }
     }
   }
@@ -558,65 +565,65 @@ window.BlackFriday = (function () {
      ============================================================ */
 
   const CSS = [
-    '.bf-caixa{background:var(--card);border:1px solid var(--line);',
+    '.cb-caixa{background:var(--card);border:1px solid var(--line);',
     'border-radius:var(--radius);padding:16px 18px;margin-bottom:18px}',
-    '.bf-regras{border-color:var(--line-2);background:#fbfaf8}',
-    '.bf-regras h3{margin:0 0 10px;font-size:12px;font-weight:700;',
+    '.cb-regras{border-color:var(--line-2);background:#fbfaf8}',
+    '.cb-regras h3{margin:0 0 10px;font-size:12px;font-weight:700;',
     'letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}',
-    '.bf-regras ol{margin:0;padding-left:20px;font-size:13px;line-height:1.55;color:var(--ink-2)}',
-    '.bf-regras li{margin-bottom:5px}',
-    '.bf-regras b{color:var(--ink)}',
-    '.bf-rotulo{font-size:10px;font-weight:700;letter-spacing:.16em;',
+    '.cb-regras ol{margin:0;padding-left:20px;font-size:13px;line-height:1.55;color:var(--ink-2)}',
+    '.cb-regras li{margin-bottom:5px}',
+    '.cb-regras b{color:var(--ink)}',
+    '.cb-rotulo{font-size:10px;font-weight:700;letter-spacing:.16em;',
     'text-transform:uppercase;color:var(--muted);margin:0 0 6px}',
-    '.bf-titulo{margin:0 0 6px;font-size:19px;font-weight:700;letter-spacing:-.01em}',
-    '.bf-apoio{margin:0 0 20px;font-size:13px;color:var(--ink-2);line-height:1.5}',
-    '.bf-secao{margin-top:30px}',
-    '.bf-secao>h3{margin:0 0 4px;font-size:11px;font-weight:700;',
+    '.cb-titulo{margin:0 0 6px;font-size:19px;font-weight:700;letter-spacing:-.01em}',
+    '.cb-apoio{margin:0 0 20px;font-size:13px;color:var(--ink-2);line-height:1.5}',
+    '.cb-secao{margin-top:30px}',
+    '.cb-secao>h3{margin:0 0 4px;font-size:11px;font-weight:700;',
     'letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}',
-    '.bf-secao>p.bf-sub{margin:0 0 12px;font-size:12px;color:var(--ink-2)}',
-    '.bf-cal{width:100%;border-collapse:collapse;font-size:12px}',
-    '.bf-cal th{text-align:left;font-size:10px;letter-spacing:.1em;',
+    '.cb-secao>p.cb-sub{margin:0 0 12px;font-size:12px;color:var(--ink-2)}',
+    '.cb-cal{width:100%;border-collapse:collapse;font-size:12px}',
+    '.cb-cal th{text-align:left;font-size:10px;letter-spacing:.1em;',
     'text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 8px 6px 0}',
-    '.bf-cal td{padding:7px 8px 7px 0;border-top:1px solid var(--line);',
+    '.cb-cal td{padding:7px 8px 7px 0;border-top:1px solid var(--line);',
     'vertical-align:top;color:var(--ink-2)}',
-    '.bf-cal td:first-child{white-space:nowrap;color:var(--ink);font-weight:600}',
-    '.bf-cal tr.bf-forte td{color:var(--ink);font-weight:600}',
-    '.bf-msg{border-top:1px solid var(--line);padding:13px 0}',
-    '.bf-msg:first-child{border-top:0;padding-top:0}',
-    '.bf-msg-topo{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}',
-    '.bf-msg-nome{font-size:13px;font-weight:600;flex:1}',
-    '.bf-msg-quando{font-size:11px;color:var(--muted);white-space:nowrap}',
-    '.bf-msg-texto{margin:0 0 9px;font-size:13px;line-height:1.55;color:var(--ink-2)}',
-    '.bf-copiar{border:1px solid var(--line-2);background:var(--card);',
+    '.cb-cal td:first-child{white-space:nowrap;color:var(--ink);font-weight:600}',
+    '.cb-cal tr.cb-forte td{color:var(--ink);font-weight:600}',
+    '.cb-msg{border-top:1px solid var(--line);padding:13px 0}',
+    '.cb-msg:first-child{border-top:0;padding-top:0}',
+    '.cb-msg-topo{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}',
+    '.cb-msg-nome{font-size:13px;font-weight:600;flex:1}',
+    '.cb-msg-quando{font-size:11px;color:var(--muted);white-space:nowrap}',
+    '.cb-msg-texto{margin:0 0 9px;font-size:13px;line-height:1.55;color:var(--ink-2)}',
+    '.cb-copiar{border:1px solid var(--line-2);background:var(--card);',
     'border-radius:7px;padding:6px 11px;font-family:inherit;font-size:11px;',
     'font-weight:700;letter-spacing:.04em;text-transform:uppercase;',
     'color:var(--ink);cursor:pointer}',
-    '.bf-copiar:hover{background:var(--bg)}',
-    '.bf-copiar.bf-feito{border-color:var(--ok);color:var(--ok)}',
-    '.bf-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}',
-    '.bf-img{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}',
-    '.bf-img img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--bg)}',
-    '.bf-img-pe{padding:9px 10px 10px}',
-    '.bf-img-nome{font-size:12px;font-weight:600}',
-    '.bf-img-para{font-size:11px;color:var(--muted);margin-bottom:8px}',
-    '.bf-img-bts{display:flex;gap:6px}',
-    '.bf-img-bts button{flex:1}',
-    '.bf-campo{margin-bottom:12px}',
-    '.bf-campo label{display:block;font-size:12px;font-weight:600;margin-bottom:4px}',
-    '.bf-campo input{width:100%;padding:10px 12px;border:1px solid var(--line);',
+    '.cb-copiar:hover{background:var(--bg)}',
+    '.cb-copiar.cb-feito{border-color:var(--ok);color:var(--ok)}',
+    '.cb-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}',
+    '.cb-img{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}',
+    '.cb-img img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--bg)}',
+    '.cb-img-pe{padding:9px 10px 10px}',
+    '.cb-img-nome{font-size:12px;font-weight:600}',
+    '.cb-img-para{font-size:11px;color:var(--muted);margin-bottom:8px}',
+    '.cb-img-bts{display:flex;gap:6px}',
+    '.cb-img-bts button{flex:1}',
+    '.cb-campo{margin-bottom:12px}',
+    '.cb-campo label{display:block;font-size:12px;font-weight:600;margin-bottom:4px}',
+    '.cb-campo input{width:100%;padding:10px 12px;border:1px solid var(--line);',
     'border-radius:9px;font-size:15px;font-family:inherit;color:var(--ink);background:var(--card)}',
-    '.bf-campo input:focus{outline:none;border-color:var(--accent);',
+    '.cb-campo input:focus{outline:none;border-color:var(--accent);',
     'box-shadow:0 0 0 3px rgba(20,22,24,.07)}',
-    '.bf-campo input[aria-invalid="true"]{border-color:var(--erro)}',
-    '.bf-campo .bf-erro{display:none;margin:5px 0 0;font-size:12px;color:var(--erro)}',
-    '.bf-campo input[aria-invalid="true"]~.bf-erro{display:block}',
-    '.bf-campo .bf-dica{margin:4px 0 0;font-size:11px;color:var(--muted)}',
-    '.bf-previa{display:block;width:100%;max-width:340px;margin:14px auto 0;',
+    '.cb-campo input[aria-invalid="true"]{border-color:var(--erro)}',
+    '.cb-campo .cb-erro{display:none;margin:5px 0 0;font-size:12px;color:var(--erro)}',
+    '.cb-campo input[aria-invalid="true"]~.cb-erro{display:block}',
+    '.cb-campo .cb-dica{margin:4px 0 0;font-size:11px;color:var(--muted)}',
+    '.cb-previa{display:block;width:100%;max-width:340px;margin:14px auto 0;',
     'border:1px solid var(--line);border-radius:10px}',
-    '.bf-bts{display:flex;gap:8px;margin-top:12px}',
-    '.bf-bts .botao{margin-top:0}',
-    '.bf-nota{margin:12px 0 0;font-size:12px;color:var(--muted);line-height:1.5}',
-    '.bf-pe{margin:30px 0 0;font-size:12px;color:var(--muted);text-align:center}'
+    '.cb-bts{display:flex;gap:8px;margin-top:12px}',
+    '.cb-bts .botao{margin-top:0}',
+    '.cb-nota{margin:12px 0 0;font-size:12px;color:var(--muted);line-height:1.5}',
+    '.cb-pe{margin:30px 0 0;font-size:12px;color:var(--muted);text-align:center}'
   ].join('');
 
   function elemento(tag, classe, texto) {
@@ -629,7 +636,7 @@ window.BlackFriday = (function () {
   /* O botão de copiar, com o "Copiado" de 2 segundos. O texto
      copiado é o do TEXTOS, letra por letra, colchetes incluídos. */
   function botaoCopiar(texto) {
-    const b = elemento('button', 'bf-copiar', 'Copiar');
+    const b = elemento('button', 'cb-copiar', 'Copiar');
     b.type = 'button';
     let volta = null;
 
@@ -637,7 +644,7 @@ window.BlackFriday = (function () {
       try {
         await navigator.clipboard.writeText(texto);
         b.textContent = 'Copiado';
-        b.classList.add('bf-feito');
+        b.classList.add('cb-feito');
       } catch (e) {
         /* Sem permissão de área de transferência o consultor ainda
            consegue selecionar o texto na tela. Dizer isso é melhor
@@ -647,7 +654,7 @@ window.BlackFriday = (function () {
       clearTimeout(volta);
       volta = setTimeout(function () {
         b.textContent = 'Copiar';
-        b.classList.remove('bf-feito');
+        b.classList.remove('cb-feito');
       }, 2000);
     });
 
@@ -655,23 +662,23 @@ window.BlackFriday = (function () {
   }
 
   function blocoDeTextos(fonte) {
-    const secao = elemento('div', 'bf-secao');
+    const secao = elemento('div', 'cb-secao');
     secao.appendChild(elemento('h3', null, fonte.titulo));
-    if (fonte.apoio) secao.appendChild(elemento('p', 'bf-sub', fonte.apoio));
+    if (fonte.apoio) secao.appendChild(elemento('p', 'cb-sub', fonte.apoio));
 
-    const caixa = elemento('div', 'bf-caixa');
+    const caixa = elemento('div', 'cb-caixa');
 
     fonte.itens.forEach(function (item) {
-      const bloco = elemento('div', 'bf-msg');
+      const bloco = elemento('div', 'cb-msg');
 
-      const topo = elemento('div', 'bf-msg-topo');
-      topo.appendChild(elemento('span', 'bf-msg-nome', item.nome));
+      const topo = elemento('div', 'cb-msg-topo');
+      topo.appendChild(elemento('span', 'cb-msg-nome', item.nome));
       if (item.quando) {
-        topo.appendChild(elemento('span', 'bf-msg-quando', item.quando));
+        topo.appendChild(elemento('span', 'cb-msg-quando', item.quando));
       }
       bloco.appendChild(topo);
 
-      bloco.appendChild(elemento('p', 'bf-msg-texto', item.texto));
+      bloco.appendChild(elemento('p', 'cb-msg-texto', item.texto));
       bloco.appendChild(botaoCopiar(item.texto));
       caixa.appendChild(bloco);
     });
@@ -681,7 +688,7 @@ window.BlackFriday = (function () {
   }
 
   function caixaDeRegras() {
-    const caixa = elemento('div', 'bf-caixa bf-regras');
+    const caixa = elemento('div', 'cb-caixa cb-regras');
     caixa.appendChild(elemento('h3', null, TEXTOS.regras.titulo));
 
     const ol = document.createElement('ol');
@@ -699,11 +706,11 @@ window.BlackFriday = (function () {
   }
 
   function tabelaDoCalendario() {
-    const secao = elemento('div', 'bf-secao');
+    const secao = elemento('div', 'cb-secao');
     secao.appendChild(elemento('h3', null, TEXTOS.calendario.titulo));
 
-    const caixa = elemento('div', 'bf-caixa');
-    const tabela = elemento('table', 'bf-cal');
+    const caixa = elemento('div', 'cb-caixa');
+    const tabela = elemento('table', 'cb-cal');
 
     const thead = document.createElement('thead');
     const tr = document.createElement('tr');
@@ -716,7 +723,7 @@ window.BlackFriday = (function () {
     const tbody = document.createElement('tbody');
     TEXTOS.calendario.linhas.forEach(function (linha) {
       const l = document.createElement('tr');
-      if (linha.destaque) l.className = 'bf-forte';
+      if (linha.destaque) l.className = 'cb-forte';
       l.appendChild(elemento('td', null, linha.quando));
       l.appendChild(elemento('td', null, linha.mensagem));
       l.appendChild(elemento('td', null, linha.imagem));
@@ -736,12 +743,12 @@ window.BlackFriday = (function () {
      arquivo que carrega a logo certa.
      ------------------------------------------------------------ */
   function grelhaDeImagens(loja) {
-    const grelha = elemento('div', 'bf-imgs');
+    const grelha = elemento('div', 'cb-imgs');
 
     TEXTOS.imagens.itens.forEach(function (item) {
-      const caminho = 'imgs/black-friday/' + loja + '/' + item.arquivo;
+      const caminho = 'imgs/creative-black/' + loja + '/' + item.arquivo;
 
-      const cartao = elemento('div', 'bf-img');
+      const cartao = elemento('div', 'cb-img');
 
       const img = document.createElement('img');
       img.src = caminho;
@@ -749,13 +756,13 @@ window.BlackFriday = (function () {
       img.loading = 'lazy';
       cartao.appendChild(img);
 
-      const pe = elemento('div', 'bf-img-pe');
-      pe.appendChild(elemento('div', 'bf-img-nome', item.nome));
-      pe.appendChild(elemento('div', 'bf-img-para', item.para));
+      const pe = elemento('div', 'cb-img-pe');
+      pe.appendChild(elemento('div', 'cb-img-nome', item.nome));
+      pe.appendChild(elemento('div', 'cb-img-para', item.para));
 
-      const bts = elemento('div', 'bf-img-bts');
+      const bts = elemento('div', 'cb-img-bts');
 
-      const baixar = elemento('button', 'bf-copiar', 'Baixar');
+      const baixar = elemento('button', 'cb-copiar', 'Baixar');
       baixar.type = 'button';
       baixar.addEventListener('click', function () {
         pegarImagem(caminho).then(function (blob) {
@@ -770,7 +777,7 @@ window.BlackFriday = (function () {
       /* Só onde o navegador aceita mandar arquivo. Onde não, o
          botão não é criado — nada de botão morto. */
       if (DA_COMPARTILHAR) {
-        const mandar = elemento('button', 'bf-copiar', 'Enviar');
+        const mandar = elemento('button', 'cb-copiar', 'Enviar');
         mandar.type = 'button';
         mandar.addEventListener('click', function () {
           pegarImagem(caminho).then(function (blob) {
@@ -799,7 +806,7 @@ window.BlackFriday = (function () {
      O gerador
      ------------------------------------------------------------ */
   function campo(id, rotulo, exemplo, dica) {
-    const bloco = elemento('div', 'bf-campo');
+    const bloco = elemento('div', 'cb-campo');
 
     const lab = elemento('label', null, rotulo);
     lab.setAttribute('for', id);
@@ -812,27 +819,27 @@ window.BlackFriday = (function () {
     input.autocomplete = 'off';
     bloco.appendChild(input);
 
-    const erro = elemento('p', 'bf-erro');
+    const erro = elemento('p', 'cb-erro');
     erro.id = id + '-erro';
     bloco.appendChild(erro);
 
-    if (dica) bloco.appendChild(elemento('p', 'bf-dica', dica));
+    if (dica) bloco.appendChild(elemento('p', 'cb-dica', dica));
 
     return { bloco: bloco, input: input, erro: erro };
   }
 
   function secaoDoGerador(estado) {
-    const secao = elemento('div', 'bf-secao');
+    const secao = elemento('div', 'cb-secao');
     secao.appendChild(elemento('h3', null, TEXTOS.gerador.titulo));
-    secao.appendChild(elemento('p', 'bf-sub', TEXTOS.gerador.apoio));
+    secao.appendChild(elemento('p', 'cb-sub', TEXTOS.gerador.apoio));
 
-    const caixa = elemento('div', 'bf-caixa');
+    const caixa = elemento('div', 'cb-caixa');
 
-    const nome = campo('bf-nome', 'Nome do cliente', 'Ex.: Ana',
+    const nome = campo('cb-nome', 'Nome do cliente', 'Ex.: Ana',
                        'Até ' + LIMITE_NOME + ' caracteres.');
     nome.input.maxLength = LIMITE_NOME;
 
-    const ambiente = campo('bf-ambiente', 'Ambiente (opcional)', 'Ex.: cozinha',
+    const ambiente = campo('cb-ambiente', 'Ambiente (opcional)', 'Ex.: cozinha',
                            'Ambiente que a peça não souber concordar sai de fora ' +
                            'da frase, não errado.');
 
@@ -840,14 +847,14 @@ window.BlackFriday = (function () {
        quem manda a peça às vezes é a gerência cobrindo a folga de
        um consultor, e aí o rodapé tem de dizer o nome de quem vai
        atender, não o de quem gerou. */
-    const consultor = campo('bf-consultor', 'Seu nome', 'Ex.: Juliana Mendes');
+    const consultor = campo('cb-consultor', 'Seu nome', 'Ex.: Juliana Mendes');
     /* Mesma pegadinha do EH_IOS: EU é const no index.html, então
        window.EU é undefined e só o nome solto resolve. */
     consultor.input.value = (typeof EU !== 'undefined' && EU.nome) ? EU.nome : '';
 
     caixa.append(nome.bloco, ambiente.bloco, consultor.bloco);
 
-    const bts = elemento('div', 'bf-bts');
+    const bts = elemento('div', 'cb-bts');
 
     const gerar = elemento('button', 'botao', 'Gerar');
     gerar.type = 'button';
@@ -857,7 +864,7 @@ window.BlackFriday = (function () {
     const saida = elemento('div');
     caixa.appendChild(saida);
 
-    caixa.appendChild(elemento('p', 'bf-nota', TEXTOS.gerador.aviso));
+    caixa.appendChild(elemento('p', 'cb-nota', TEXTOS.gerador.aviso));
     secao.appendChild(caixa);
 
     function avisarCampo(c, texto) {
@@ -909,14 +916,14 @@ window.BlackFriday = (function () {
         });
 
         const previa = document.createElement('img');
-        previa.className = 'bf-previa';
+        previa.className = 'cb-previa';
         previa.alt = 'Prévia da peça';
         previa.src = 'data:image/png;base64,' + peca.b64;
         saida.appendChild(previa);
 
         const blob = new Blob([bytesDeBase64(peca.b64)], { type: 'image/png' });
 
-        const linha = elemento('div', 'bf-bts');
+        const linha = elemento('div', 'cb-bts');
 
         const baixar = elemento('button', 'botao verde', 'Baixar PNG');
         baixar.type = 'button';
@@ -937,10 +944,10 @@ window.BlackFriday = (function () {
         saida.appendChild(linha);
 
       } catch (e) {
-        console.warn('[black-friday] não gerei a peça', e);
-        saida.appendChild(elemento('p', 'bf-erro',
+        console.warn('[creative-black] não gerei a peça', e);
+        saida.appendChild(elemento('p', 'cb-erro',
           'Não consegui montar a peça. Recarregue a página e tente de novo.'));
-        saida.querySelector('.bf-erro').style.display = 'block';
+        saida.querySelector('.cb-erro').style.display = 'block';
       } finally {
         gerar.disabled = false;
         gerar.textContent = 'Gerar';
@@ -994,11 +1001,11 @@ window.BlackFriday = (function () {
        que é imutável é o nome, não o conteúdo do array. */
     if (typeof ABAS_PARA_A_MATRIZ !== 'undefined'
         && !ABAS_PARA_A_MATRIZ.some(function (a) { return a.id === CHAVE_ABA; })) {
-      ABAS_PARA_A_MATRIZ.push({ id: CHAVE_ABA, nome: 'Black Friday' });
+      ABAS_PARA_A_MATRIZ.push({ id: CHAVE_ABA, nome: 'Creative Black' });
     }
 
     const estilo = document.createElement('style');
-    estilo.id = 'bf-estilo';
+    estilo.id = 'cb-estilo';
     estilo.textContent = CSS;
     document.head.appendChild(estilo);
 
@@ -1008,17 +1015,17 @@ window.BlackFriday = (function () {
     botaoAba.type = 'button';
     botaoAba.setAttribute('role', 'tab');
     botaoAba.setAttribute('aria-selected', 'false');
-    botaoAba.dataset.aba = 'blackfriday';
-    botaoAba.textContent = 'Black Friday';
+    botaoAba.dataset.aba = 'creative-black';
+    botaoAba.textContent = 'Creative Black';
     abas.appendChild(botaoAba);
 
     /* ---------- o painel ---------- */
     painel = elemento('div', 'painel-aba oculto');
-    painel.dataset.painel = 'blackfriday';
+    painel.dataset.painel = 'creative-black';
 
-    painel.appendChild(elemento('p', 'bf-rotulo', TEXTOS.topo.rotulo));
-    painel.appendChild(elemento('h2', 'bf-titulo', TEXTOS.topo.titulo));
-    painel.appendChild(elemento('p', 'bf-apoio', TEXTOS.topo.apoio));
+    painel.appendChild(elemento('p', 'cb-rotulo', TEXTOS.topo.rotulo));
+    painel.appendChild(elemento('h2', 'cb-titulo', TEXTOS.topo.titulo));
+    painel.appendChild(elemento('p', 'cb-apoio', TEXTOS.topo.apoio));
 
     /* A caixa de regras vem antes de tudo e não recolhe. Recolhida
        ela seria fechada no primeiro dia e nunca mais aberta, e é
@@ -1032,16 +1039,16 @@ window.BlackFriday = (function () {
     painel.appendChild(blocoDeTextos(TEXTOS.respostas));
 
     /* ---------- as imagens ---------- */
-    const secaoImgs = elemento('div', 'bf-secao');
+    const secaoImgs = elemento('div', 'cb-secao');
     secaoImgs.appendChild(elemento('h3', null, TEXTOS.imagens.titulo));
-    secaoImgs.appendChild(elemento('p', 'bf-sub', TEXTOS.imagens.apoio));
+    secaoImgs.appendChild(elemento('p', 'cb-sub', TEXTOS.imagens.apoio));
     areaImagens = elemento('div');
     secaoImgs.appendChild(areaImagens);
     painel.appendChild(secaoImgs);
 
     painel.appendChild(secaoDoGerador({ loja: lojaAtual }));
 
-    painel.appendChild(elemento('p', 'bf-pe', TEXTOS.rodape));
+    painel.appendChild(elemento('p', 'cb-pe', TEXTOS.rodape));
 
     /* Depois do último painel, para a ordem na tela seguir a
        ordem das abas. */
@@ -1098,9 +1105,9 @@ window.BlackFriday = (function () {
        index.html já fez a sua escolha antes de a gente existir,
        então só entramos quando ela era nossa. */
     try {
-      if (localStorage.getItem('dalmobile:aba') === 'blackfriday'
+      if (localStorage.getItem('dalmobile:aba') === 'creative-black'
           && !location.hash) {
-        trocarAba('blackfriday');
+        trocarAba('creative-black');
       }
     } catch (e) {}
 
@@ -1110,7 +1117,7 @@ window.BlackFriday = (function () {
   return {
     montar: montar,
     dentroDoPrazo: dentroDoPrazo,
-    FIM: FIM_BLACK_FRIDAY,
+    FIM: FIM_CREATIVE_BLACK,
     CHAVE_ABA: CHAVE_ABA,
 
     /* expostos para as provas de tela */

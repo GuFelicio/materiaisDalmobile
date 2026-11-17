@@ -255,7 +255,7 @@ window.Pecas = (function () {
 
   /* 'light' entrou para o título da peça da Condição de Fábrica,
      que no KV é de traço fino. Quem registra a Krub-Light é o
-     black-friday.js, e só se o arquivo existir na raiz — por isso
+     creative-black.js, e só se o arquivo existir na raiz — por isso
      o peso não ganha carregamento aqui: pedir 'light' sem a fonte
      registrada cai no 300 sintético do navegador, que é feio mas
      não quebra a peça. Quem não tem a fonte manda 'medium'. */
@@ -1300,7 +1300,7 @@ window.Pecas = (function () {
 
     /* ------------------------------------------------------------
        A maquinaria de canvas, emprestada para quem desenha peça
-       fora deste arquivo (hoje: black-friday.js).
+       fora deste arquivo (hoje: creative-black.js).
 
        Está exposta porque a alternativa era copiar: a quebra de
        linha com peso por pedaço, o recorte da tinta da logo e o

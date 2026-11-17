@@ -1,7 +1,8 @@
-IMAGENS DA AÇÃO DE NOVEMBRO/2026 — Condição de Fábrica
-======================================================
+IMAGENS DA AÇÃO DE NOVEMBRO/2026 — Creative Black
+=================================================
 
-Esta pasta é lida pela aba Black Friday do Central (black-friday.js).
+Esta pasta é lida pela aba Creative Black do Central
+(creative-black.js).
 Ela sai do ar junto com a aba, depois de 30/11/2026.
 
 O QUE PRECISA ESTAR AQUI
@@ -41,7 +42,7 @@ mandar a peça.
 CHEGARAM EM 16/11/2026
 ----------------------
 Os 16 arquivos entraram nesta data, e a Krub-Light.ttf foi para a
-raiz junto. A prova 8 da suíte de tela (teste-bf-8-arquivos.mjs)
+raiz junto. A prova 8 da suíte de tela (teste-cb-8-arquivos.mjs)
 passou a buscar cada um deles no servidor e a exigir 200 com bytes
 de JPEG de verdade — é ela que denuncia o nome errado, que a tela
 não denuncia.
