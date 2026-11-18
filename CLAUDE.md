@@ -113,9 +113,15 @@ se retirar do menu.
 
 ⚠️ **Os nomes não são intercambiáveis.** "Creative Black" é o nome da campanha
 da fábrica e pode chegar ao cliente. O que a **peça desenha** é sempre
-"Condição de Fábrica", e o percentual aparece **só** na caixa de regras, que é
-texto da tela e nunca passa pelo canvas. O nome da aba já mudou duas vezes
-em duas semanas; se mudar de novo, o que não muda é isso.
+"Condição de Fábrica". O nome da aba já mudou duas vezes em duas semanas; se
+mudar de novo, o que não muda é isso.
+
+⚠️ **O percentual não está em lugar nenhum do repositório.** Quem passa o
+número é o gerente, por ligação ou na loja. Ele já esteve escrito na caixa de
+regras da aba e saiu em 18/nov/2026, a pedido: número escrito numa tela é
+número que alguém copia, cola e manda, e uma vez por escrito ele vira
+promessa — inclusive depois de a condição mudar. Repor "para facilitar" é
+desfazer a decisão, não corrigir um esquecimento.
 
 A varredura que garante que um nome velho não ficou para trás é a **prova 9**
 da suíte de tela. Ela trabalha com exceção nomeada, não com zero ocorrências

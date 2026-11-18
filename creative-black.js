@@ -91,14 +91,21 @@ window.CreativeBlack = (function () {
     },
 
     /* --- B2 · a caixa que não recolhe ---
-       Aqui, e só aqui, o percentual aparece. A aba fica atrás do
-       login, então este número é interno. Ele é TEXTO DA TELA: não
-       passa pelo canvas, não entra em peça e não é copiável por
-       botão nenhum, para não acabar colado numa conversa. */
+       ⚠️ O PERCENTUAL NÃO MORA MAIS AQUI, e não é descuido: ele
+       saiu do repositório inteiro. Quem passa o número é o
+       gerente, de viva voz. Número escrito numa tela é número
+       que alguém copia, cola e manda — e uma vez por escrito, ele
+       vira promessa. Se a condição mudar no meio da ação, o que
+       está na tela de todo mundo continua dizendo a antiga.
+
+       Então não reponha o percentual aqui "para facilitar". O
+       caminho é o gerente. */
     regras: {
       titulo: 'Antes de falar com o cliente',
       itens: [
-        { forte: 'A condição é de 12% de desconto em projetos que estão na casa!',},
+        { forte: 'O valor do desconto é com o gerente.',
+          resto: ' Procure o gerente da sua loja antes de falar com o cliente — ' +
+                 'o número não está escrito em lugar nenhum, de propósito.' },
         { forte: 'O pedido precisa ser implantado até dia 30/11. ',
           resto: ' O pagamento fica com prazo limite para 07/12.' },
         { forte: 'O número de desconto só sai por ligação ou na loja.',
@@ -283,8 +290,9 @@ window.CreativeBlack = (function () {
      ⚠️ A REGRA QUE NÃO PODE QUEBRAR: nada aqui desenha valor,
      percentual ou a palavra "desconto". O que o canvas escreve é
      só o que está em MOLDE, e MOLDE não tem número de dinheiro
-     nenhum. O percentual vive na caixa de regras (B2), que é
-     texto de tela. A prova 5 confere espiando o fillText.
+     nenhum. O percentual não está em lugar nenhum deste arquivo —
+     quem o passa é o gerente, de viva voz. A prova 5 confere
+     espiando o fillText.
 
      ⚠️ TODA FALTA DE ARQUIVO É ABSORVIDA, e isso não é zelo
      excessivo: o consultor está com o cliente na linha. Fundo,
@@ -339,9 +347,10 @@ window.CreativeBlack = (function () {
 
      ⚠️ Nada aqui tem número de dinheiro, percentual nem a palavra
      "desconto". A data diz 28/11 — dois números que são dia e
-     mês, e que não formam a sequência "12". O percentual vive na
-     caixa de regras (B2), que é texto de tela e não passa por
-     aqui. A prova 5 confere isso espiando o fillText. */
+     mês, e que não formam a sequência "12". O percentual não está
+     em canto nenhum da aba: quem o passa é o gerente, por
+     ligação ou na loja. A prova 5 confere isso espiando o
+     fillText. */
   const MOLDE = {
     faixa: 'CONDIÇÃO ESPECIAL DE FÁBRICA',
     letteringReserva: 'CREATIVE BLACK',
