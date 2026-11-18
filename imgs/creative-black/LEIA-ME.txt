@@ -84,3 +84,6 @@ são desenhados, e a prova 12 confere que a peça AINDA SAI com os
 dois faltando. Essa segunda é a que importa mais: a primeira pega
 o caminho errado, a segunda pega alguém que resolveu "simplificar"
 as reservas.
+
+18/11: prazo passou para 30/11 e a contagem ganhou o 7 (w4-faltam-7.jpg, nas duas lojas).
+A aba ainda nao mostra o w4-faltam-7: falta acrescentar o cartao no creative-black.js.
