@@ -154,7 +154,7 @@ da suíte de tela. Ela trabalha com exceção nomeada, não com zero ocorrência
 `Krub-Light.ttf` (só o título da peça da Creative Black — **opcional**: sem
 ela o título cai no peso 500 e a peça não quebra),
 `imgs/dalmoSJC_preto_1.png`, `imgs/logoDalmo_caraguaPreto.png`,
-`imgs/creative-black/sjc/` e `.../cgt/` (as 7 imagens de WhatsApp e a
+`imgs/creative-black/sjc/` e `.../cgt/` (as 8 imagens de WhatsApp e a
 `foto-<loja>.jpg` da peça, com o mesmo nome nas duas pastas — quem diz a loja
 é a pasta, nunca o nome; há um `LEIA-ME.txt` lá com a lista exata),
 `bases-sjc.pdf`, `bases-cgt.pdf` (os PDFs base do orçamento),

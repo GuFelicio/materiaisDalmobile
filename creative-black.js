@@ -47,16 +47,26 @@ window.CreativeBlack = (function () {
      Fim do dia 30/11/2026 no horário de Brasília (UTC-3), que em
      1º/12 às 00:00 vira 03:00 UTC.
 
-     A aba sai do menu sozinha porque os textos prometem "até 28
-     de novembro" por escrito. Uma aba esquecida no ar em
-     dezembro faria o consultor abrir a conversa oferecendo uma
-     condição que a fábrica já fechou — e o cliente cobraria, com
-     o print na mão. Esquecer de tirar é o caso normal, não o
-     excepcional: é por isso que quem tira é o código.
+     A aba sai do menu sozinha porque os textos prometem "até 30
+     de novembro" por escrito, e a arte do WhatsApp também. Uma
+     aba esquecida no ar em dezembro faria o consultor abrir a
+     conversa oferecendo uma condição que a fábrica já fechou — e
+     o cliente cobraria, com o print na mão. Esquecer de tirar é o
+     caso normal, não o excepcional: é por isso que quem tira é o
+     código.
 
-     Os dois dias de folga entre o 28 (último dia para o cliente)
-     e o 30 são de propósito: o fechamento de sábado ainda é
-     lançado na segunda, e o consultor precisa da aba para isso.
+     ⚠️ A FOLGA ACABOU, e saber disso importa. O prazo do cliente
+     era 28/11 e o de implantação, 30/11: os dois dias no meio
+     eram o que deixava lançar na segunda o que fechou no sábado.
+     Em 23/11/2026 o prazo do cliente passou para 30/11, a pedido,
+     e os dois prazos viraram o mesmo dia. A aba morre à
+     meia-noite de 30/11, que é a hora certa pelo que ela promete
+     — mas quem fechar no domingo ou na segunda tem de implantar
+     no mesmo 30, não no dia seguinte.
+
+     Se a fábrica der prazo de implantação além do 30, esta data
+     precisa andar junto: é ela, e não o calendário da parede, que
+     decide se o consultor ainda tem o kit na mão.
      ------------------------------------------------------------ */
   const FIM_CREATIVE_BLACK = new Date('2026-12-01T03:00:00Z');
 
@@ -82,7 +92,7 @@ window.CreativeBlack = (function () {
 
     /* --- B1 · topo --- */
     topo: {
-      rotulo: 'CREATIVE BLACK · ATÉ 28 DE NOVEMBRO',
+      rotulo: 'CREATIVE BLACK · ATÉ 30 DE NOVEMBRO',
       titulo: 'Condições especiais para fechar projetos na Creative Black',
       apoio: 'Mensagens prontas, imagens para o WhatsApp e a peça com o ' +
              'nome do cliente. A condição vale nas duas lojas, para toda a ' +
@@ -106,19 +116,27 @@ window.CreativeBlack = (function () {
         { forte: 'O valor do desconto é com o gerente.',
           resto: ' Procure o gerente da sua loja antes de falar com o cliente — ' +
                  'o número não está escrito em lugar nenhum, de propósito.' },
-        { forte: 'O pedido precisa ser implantado até dia 30/11. ',
-          resto: ' O pagamento fica com prazo limite para 07/12.' },
+        { forte: 'O pedido precisa ser implantado até dia 30/11 — o mesmo dia.',
+          resto: ' O cliente fecha e o pedido entra no sistema no mesmo 30/11; ' +
+                 'não sobra segunda-feira para lançar o que fechou no fim de semana. ' +
+                 'O pagamento fica com prazo limite para 07/12.' },
         { forte: 'O número de desconto só sai por ligação ou na loja.',
           resto: ' Nunca por escrito: nem no WhatsApp, nem em imagem, nem em e-mail. Caso as negociações já estejam sendo feitas via WhatsApp, abrir excessão.' },
       
         { forte: 'Para o cliente, fale em "Creative Black" ou "Condição de Fábrica".',
           resto: ' Não use "Black Friday" nem "promoção".' },
         { forte: 'Puxe o fechamento para o quanto antes.',
-          resto: ' O dia 28 é o último empurrão, não a meta.' },
+          resto: ' O dia 30 é o último empurrão, não a meta.' },
         { forte: 'Pagamento:',
           resto: ' segue a regra da fábrica, até 07/12.' },
-        { forte: 'Não fale de 30/11 nem de 07/12 com o cliente.',
-          resto: ' Para ele, o prazo é 28 de novembro.' }
+        /* ⚠️ Esta regra encolheu em 23/11/2026, e encolheu porque a
+           data do cliente mudou: o 30/11 era o prazo INTERNO de
+           implantação e virou o prazo que a arte promete. Guardar
+           uma data que o cliente lê na imagem só ensinaria o
+           consultor a desconfiar das regras. O 07/12 continua
+           interno, e é o único que sobrou. */
+        { forte: 'Não fale de 07/12 com o cliente.',
+          resto: ' Para ele, o prazo é 30 de novembro, que é o que a arte diz.' }
       ]
     },
 
@@ -129,10 +147,11 @@ window.CreativeBlack = (function () {
         { quando: '16 a 19/11',      mensagem: 'Mensagem 1 · Abertura',        imagem: 'W1 Reservado ou a peça com o nome' },
         { quando: '17 a 22/11',      mensagem: 'Para quem não respondeu',      imagem: 'W2 Na conversa' },
         { quando: '20/11',           mensagem: 'Feriado: não mande nada',      imagem: '—' },
-        { quando: '23 e 24/11',      mensagem: 'Mensagem 2 · Convite',         imagem: 'W3 Convite + W4 Faltam 5 dias' },
-        { quando: '25/11 · quarta',  mensagem: 'Dia Grafite na loja',          imagem: 'W4 Faltam 3 dias (de manhã)', destaque: true },
-        { quando: '26 e 27/11',      mensagem: 'Mensagem 3 · Última chamada',  imagem: 'W4 Falta 1 dia (no dia 27)' },
-        { quando: '28/11 · sábado',  mensagem: 'Último dia',                   imagem: 'W5 Último dia', destaque: true }
+        { quando: '23 e 24/11',      mensagem: 'Mensagem 2 · Convite',         imagem: 'W3 Convite + W4 Faltam 7 dias (no dia 23)' },
+        { quando: '25/11 · quarta',  mensagem: 'Dia Grafite na loja',          imagem: 'W4 Faltam 5 dias (de manhã)', destaque: true },
+        { quando: '26 e 27/11',      mensagem: 'Mensagem 3 · Última chamada',  imagem: 'W4 Faltam 3 dias (no dia 27)' },
+        { quando: '29/11 · domingo', mensagem: 'Véspera',                      imagem: 'W4 Falta 1 dia' },
+        { quando: '30/11 · segunda', mensagem: 'Último dia',                   imagem: 'W5 Último dia', destaque: true }
       ]
     },
 
@@ -149,7 +168,7 @@ window.CreativeBlack = (function () {
       itens: [
         { nome: 'Mensagem 1 · Abertura', quando: '16 a 19/11',
           texto: 'Oi, [Nome], como vai? Aqui é [Consultor], da Dalmóbile. A fábrica ' +
-                 'abriu uma condição muito especial que vale até o dia 28 de novembro, e o ' +
+                 'abriu uma condição muito especial que vale até o dia 30 de novembro, e o ' +
                  'seu projeto [da cozinha] pode fazer parte dessa condição especial. Gostaria de ter um tempo para ' +
                  'te explicar melhor por telefone ou aqui na loja, porque muda o valor final. Qual horário fica ' +
                  'bom pra você esta semana?' },
@@ -158,10 +177,10 @@ window.CreativeBlack = (function () {
                  'quer fechar o projeto dentro da condição especial da Creative Black. Posso reservar um horário pra você e acertarmos os ' +
                  'detalhes do seu [ambiente]?' },
         { nome: 'Mensagem 3 · Última chamada', quando: '26 e 27/11',
-          texto: '[Nome], passando pra lembrar: sábado, dia 28, é o último dia da ' +
+          texto: '[Nome], passando pra lembrar: segunda, dia 30, é o último dia da ' +
                  'Condição de Fábrica. Depois disso, o projeto volta para a condição ' +
-                 'normal da loja. Consegue vir aqui no sábado, ou prefere que eu te ' +
-                 'ligue antes?' }
+                 'normal da loja. Consegue vir aqui no fim de semana, ou prefere que eu ' +
+                 'te ligue antes?' }
       ]
     },
 
@@ -189,14 +208,14 @@ window.CreativeBlack = (function () {
       itens: [
         { nome: '"Que condição é essa?"',
           texto: 'É uma condição que a fábrica abriu para as lojas neste fim de ano, e ' +
-                 'vale até o dia 28. Ela muda o valor do projeto, e eu prefiro te mostrar ' +
+                 'vale até o dia 30. Ela muda o valor do projeto, e eu prefiro te mostrar ' +
                  'com os números do seu. Posso te ligar agora?' },
         { nome: '"Me manda o valor por aqui."',
           texto: 'Te passo, sim, mas por ligação: quero conferir com você os itens do ' +
                  'projeto antes, porque a condição entra sobre o que a gente fechar. São ' +
                  'uns dez minutos. Pode ser [horário]?' },
-        { nome: '"Posso fechar depois do dia 28?"',
-          texto: 'A condição vale para os projetos fechados até sábado, dia 28. Depois ' +
+        { nome: '"Posso fechar depois do dia 30?"',
+          texto: 'A condição vale para os projetos fechados até segunda, dia 30. Depois ' +
                  'disso, ele segue com a condição normal da loja.' },
         { nome: '"Ainda não tenho projeto. Dá tempo?"',
           texto: 'Dá, se a gente começar agora. Me conta qual é o ambiente e se o imóvel ' +
@@ -218,11 +237,12 @@ window.CreativeBlack = (function () {
       itens: [
         { arquivo: 'w1-reservado.jpg',  nome: 'Reservado',            para: 'Abrir a conversa' },
         { arquivo: 'w2-na-conversa.jpg', nome: 'Na conversa',          para: 'Para quem não respondeu' },
-        { arquivo: 'w3-convite.jpg',    nome: 'Convite · Dia Grafite', para: 'Convidar para quarta, 25/11' },
-        { arquivo: 'w4-faltam-5.jpg',   nome: 'Faltam 5 dias',        para: '23/11' },
-        { arquivo: 'w4-faltam-3.jpg',   nome: 'Faltam 3 dias',        para: '25/11' },
-        { arquivo: 'w4-falta-1.jpg',    nome: 'Falta 1 dia',          para: '27/11' },
-        { arquivo: 'w5-ultimo-dia.jpg', nome: 'Último dia',           para: '28/11' }
+        { arquivo: 'w3-convite.jpg',    nome: 'Convite',              para: 'Convidar para a loja' },
+        { arquivo: 'w4-faltam-7.jpg',   nome: 'Faltam 7 dias',        para: '23/11' },
+        { arquivo: 'w4-faltam-5.jpg',   nome: 'Faltam 5 dias',        para: '25/11' },
+        { arquivo: 'w4-faltam-3.jpg',   nome: 'Faltam 3 dias',        para: '27/11' },
+        { arquivo: 'w4-falta-1.jpg',    nome: 'Falta 1 dia',          para: '29/11' },
+        { arquivo: 'w5-ultimo-dia.jpg', nome: 'Último dia',           para: '30/11' }
       ]
     },
 
@@ -346,7 +366,7 @@ window.CreativeBlack = (function () {
   /* O que o canvas escreve, inteiro.
 
      ⚠️ Nada aqui tem número de dinheiro, percentual nem a palavra
-     "desconto". A data diz 28/11 — dois números que são dia e
+     "desconto". A data diz 30/11 — dois números que são dia e
      mês, e que não formam a sequência "12". O percentual não está
      em canto nenhum da aba: quem o passa é o gerente, por
      ligação ou na loja. A prova 5 confere isso espiando o
@@ -354,7 +374,7 @@ window.CreativeBlack = (function () {
   const MOLDE = {
     faixa: 'CONDIÇÃO ESPECIAL DE FÁBRICA',
     letteringReserva: 'CREATIVE BLACK',
-    data: 'ATÉ 28/11',
+    data: 'ATÉ 30/11',
     cargo: 'CONSULTOR(A) DE VENDAS',
     fecho: 'ENTRA NA CONDIÇÃO ESPECIAL.',
     semAmbiente: 'O SEU PROJETO',
@@ -370,7 +390,7 @@ window.CreativeBlack = (function () {
 
   const LIMITE_NOME = 24;
 
-  /* A Krub-Light é opcional. Ela é o peso da DATA ("ATÉ 28/11") e
+  /* A Krub-Light é opcional. Ela é o peso da DATA ("ATÉ 30/11") e
      do lettering de reserva. Se o arquivo não estiver na raiz, o
      navegador sintetiza um 300 a partir da Medium: fica mais
      gordo que a arte da fábrica, mas sai. A peça não pode deixar

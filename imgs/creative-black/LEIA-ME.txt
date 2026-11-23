@@ -28,13 +28,14 @@ que diz qual loja é.
     w1-reservado.jpg            w1-reservado.jpg
     w2-na-conversa.jpg          w2-na-conversa.jpg
     w3-convite.jpg              w3-convite.jpg
+    w4-faltam-7.jpg             w4-faltam-7.jpg
     w4-faltam-5.jpg             w4-faltam-5.jpg
     w4-faltam-3.jpg             w4-faltam-3.jpg
     w4-falta-1.jpg              w4-falta-1.jpg
     w5-ultimo-dia.jpg           w5-ultimo-dia.jpg
     foto-sjc.jpg                foto-cgt.jpg
 
-As sete w*.jpg são as imagens de WhatsApp, exportadas do
+As oito w*.jpg são as imagens de WhatsApp, exportadas do
 whatsapp_consultores.jsx em JPG 1080x1350, qualidade 80.
 
 A foto-<loja>.jpg é a foto que entra na peça com o nome do
@@ -86,4 +87,18 @@ o caminho errado, a segunda pega alguém que resolveu "simplificar"
 as reservas.
 
 18/11: prazo passou para 30/11 e a contagem ganhou o 7 (w4-faltam-7.jpg, nas duas lojas).
-A aba ainda nao mostra o w4-faltam-7: falta acrescentar o cartao no creative-black.js.
+
+23/11: o creative-black.js ganhou o cartao do w4-faltam-7 e a aba inteira passou
+para 30/11 — peca com o nome do cliente, rotulo do topo, calendario, mensagens e
+respostas. A contagem agora e ancorada no 30, nao no 28:
+
+    faltam 7 -> 23/11      faltam 3 -> 27/11
+    faltam 5 -> 25/11      falta 1  -> 29/11      ultimo dia -> 30/11
+
+⚠️ Mandar a imagem da contagem no dia errado nao da erro em lugar nenhum: o
+cliente so conclui que a loja nao sabe contar. Se as datas da arte mudarem de
+novo, a lista "imagens" do creative-black.js tem de andar junto.
+
+O w3-convite.jpg deixou de falar em Dia Grafite nesta rodada — ele agora e um
+convite generico para a loja. Quem ainda cita o Dia Grafite e a Mensagem 2, que
+e texto do consultor, nao a imagem.
