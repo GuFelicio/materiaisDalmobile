@@ -852,6 +852,30 @@ const inputPv   = el('pv');
 
 let ambientes = [];   // [{ id, nome, valor, imagens: [File] }]
 let proximoId = 1;
+
+/* `id` é o cabo da tela: um contador que vale enquanto a página
+   está aberta e é REFEITO a cada vez que a apresentação é
+   reaberta. Serve para achar o cartão no DOM, e nada mais.
+
+   `uid` é a identidade do ambiente, e ela é SALVA. É por ela que
+   a foto no Drive sabe a que ambiente pertence.
+
+   ⚠️ Por que não a posição no array: o consultor apaga o segundo
+   ambiente de quatro e salva. Os de baixo sobem uma casa, e toda
+   foto guardada pela posição passa a pertencer ao ambiente
+   errado — a cozinha aparecendo no dormitório, sem erro nenhum
+   em lugar nenhum, e ninguém descobrindo até o cliente abrir a
+   apresentação. O uid não sobe de casa. */
+function novoUid() {
+  if (crypto && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  /* Navegador antigo: aleatório o bastante para não colidir
+     dentro de uma apresentação, que é todo o alcance que ele
+     precisa ter. */
+  return 'a' + Date.now().toString(36)
+       + Math.random().toString(36).slice(2, 10);
+}
 let arquivoPv = null;
 
 const painelOrc   = el('orc-conferencia');
@@ -908,7 +932,7 @@ campoConsultor.addEventListener('change', () => {
    ============================================================ */
 
 el('add').addEventListener('click', () => {
-  ambientes.push({ id: proximoId++, nome: '', valor: '', imagens: [] });
+  ambientes.push({ id: proximoId++, uid: novoUid(), nome: '', valor: '', imagens: [] });
   desenharAmbientes();
 });
 
@@ -1096,7 +1120,7 @@ function formatarValor(bruto) {
 }
 
 /* Começa com um ambiente pronto para preencher */
-ambientes.push({ id: proximoId++, nome: '', valor: '', imagens: [] });
+ambientes.push({ id: proximoId++, uid: novoUid(), nome: '', valor: '', imagens: [] });
 desenharAmbientes();
 
 /* ============================================================
@@ -2418,6 +2442,15 @@ function desenharEncaixando(p, imagem, LARGURA, ALTURA) {
  * pesar vários MB; a 1920 o resultado é visualmente idêntico
  * numa apresentação e o PDF fica muitas vezes menor.
  */
+/* A mesma redução do PDF, embalada como arquivo para subir.
+   Chamar `reduzirImagem` aqui, e não uma segunda rotina, é o que
+   garante que a foto guardada no Drive é exatamente a que o
+   cliente recebe no PDF. */
+async function reduzirParaDrive(arquivo) {
+  const buf = await reduzirImagem(arquivo);
+  return new Blob([buf], { type: 'image/jpeg' });
+}
+
 async function reduzirImagem(arquivo) {
   const bitmap = await carregarBitmap(arquivo);
 
@@ -2691,6 +2724,7 @@ function fichaAtual() {
     dados: {
       consultor: el('consultor').value.trim(),
       ambientes: ambientes.map((a) => ({
+        uid: a.uid,
         nome: a.nome,
         valor: a.valor,
         imagens: (a.imagens || []).map(DADOS.marcarFoto)
@@ -2719,8 +2753,26 @@ el('btn-salvar').addEventListener('click', async () => {
   try {
     trabalhoAberto = await DADOS.salvar(ficha, trabalhoAberto);
     mostrarAberto(ficha.cliente, 'salvo agora', donoAberto);
-    botao.textContent = 'Salvo';
-    setTimeout(() => { botao.textContent = 'Salvar'; }, 1800);
+
+    /* A apresentação JÁ está salva. As fotos vão para o Drive
+       depois, e de propósito: se o Drive falhar, o trabalho do
+       consultor está guardado e ele não refaz nada. O botão
+       conta o que realmente houve, em vez de dizer "Salvo" e
+       deixar a pessoa descobrir sozinha, meses depois, que as
+       fotos não subiram. */
+    const conta = await DADOS.guardarFotos(trabalhoAberto, ambientes,
+      (feitas, total) => { botao.textContent = 'Fotos ' + feitas + '/' + total; },
+      reduzirParaDrive);
+
+    botao.textContent = recadoDasFotos(conta);
+    setTimeout(() => { botao.textContent = 'Salvar'; }, 2600);
+
+    if (conta.falharam) {
+      erro('A apresentação está salva, mas ' + conta.falharam
+        + (conta.falharam === 1 ? ' foto não foi' : ' fotos não foram')
+        + ' para o Drive. Salve de novo para tentar só '
+        + (conta.falharam === 1 ? 'ela.' : 'elas.'));
+    }
   } catch (e) {
     console.error(e);
     erro(e.message);
@@ -2729,6 +2781,17 @@ el('btn-salvar').addEventListener('click', async () => {
     botao.disabled = false;
   }
 });
+
+/* "Salvo" quando não havia foto nova; o número quando houve.
+   Drive desligado não é falha: é o sistema como ele era antes
+   das três variáveis do Google existirem, e o consultor não tem
+   nada a fazer a respeito. */
+function recadoDasFotos(conta) {
+  if (!conta || conta.desligado || conta.semSessao) return 'Salvo';
+  if (conta.falharam)  return 'Salvo \u00b7 ' + conta.falharam + ' foto(s) faltou';
+  if (conta.guardadas) return 'Salvo \u00b7 ' + conta.guardadas + ' foto(s) no Drive';
+  return 'Salvo';
+}
 
 function mostrarAberto(cliente, quando, autor) {
   avisoAberto.classList.remove('oculto');
@@ -2879,6 +2942,11 @@ async function abrirTrabalho(id) {
 
     ambientes = (d.ambientes || []).map((a) => ({
       id: proximoId++,
+      /* Apresentação salva antes do uid existir ganha um agora.
+         Ela não tem foto no Drive para perder: as dela estão no
+         disco do consultor, e a reposição pelo nome continua
+         valendo para elas. */
+      uid: a.uid || novoUid(),
       nome: a.nome || '',
       valor: a.valor || '',
       imagens: [],                 // entram na reposição
@@ -2886,10 +2954,31 @@ async function abrirTrabalho(id) {
     }));
 
     if (!ambientes.length) {
-      ambientes.push({ id: proximoId++, nome: '', valor: '', imagens: [] });
+      ambientes.push({ id: proximoId++, uid: novoUid(), nome: '', valor: '', imagens: [] });
     }
 
     reposicao = { porAmbiente: new Map(), faltando: [] };
+
+    /* O Drive primeiro. O que ele tiver COMPLETO já entra, e o
+       ambiente nem aparece na reposição. O que faltar cai na
+       reposição pelo nome, que é o comportamento de sempre — e é
+       o que atende toda apresentação salva antes disto.
+
+       Desenha ANTES de pedir ao Drive para a tela não ficar em
+       branco enquanto 20 fotos descem, e DE NOVO depois, porque
+       os cartões mostram as fotos que entraram. */
+    desenharAmbientes();
+    avisarTrazendo(0, 0);
+
+    /* `t.id`, NÃO `trabalhoAberto`: essa variável só recebe o
+       id mais abaixo nesta mesma função. Usá-la aqui pediria as
+       fotos da apresentação aberta ANTES desta — e elas
+       chegariam, porque o id é válido e a permissão é a mesma.
+       A apresentação do João abriria com as fotos da Maria. */
+    await DADOS.trazerFotos(t.id, ambientes,
+      (feitas, total) => avisarTrazendo(feitas, total));
+
+    avisarTrazendo(null);
     desenharAmbientes();
     montarReposicao();
 
@@ -2928,6 +3017,25 @@ async function abrirTrabalho(id) {
 }
 
 /* --- repor as fotos pela pasta --- */
+/* A tarja de "estou buscando as fotos". Sem ela, reabrir uma
+   apresentação de 20 fotos fica uns segundos parado, e a leitura
+   natural disso é que as fotos se perderam — o consultor já
+   estaria apontando a pasta de novo. */
+function avisarTrazendo(feitas, total) {
+  const antigo = el('area-trazendo');
+  if (antigo) antigo.remove();
+
+  if (feitas === null) return;
+
+  const caixa = document.createElement('div');
+  caixa.className = 'repor';
+  caixa.id = 'area-trazendo';
+  caixa.innerHTML = '<strong>Buscando as fotos no Drive</strong>'
+    + (total ? feitas + ' de ' + total + '\u2026' : 'Um instante\u2026');
+
+  listaAmb.parentNode.insertBefore(caixa, listaAmb.nextSibling);
+}
+
 function montarReposicao() {
   const antigo = el('area-repor');
   if (antigo) antigo.remove();

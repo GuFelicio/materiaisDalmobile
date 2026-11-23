@@ -257,6 +257,274 @@ const DADOS = (function () {
   }
 
   /* --------------------------------------------------------
+     AS FOTOS NO DRIVE
+     --------------------------------------------------------
+     Até aqui este arquivo dizia, com razão: AS FOTOS NÃO SOBEM.
+     Agora sobem — para o Drive da Dalmóbile, não para o banco.
+     A diferença importa: o plano grátis do Supabase tem 1 GB e,
+     passando dele, restringe o projeto; a conta da Dalmóbile tem
+     5 TB já pagos. Uma apresentação de 20 fotos é 10 MB.
+
+     O que NÃO mudou: a reposição pelo nome continua de pé, e é
+     ela que atende as apresentações salvas antes disto.
+
+     ⚠️ O id do arquivo no Drive não chega aqui, nunca. Pedimos a
+     foto pelo LUGAR dela — trabalho + ambiente + ordem — e quem
+     responde "você pode?" é a RLS de `trabalhos`, lá no
+     /api/foto. Se o navegador soubesse o id, bastaria tentar ids
+     até achar o projeto de outra loja.
+     -------------------------------------------------------- */
+
+  async function tokenDaSessao() {
+    const c = exigirSessao();
+    const se = await c.auth.getSession();
+    const t = se && se.data && se.data.session && se.data.session.access_token;
+    if (!t) throw new Error('Sua sessão expirou. Entre de novo.');
+    return t;
+  }
+
+  /* Sobe o que ainda não está lá.
+
+     NUNCA ESTOURA. Quem chama isto acabou de salvar a
+     apresentação com sucesso: o texto, os valores e o orçamento
+     já estão no banco. Derrubar a tela por causa do Drive
+     trocaria "as fotos não subiram" por "o salvamento falhou", e
+     a segunda é muito pior — o consultor refaria o trabalho.
+
+     Devolve a conta para a tela dizer o que houve. */
+  /* `reduzir` vem da tela porque é lá que mora o canvas, e a
+     redução tem de ser A MESMA que o PDF usa — senão o Drive
+     guardaria uma foto e o cliente receberia outra.
+
+     ⚠️ ELA NÃO É OPCIONAL NA PRÁTICA. As fotos em `a.imagens`
+     são os ORIGINAIS escolhidos no disco: render de 4K pesa
+     vários MB, e uma apresentação de 20 fotos passaria de 150 MB
+     de subida — pela internet da loja, no meio do atendimento.
+     Reduzida, cada uma fica em 300–800 KB. */
+  async function guardarFotos(trabalho, ambientes, aoAndar, reduzir) {
+    const conta = { guardadas: 0, falharam: 0, desligado: false, semSessao: false };
+    if (!trabalho) return conta;
+
+    let token;
+    try { token = await tokenDaSessao(); }
+    catch (e) { conta.semSessao = true; return conta; }
+
+    /* A lista do que falta, montada antes de subir nada: é ela
+       que dá o total honesto para a contagem na tela. */
+    const fila = [];
+    (ambientes || []).forEach(function (a) {
+      if (!a || !a.uid) return;
+      (a.imagens || []).forEach(function (f, ordem) {
+        if (!f || typeof f.arrayBuffer !== 'function') return;
+
+        /* Já veio do Drive e está no mesmo lugar: nada a fazer.
+           Sem esta linha, cada salvamento subiria tudo de novo. */
+        if (f.__doDrive === ordem) return;
+
+        fila.push({ uid: a.uid, ordem: ordem, arquivo: f });
+      });
+    });
+
+    if (!fila.length) return conta;
+
+    async function subirUma(tok, id, item) {
+      try {
+        /* Reduz aqui, não na escolha do arquivo: é o momento em
+           que o original ainda está em mão e o PDF já aceitou
+           esse mesmo tratamento. */
+        let corpo = item.arquivo;
+        if (reduzir) {
+          try { corpo = await reduzir(item.arquivo); }
+          catch (e) {
+            console.warn('[fotos] não reduzi ' + item.arquivo.name
+              + ': ' + ((e && e.message) || 'erro'));
+            return false;
+          }
+        }
+
+        const forma = new FormData();
+        forma.append('trabalho', id);
+        forma.append('ambiente', item.uid);
+        forma.append('ordem', String(item.ordem));
+        forma.append('arquivo', corpo, nomeJpeg(item.arquivo.name));
+
+        const r = await fetch('/api/foto', {
+          method: 'POST',
+          headers: { authorization: 'Bearer ' + tok },
+          body: forma
+        });
+
+        if (r.status === 503) { conta.desligado = true; return false; }
+        if (!r.ok) {
+          console.warn('[fotos] ' + r.status + ' em ' + item.uid + '/' + item.ordem);
+          return false;
+        }
+        return true;
+
+      } catch (e) {
+        console.warn('[fotos] ' + ((e && e.message) || 'falhou'));
+        return false;
+      }
+    }
+
+    /* Três por vez: uma a uma demora demais com 20 fotos, e
+       todas de uma vez estrangulam a conexão da loja. */
+    let proxima = 0;
+
+    async function trabalhar() {
+      while (proxima < fila.length) {
+        const item = fila[proxima++];
+        const ok = await subirUma(token, trabalho, item);
+
+        if (ok) {
+          conta.guardadas++;
+          /* Marca para o próximo salvamento não repetir. */
+          try { item.arquivo.__doDrive = item.ordem; } catch (e) {}
+        } else if (conta.desligado) {
+          return;
+        } else {
+          conta.falharam++;
+        }
+
+        if (aoAndar) {
+          try { aoAndar(conta.guardadas + conta.falharam, fila.length); }
+          catch (e) {}
+        }
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(3, fila.length) }, trabalhar));
+
+    return conta;
+  }
+
+
+  /* Traz de volta o que o Drive tiver.
+
+     Também não estoura: o que não vier cai na reposição pelo
+     nome. Pior caso, a tela fica exatamente como era antes desta
+     função existir. */
+  async function trazerFotos(trabalho, ambientes, aoAndar) {
+    const conta = { trazidas: 0, faltaram: 0, desligado: false };
+    if (!trabalho) return conta;
+
+    let token;
+    try { token = await tokenDaSessao(); } catch (e) { return conta; }
+
+    /* Quantas fotos cada ambiente tinha: é o que a ficha salva
+       registra em `marcas`, e é por ele que sabemos quantos
+       lugares pedir. */
+    const fila = [];
+    (ambientes || []).forEach(function (a) {
+      if (!a || !a.uid) return;
+      const quantas = (a.marcas && a.marcas.length) || 0;
+      for (let o = 0; o < quantas; o++) fila.push({ amb: a, uid: a.uid, ordem: o });
+    });
+
+    if (!fila.length) return conta;
+
+    async function baixarUma(tok, id, item) {
+      try {
+        const r = await fetch('/api/foto?trabalho=' + encodeURIComponent(id)
+          + '&ambiente=' + encodeURIComponent(item.uid)
+          + '&ordem=' + encodeURIComponent(item.ordem),
+          { headers: { authorization: 'Bearer ' + tok } });
+
+        if (r.status === 503) { conta.desligado = true; return null; }
+        if (!r.ok) return null;          /* 404 = nunca subiu. Normal. */
+
+        const blob = await r.blob();
+        const nome = nomeDoCabecalho(r) || ('foto-' + (item.ordem + 1) + '.jpg');
+        const f = new File([blob], nome, { type: blob.type || 'image/jpeg' });
+
+        /* A marca que evita subir de volta o que acabou de
+           descer. Propriedade solta num File é feio, e a
+           alternativa — uma segunda estrutura em paralelo com
+           esta — envelheceria em separado. */
+        try { f.__doDrive = item.ordem; } catch (e) {}
+
+        return f;
+
+      } catch (e) {
+        return null;
+      }
+    }
+
+    let proxima = 0;
+
+    async function trabalhar() {
+      while (proxima < fila.length) {
+        const item = fila[proxima++];
+        const f = await baixarUma(token, trabalho, item);
+
+        if (f) {
+          /* Guarda no ÍNDICE, não no fim: a ordem no array tem
+             de bater com a ordem no Drive. Os furos são
+             resolvidos abaixo. */
+          if (!item.amb.__baixadas) item.amb.__baixadas = [];
+          item.amb.__baixadas[item.ordem] = f;
+        } else if (conta.desligado) {
+          return;
+        }
+
+        if (aoAndar) { try { aoAndar(proxima, fila.length); } catch (e) {} }
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(3, fila.length) }, trabalhar));
+
+    /* ⚠️ TUDO OU NADA, POR AMBIENTE — e esta é a regra que
+       importa entender.
+
+       Se o Drive tem 3 das 4 fotos de um ambiente, aceitar as 3
+       e pedir a 4ª pela reposição parece melhor. Não é: a que
+       falta pode ser a PRIMEIRA, e a reposição acrescenta no
+       fim. A apresentação sairia com as fotos daquele ambiente
+       em outra ordem — a de detalhe abrindo, a geral no fim — e
+       ninguém veria erro nenhum, só uma apresentação pior.
+
+       Então: ambiente completo vem do Drive e não pede nada;
+       ambiente incompleto cai INTEIRO na reposição pelo nome,
+       que é o que o sistema já fazia e que acerta a ordem. */
+    (ambientes || []).forEach(function (a) {
+      const quantas  = (a.marcas && a.marcas.length) || 0;
+      const baixadas = a.__baixadas || [];
+
+      let completo = quantas > 0;
+      for (let o = 0; o < quantas; o++) if (!baixadas[o]) completo = false;
+
+      if (completo) {
+        a.imagens = baixadas.slice(0, quantas);
+        a.marcas  = [];                 /* nada a repor */
+        conta.trazidas += quantas;
+      } else {
+        conta.faltaram += quantas;      /* a reposição assume */
+      }
+
+      delete a.__baixadas;
+    });
+
+    return conta;
+  }
+
+  /* O nome vai sem a extensão original porque o que sobe é
+     sempre JPEG. Sem isto, uma foto escolhida como .png subiria
+     chamada .png contendo JPEG. */
+  function nomeJpeg(nome) {
+    const base = String(nome || 'foto').replace(/\.[^.]+$/, '');
+    return (base || 'foto') + '.jpg';
+  }
+
+  function nomeDoCabecalho(r) {
+    const d = r.headers.get('content-disposition') || '';
+    const m = /filename="?([^";]+)"?/i.exec(d);
+    return m ? m[1] : null;
+  }
+
+
+  /* --------------------------------------------------------
      Formatação de datas para a lista
      -------------------------------------------------------- */
 
@@ -280,6 +548,7 @@ const DADOS = (function () {
   return {
     salvar, listar, abrir, apagar,
     souAdmin, souGerente, vejoDeOutros, meuPerfil, listaDeConsultores,
-    marcarFoto, indexar, quando, traduzir
+    marcarFoto, indexar, quando, traduzir,
+    guardarFotos, trazerFotos
   };
 })();
