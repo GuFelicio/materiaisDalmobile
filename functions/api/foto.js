@@ -145,7 +145,7 @@ async function subir(request, env, url, secreta, sessao) {
     function (escopo, chave, pastaNova, nome) {
       return reservarPasta(url, secreta, escopo, chave, pastaNova, nome);
     },
-    pessoa, dono.cliente);
+    pessoa, dono.cliente, dono);
 
   const nome = nomeDaFoto(lugar.ordem, arquivo.name, TIPOS[tipo]);
 
@@ -312,7 +312,7 @@ async function podeAlterar(url, secreta, sessao, trabalho) {
      que um salvamento deveria mexer, e a RLS de alteração é
      quem decide se ele acontece. Zero linhas = não pode. */
   const r = await fetch(url + '/rest/v1/trabalhos'
-    + '?select=autor,cliente&id=eq.' + encodeURIComponent(trabalho), {
+    + '?select=id,autor,cliente,criado_em&id=eq.' + encodeURIComponent(trabalho), {
     method: 'PATCH',
     headers: cabecalhos(secreta, sessao, {
       'content-type': 'application/json',

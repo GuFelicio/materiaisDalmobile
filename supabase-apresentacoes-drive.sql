@@ -29,7 +29,7 @@
 -- rache os projetos dela em duas.
 
 create table if not exists public.drive_pastas (
-  escopo     text not null check (escopo in ('raiz', 'usuario', 'cliente')),
+  escopo     text not null check (escopo in ('raiz', 'usuario', 'cliente', 'projeto')),
   chave      text not null,
   pasta      text not null,
   nome_usado text,
@@ -42,6 +42,7 @@ comment on table public.drive_pastas is
   'escopo=raiz: chave fixa ("apresentacoes"). '
   'escopo=usuario: chave é o uuid do perfil. '
   'escopo=cliente: chave é "<uuid do perfil>|<cliente>". '
+  'escopo=projeto: chave é o uuid do trabalho. '
   'A chave do cliente inclui o dono porque duas pessoas podem atender o '
   'mesmo cliente, e cada uma tem a sua própria pasta. '
   'Guardar o id é o que faz renomear a pessoa no painel, ou a pasta dentro '
@@ -71,7 +72,7 @@ begin
 
   alter table public.drive_pastas
     add constraint drive_pastas_escopo_check
-    check (escopo in ('raiz', 'usuario', 'cliente'));
+    check (escopo in ('raiz', 'usuario', 'cliente', 'projeto'));
 end
 $$;
 

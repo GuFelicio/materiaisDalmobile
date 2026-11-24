@@ -72,9 +72,11 @@ function novoMundo() {
     trabalhos: {
       [T_PATRICIA]: { id: T_PATRICIA, autor: 'u-patricia', loja: 'sjc',
                       cliente: 'Carlos e Bia', tipo: 'apresentacao',
+                      criado_em: '2026-01-01T00:00:00Z',
                       atualizado_em: '2026-01-01T00:00:00Z' },
       [T_MARCIA]:   { id: T_MARCIA,   autor: 'u-marcia',   loja: 'cgt',
                       cliente: 'Ana', tipo: 'apresentacao',
+                      criado_em: '2026-01-01T00:00:00Z',
                       atualizado_em: '2026-01-01T00:00:00Z' }
     },
     drive_pastas: new Map(),      /* "escopo|chave" -> pasta        */
@@ -425,6 +427,20 @@ function pastas(mundo) {
 function pastaPorNome(mundo, nome) {
   return pastas(mundo).filter((a) => a.name === nome);
 }
+/* A gaveta do projeto: a única pasta dentro da pasta do cliente.
+   É nela que as fotos moram desde que a colisão entre dois
+   projetos do mesmo cliente apareceu (prova 30). */
+function pastaDoProjeto(mundo, nomeDoCliente) {
+  const doCliente = pastaPorNome(mundo, nomeDoCliente || 'Carlos e Bia');
+  if (!doCliente.length) throw new Error('não achei a pasta do cliente');
+  const dentro = pastas(mundo).filter((p) => (p.parents || []).includes(doCliente[0].id));
+  if (dentro.length !== 1) {
+    throw new Error('esperava UMA pasta de projeto dentro de "'
+      + doCliente[0].name + '", achei ' + dentro.length);
+  }
+  return dentro[0];
+}
+
 function arquivosDe(mundo, pastaId) {
   return Array.from(mundo.arquivos.values())
     .filter((a) => !a.trashed && a.mime !== 'application/vnd.google-apps.folder'
@@ -436,7 +452,7 @@ function arquivosDe(mundo, pastaId) {
    AS PROVAS DA ROTA
    ============================================================ */
 
-prova('1. a árvore é raiz > pessoa > cliente, nessa ordem', async (rota) => {
+prova('1. a árvore é raiz > pessoa > cliente > projeto, nessa ordem', async (rota) => {
   const m = novoMundo();
   const r = await rota.onRequest({ request: pedido('POST',
     formaDeSubida(T_PATRICIA, 'amb-aaa', 0, fotoFalsa()), 'u-patricia'), env: env(m) });
@@ -454,7 +470,18 @@ prova('1. a árvore é raiz > pessoa > cliente, nessa ordem', async (rota) => {
   igual(cliente.length, 1, 'uma pasta do cliente');
   certo(cliente[0].parents.includes(pessoa[0].id), 'cliente dentro da pessoa');
 
-  igual(arquivosDe(m, cliente[0].id).length, 1, 'a foto na pasta do cliente');
+  const projeto = pastaDoProjeto(m);
+  certo(projeto.parents.includes(cliente[0].id), 'projeto dentro do cliente');
+  /* O nome diz quando o PROJETO nasceu, não quando a foto subiu.
+     É a diferença entre "Projeto 2026-01-01 00h00" e a gaveta de
+     um projeto de janeiro aparecer datada de hoje — e com ela a
+     ordem das gavetas na tela do Drive deixa de significar nada. */
+  igual(projeto.name, 'Projeto 2026-01-01 00h00',
+    'a data de criação do trabalho, não a de hoje');
+
+  igual(arquivosDe(m, projeto.id).length, 1, 'a foto na gaveta do projeto');
+  igual(arquivosDe(m, cliente[0].id).length, 0,
+    'e nenhuma foto solta na pasta do cliente');
 });
 
 
@@ -566,8 +593,8 @@ prova('8. renomear a pessoa não cria uma segunda pasta', async (rota) => {
     'uma pasta só, apesar do nome novo');
   igual(pastaPorNome(m, 'Patrícia').length, 0, 'nenhuma pasta nova com o nome corrigido');
 
-  const cliente = pastaPorNome(m, 'Carlos e Bia')[0];
-  igual(arquivosDe(m, cliente.id).length, 2, 'as duas fotos na mesma pasta');
+  igual(arquivosDe(m, pastaDoProjeto(m).id).length, 2,
+    'as duas fotos na mesma gaveta');
 });
 
 
@@ -583,7 +610,7 @@ prova('9. renomear a pasta DENTRO do Drive também não racha nada', async (rota
     formaDeSubida(T_PATRICIA, 'amb-aaa', 1, fotoFalsa('sala.jpg')), 'u-patricia'), env: env(m) });
 
   igual(pastaPorNome(m, 'Patricia').length, 0, 'não recriou a antiga');
-  igual(arquivosDe(m, pastaPorNome(m, 'Carlos e Bia')[0].id).length, 2,
+  igual(arquivosDe(m, pastaDoProjeto(m).id).length, 2,
     'as duas fotos continuam juntas');
 });
 
@@ -656,8 +683,7 @@ prova('12. subir a mesma foto duas vezes não cria duas cópias', async (rota) =
   await faz();
   await faz();
 
-  const cliente = pastaPorNome(m, 'Carlos e Bia')[0];
-  igual(arquivosDe(m, cliente.id).length, 1, 'uma cópia só');
+  igual(arquivosDe(m, pastaDoProjeto(m).id).length, 1, 'uma cópia só');
   igual(m.trabalho_fotos.size, 1, 'um registro só');
 });
 
@@ -859,7 +885,7 @@ prova('23. se o registro no banco falhar, a rota avisa — não diz que deu cert
     formaDeSubida(T_PATRICIA, 'amb-aaa', 0, fotoFalsa()), 'u-patricia'), env: env(m) });
 
   igual(r2.status, 200, 'a repetição devia funcionar');
-  igual(arquivosDe(m, pastaPorNome(m, 'Carlos e Bia')[0].id).length, 1,
+  igual(arquivosDe(m, pastaDoProjeto(m).id).length, 1,
     'uma cópia só, apesar das duas tentativas');
 });
 
@@ -937,10 +963,10 @@ prova('29. a reserva poupa o Drive: 20 fotos não viram 20 pastas criadas e joga
   await rota.onRequest({ request: pedido('POST',
     formaDeSubida(T_PATRICIA, 'amb-aaa', 0, fotoFalsa()), 'u-patricia'), env: env(m) });
 
-  /* A primeira subida cria raiz, pessoa e cliente: três. */
+  /* A primeira subida cria raiz, pessoa, cliente e projeto. */
   const criadasNaPrimeira = m.chamadas.filter((c) =>
     c.metodo === 'POST' && new URL(c.url).pathname === '/drive/v3/files').length;
-  igual(criadasNaPrimeira, 3, 'raiz + pessoa + cliente');
+  igual(criadasNaPrimeira, 4, 'raiz + pessoa + cliente + projeto');
 
   m.chamadas.length = 0;
 
@@ -981,6 +1007,51 @@ prova('29. a reserva poupa o Drive: 20 fotos não viram 20 pastas criadas e joga
 });
 
 
+prova('30. duas apresentações do MESMO cliente não se misturam na pasta', async (rota) => {
+  const m = novoMundo();
+
+  /* A reforma de um ano depois: outro projeto, mesmo cliente,
+     mesma pessoa. A pasta é a mesma de propósito — é isso que o
+     Gu quer. O que NÃO pode é a foto de um aparecer no outro. */
+  const SEGUNDO = '33333333-3333-4333-8333-333333333333';
+  m.trabalhos[SEGUNDO] = {
+    id: SEGUNDO, autor: 'u-patricia', loja: 'sjc',
+    cliente: 'Carlos e Bia', tipo: 'apresentacao',
+    /* O MESMO instante de criação do primeiro, de propósito: é o
+       pior caso para a gaveta, porque os dois projetos geram
+       nome idêntico. Se a gaveta fosse adotada pelo nome, aqui é
+       que os dois se misturariam. */
+    criado_em: '2026-01-01T00:00:00Z',
+    atualizado_em: '2026-01-01T00:00:00Z'
+  };
+
+  /* Os dois têm uma cozinha, e o consultor nomeia os arquivos do
+     jeito que todo mundo nomeia. */
+  await rota.onRequest({ request: pedido('POST',
+    formaDeSubida(T_PATRICIA, 'amb-aaa', 0, fotoFalsa('cozinha.jpg', 1024)), 'u-patricia'), env: env(m) });
+
+  await rota.onRequest({ request: pedido('POST',
+    formaDeSubida(SEGUNDO, 'amb-bbb', 0, fotoFalsa('cozinha.jpg', 2048)), 'u-patricia'), env: env(m) });
+
+  const a = m.trabalho_fotos.get(T_PATRICIA + '|amb-aaa|0');
+  const b = m.trabalho_fotos.get(SEGUNDO + '|amb-bbb|0');
+
+  certo(a && b, 'as duas foram registradas');
+  if (a.drive_id === b.drive_id) {
+    throw new Error('as duas apresentações apontam para O MESMO arquivo ('
+      + a.drive_id + '): a nova mostraria as fotos da antiga');
+  }
+
+  /* E a prova de verdade: o que volta tem de ser o que subiu. */
+  const r = await rota.onRequest({ request: pedido('GET', null, 'u-patricia',
+    { trabalho: SEGUNDO, ambiente: 'amb-bbb', ordem: '0' }), env: env(m) });
+
+  igual(r.status, 200, 'status');
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  igual(bytes.length, 2048, 'a foto da apresentação NOVA, não a da antiga');
+});
+
+
 /* ============================================================
    OS DEFEITOS — cada um tem de deixar uma prova vermelha
    ============================================================
@@ -1004,6 +1075,23 @@ const DEFEITOS = [
     de: `  const daPessoa = await pastaFirmada(
     acesso, reservar, 'usuario', String(pessoa.id), nomeDaPessoa, raiz);`,
     para: `  const daPessoa = raiz;` },
+
+  { nome: 'a gaveta do projeto desaparece: dois projetos dividem a pasta',
+    arquivo: 'lib/drive.js',
+    de: `  if (!projeto || !projeto.id) return doCliente;`,
+    para: `  return doCliente;` },
+
+  { nome: 'a gaveta do projeto passa a ser adotada pelo nome',
+    arquivo: 'lib/drive.js',
+    de: `    nomeDoProjeto(projeto), doCliente,
+    false);                 /* nunca adotar pelo nome: ver acima */`,
+    para: `    nomeDoProjeto(projeto), doCliente,
+    true);` },
+
+  { nome: 'o trabalho deixa de trazer criado_em: toda gaveta vira "agora"',
+    arquivo: 'functions/api/foto.js',
+    de: `    + '?select=id,autor,cliente,criado_em&id=eq.' + encodeURIComponent(trabalho), {`,
+    para: `    + '?select=id,autor,cliente&id=eq.' + encodeURIComponent(trabalho), {` },
 
   { nome: 'a raiz volta a ser achada pelo nome, sem reserva',
     arquivo: 'lib/drive.js',
