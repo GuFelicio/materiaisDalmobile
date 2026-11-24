@@ -47,6 +47,35 @@ comment on table public.drive_pastas is
   'Guardar o id é o que faz renomear a pessoa no painel, ou a pasta dentro '
   'do Drive, não criar uma segunda pasta e rachar os projetos em duas.';
 
+-- ⚠️ SE VOCÊ JÁ RODOU A VERSÃO ANTERIOR DESTE ARQUIVO, a tabela
+-- já existe com a restrição antiga, que não conhece o escopo
+-- 'raiz' — e `create table if not exists` NÃO corrige restrição de
+-- tabela que já existe. Sem o bloco abaixo, a reserva da pasta raiz
+-- falharia na primeira foto, com erro de restrição, e o arquivo
+-- todo pareceria ter rodado bem.
+do $$
+declare
+  nome_da_restricao text;
+begin
+  select conname into nome_da_restricao
+    from pg_constraint
+   where conrelid = 'public.drive_pastas'::regclass
+     and contype = 'c'
+     and pg_get_constraintdef(oid) like '%escopo%'
+   limit 1;
+
+  if nome_da_restricao is not null then
+    execute format('alter table public.drive_pastas drop constraint %I',
+                   nome_da_restricao);
+  end if;
+
+  alter table public.drive_pastas
+    add constraint drive_pastas_escopo_check
+    check (escopo in ('raiz', 'usuario', 'cliente'));
+end
+$$;
+
+
 comment on column public.drive_pastas.nome_usado is
   'O nome com que a pasta foi criada. Só para você conferir no Drive — '
   'o sistema nunca procura por ele, só pelo id.';
@@ -244,6 +273,14 @@ select r.routine_name, p.grantee as ainda_executa
    and r.routine_name in ('reservar_pasta_drive', 'registrar_foto_drive')
    and p.grantee in ('anon', 'authenticated')
  order by 1, 2;
+
+-- 3b. A restrição do escopo conhece 'raiz'?
+--     Tem de aparecer os três: raiz, usuario, cliente.
+select pg_get_constraintdef(oid) as restricao_do_escopo
+  from pg_constraint
+ where conrelid = 'public.drive_pastas'::regclass
+   and contype = 'c'
+   and pg_get_constraintdef(oid) like '%escopo%';
 
 -- 4. A regra de quem vê o quê — a que você descreveu.
 --    Tem de aparecer pode_ver_trabalho, não "autor = auth.uid()".
