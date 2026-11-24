@@ -280,8 +280,11 @@ select r.routine_name, p.grantee as ainda_executa
    and p.grantee in ('anon', 'authenticated')
  order by 1, 2;
 
--- 3b. A restrição do escopo conhece 'raiz'?
---     Tem de aparecer os três: raiz, usuario, cliente.
+-- 3b. A restrição do escopo conhece os seis?
+--     Tem de aparecer: raiz, usuario, cliente, projeto, contrato, ficha.
+--     Faltando um, a reserva daquele nível falha na primeira foto ou
+--     na primeira assinatura — por restrição — e este arquivo todo
+--     pareceria ter rodado bem.
 select pg_get_constraintdef(oid) as restricao_do_escopo
   from pg_constraint
  where conrelid = 'public.drive_pastas'::regclass
