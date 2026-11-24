@@ -40,6 +40,12 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
+/* O dublê do Drive é compartilhado com as outras suítes. Um só,
+   porque dois do mesmo serviço envelhecem em direções
+   diferentes — e o que sobra é prova que concorda com código
+   errado. */
+import { criarDrive, COTA_ESTOURADA } from './duble-drive.mjs';
+
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ = resolve(AQUI, '..');
 
@@ -81,11 +87,14 @@ function novoMundo() {
     },
     drive_pastas: new Map(),      /* "escopo|chave" -> pasta        */
     trabalho_fotos: new Map(),    /* "trab|amb|ordem" -> linha      */
-    arquivos: new Map(),          /* id -> {id,name,parents,mime,trashed,bytes,meta} */
     chamadas: [],                 /* tudo que o código pediu        */
-    proximo: 1
+    drive: criarDrive()
   };
-  m.novoId = (p) => p + '-' + (m.proximo++);
+
+  /* Apelidos: as provas falam de `m.arquivos` e `m.novoId`, e o
+     dono deles agora é o dublê. */
+  m.arquivos = m.drive.arquivos;
+  m.novoId = m.drive.novoId;
 
   /* O fetch falso acha o mundo por aqui. Uma variável de módulo
      em vez de passar o mundo por dez camadas: a prova é
@@ -104,28 +113,6 @@ function env(mundo, extra) {
     GOOGLE_CLIENT_SECRET: 'csec',
     GOOGLE_REFRESH_TOKEN: 'rtok'
   }, extra || {});
-}
-
-/* ---------- a busca do Drive, com a mesquinhez certa ---------- */
-function buscarNoDrive(mundo, q) {
-  const pedeNaoLixeira = /trashed\s*=\s*false/.test(q);
-  const nome   = (/name\s*=\s*'((?:\\.|[^'])*)'/.exec(q) || [])[1];
-  const pai    = (/'([^']+)'\s+in\s+parents/.exec(q) || [])[1];
-  const sóPasta = /mimeType\s*=\s*'application\/vnd\.google-apps\.folder'/.test(q);
-
-  const limpo = (s) => String(s || '').replace(/\\'/g, "'").replace(/\\\\/g, '\\');
-
-  return Array.from(mundo.arquivos.values()).filter(function (a) {
-    /* ⚠️ AQUI MORA UMA PROVA: se o código não pedir
-       `trashed = false`, a pasta na lixeira VOLTA — e os
-       arquivos novos iriam para dentro dela, contando os 30 dias
-       para o Drive apagar tudo, em silêncio. */
-    if (pedeNaoLixeira && a.trashed) return false;
-    if (nome !== undefined && a.name !== limpo(nome)) return false;
-    if (pai && !(a.parents || []).includes(pai)) return false;
-    if (sóPasta && a.mime !== 'application/vnd.google-apps.folder') return false;
-    return true;
-  });
 }
 
 /* ---------- o PostgREST, com o papel vindo do bearer ---------- */
@@ -189,68 +176,14 @@ async function despachar(mundo, endereco, opcoes) {
 
     mundo.chamadas.push({ metodo: metodo, url: String(endereco), headers: h, body: o.body });
 
-    /* ---- token do Google ---- */
-    if (u.host === 'oauth2.googleapis.com') {
-      return json({ access_token: 'acesso-ok', expires_in: 3600 });
-    }
+    /* O Google é do dublê compartilhado. Os ganchos da prova
+       moram no mundo por conveniência, então viajam para lá a
+       cada chamada. */
+    mundo.drive.aoCriarPasta = mundo.aoCriarPasta || null;
+    mundo.drive.falharUpload = mundo.falharUpload || null;
 
-    /* ---- Drive: baixar ---- */
-    if (u.pathname.startsWith('/drive/v3/files/') && u.searchParams.get('alt') === 'media') {
-      const id = decodeURIComponent(u.pathname.split('/').pop());
-      const a = mundo.arquivos.get(id);
-      if (!a || a.trashed) return new Response('não achei', { status: 404 });
-      return new Response(a.bytes, {
-        status: 200, headers: { 'content-type': a.mime }
-      });
-    }
-
-    /* ---- Drive: lixeira ---- */
-    if (metodo === 'PATCH' && u.pathname.startsWith('/drive/v3/files/')) {
-      const id = decodeURIComponent(u.pathname.split('/').pop());
-      const corpo = JSON.parse(o.body || '{}');
-      const a = mundo.arquivos.get(id);
-      if (a && corpo.trashed === true) a.trashed = true;
-      return json({ id: id });
-    }
-
-    /* ---- Drive: buscar ---- */
-    if (metodo === 'GET' && u.pathname === '/drive/v3/files') {
-      const achados = buscarNoDrive(mundo, u.searchParams.get('q') || '');
-      return json({ files: achados.map((a) => ({ id: a.id, name: a.name })) });
-    }
-
-    /* ---- Drive: criar pasta ---- */
-    if (metodo === 'POST' && u.pathname === '/drive/v3/files') {
-      const corpo = JSON.parse(o.body || '{}');
-      const id = mundo.novoId('pasta');
-      mundo.arquivos.set(id, {
-        id: id, name: corpo.name, parents: corpo.parents || [],
-        mime: corpo.mimeType, trashed: false, bytes: new Uint8Array(0), meta: {}
-      });
-      if (mundo.aoCriarPasta) await mundo.aoCriarPasta(corpo, id);
-      return json({ id: id });
-    }
-
-    /* ---- Drive: subir arquivo ---- */
-    if (metodo === 'POST' && u.pathname === '/upload/drive/v3/files') {
-      const forma = o.body;                      /* FormData real */
-      const metaTexto = await forma.get('metadata').text();
-      const meta = JSON.parse(metaTexto);
-      const arq = forma.get('file');
-      const bytes = new Uint8Array(await arq.arrayBuffer());
-
-      if (mundo.falharUpload) {
-        return new Response(mundo.falharUpload, { status: 403 });
-      }
-
-      const id = mundo.novoId('arq');
-      mundo.arquivos.set(id, {
-        id: id, name: meta.name, parents: meta.parents || [],
-        mime: arq.type, trashed: false, bytes: bytes,
-        meta: { description: meta.description, properties: meta.properties }
-      });
-      return json({ id: id, name: meta.name });
-    }
+    const doGoogle = await mundo.drive.atender(endereco, opcoes);
+    if (doGoogle) return doGoogle;
 
     /* ---- Supabase ---- */
     if (u.host === new URL(URL_SB).host) return await supabase(mundo, u, metodo, h, o);
@@ -892,7 +825,7 @@ prova('23. se o registro no banco falhar, a rota avisa — não diz que deu cert
 
 prova('24. cota cheia no Drive dá recado que diz o que fazer', async (rota) => {
   const m = novoMundo();
-  m.falharUpload = '{"error":{"errors":[{"reason":"storageQuotaExceeded"}]}}';
+  m.falharUpload = COTA_ESTOURADA;
 
   const r = await rota.onRequest({ request: pedido('POST',
     formaDeSubida(T_PATRICIA, 'amb-aaa', 0, fotoFalsa()), 'u-patricia'), env: env(m) });
@@ -1049,6 +982,42 @@ prova('30. duas apresentações do MESMO cliente não se misturam na pasta', asy
   igual(r.status, 200, 'status');
   const bytes = new Uint8Array(await r.arrayBuffer());
   igual(bytes.length, 2048, 'a foto da apresentação NOVA, não a da antiga');
+});
+
+
+prova('31. "Carlos e Bia" e "carlos e bia" são UM cliente, não duas pastas', async (rota) => {
+  const m = novoMundo();
+
+  /* Ninguém digita igual duas vezes. Achando a pasta pela palavra
+     exata, o mesmo cliente racha em duas — e as duas parecem
+     certas para quem olha o Drive. */
+  const SEGUNDO = '44444444-4444-4444-8444-444444444444';
+  m.trabalhos[SEGUNDO] = {
+    id: SEGUNDO, autor: 'u-patricia', loja: 'sjc',
+    cliente: 'carlos e bia',          /* a mesma gente, outro dia */
+    tipo: 'apresentacao',
+    criado_em: '2026-06-01T10:00:00Z',
+    atualizado_em: '2026-06-01T10:00:00Z'
+  };
+
+  await rota.onRequest({ request: pedido('POST',
+    formaDeSubida(T_PATRICIA, 'amb-aaa', 0, fotoFalsa()), 'u-patricia'), env: env(m) });
+  await rota.onRequest({ request: pedido('POST',
+    formaDeSubida(SEGUNDO, 'amb-bbb', 0, fotoFalsa()), 'u-patricia'), env: env(m) });
+
+  const daPessoa = pastaPorNome(m, 'Patricia')[0];
+  const clientes = pastas(m).filter((p) => (p.parents || []).includes(daPessoa.id));
+
+  igual(clientes.length, 1,
+    'uma pasta de cliente, não ' + clientes.length
+    + ' (' + clientes.map((p) => p.name).join(', ') + ')');
+
+  /* O nome fica como foi digitado da primeira vez. */
+  igual(clientes[0].name, 'Carlos e Bia', 'o nome é o da primeira vez');
+
+  /* E dentro dela, duas gavetas: são dois projetos. */
+  igual(pastas(m).filter((p) => (p.parents || []).includes(clientes[0].id)).length, 2,
+    'dois projetos do mesmo cliente, duas gavetas');
 });
 
 
@@ -1237,8 +1206,13 @@ const DEFEITOS = [
 
   { nome: 'a chave do cliente perde o dono: duas pessoas, uma pasta',
     arquivo: 'lib/drive.js',
-    de: `    String(pessoa.id) + '|' + nomeDoCliente,`,
-    para: `    nomeDoCliente,` }
+    de: `    String(pessoa.id) + '|' + chaveDe(nomeDoCliente),`,
+    para: `    chaveDe(nomeDoCliente),` },
+
+  { nome: 'a chave do cliente deixa de ser normalizada',
+    arquivo: 'lib/drive.js',
+    de: `    String(pessoa.id) + '|' + chaveDe(nomeDoCliente),`,
+    para: `    String(pessoa.id) + '|' + nomeDoCliente,` }
 ];
 
 

@@ -419,8 +419,17 @@ async function arquivarOAssinado(env, ficha, anexo, docId, rodada) {
       return;
     }
 
+    /* O `reservar` é daqui porque lib/drive.js não sabe o que é
+       Supabase e não vai aprender. Devolve o id da pasta que
+       vale: a nossa, se chegamos primeiro, ou a de quem chegou
+       antes — com pasta nula, só consulta. */
     const guardado = await arquivarNoDrive(env, anexo, ficha,
-                                           marcasDoArquivo(ficha, rodada, anexo));
+      marcasDoArquivo(ficha, rodada, anexo),
+      function (escopo, chave, pasta, nome) {
+        return chamarBanco(env, 'reservar_pasta_drive', {
+          p_escopo: escopo, p_chave: chave, p_pasta: pasta, p_nome: nome
+        });
+      });
 
     if (!guardado) {
       /* Devolve a reserva para a repetição tentar de novo. A
