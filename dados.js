@@ -257,6 +257,78 @@ const DADOS = (function () {
   }
 
   /* --------------------------------------------------------
+     OS CLIENTES QUE JÁ EXISTEM
+     --------------------------------------------------------
+     Para a tela oferecer a lista em vez de campo livre. Ninguém
+     digita igual duas vezes, e "Carlos e Bia" digitado de duas
+     formas vira dois clientes para o sistema: duas pastas no
+     Drive, cada uma com metade dos projetos, as duas parecendo
+     certas para quem olha.
+
+     ⚠️ A DEDUPLICAÇÃO USA A MESMA `chaveDe` DO lib/drive.js, e
+     tem de usar: é ela que decide em qual pasta a foto entra. Se
+     a lista agrupasse por uma regra e o Drive por outra, a pessoa
+     escolheria um cliente da lista e o Drive criaria outra pasta
+     — e nada ligaria as duas coisas. Por isso a função mora num
+     arquivo só, e por isso aqui ela é EXIGIDA em vez de ter
+     cópia local: cópia é o que envelhece em direção diferente.
+
+     O `import()` dinâmico, e não uma variável global posta pela
+     página: módulo é carregado depois dos scripts clássicos, e um
+     global dependeria de a página ter terminado de carregar antes
+     desta função rodar. "Normalmente terminou" não é garantia —
+     é um defeito que aparece uma vez em vinte, na máquina lenta
+     da loja, e nunca na minha.
+
+     A RLS faz a parte dela: `trabalhos` já só devolve o que a
+     pessoa pode ver, então a lista do consultor é a dele e a do
+     gerente é a da loja. Não há filtro de permissão aqui porque
+     não deve haver — seria uma segunda cópia da regra.
+     -------------------------------------------------------- */
+  async function clientesConhecidos(tipo) {
+    const c = exigirSessao();
+
+    const { chaveDe } = await import('./lib/chave.js');
+
+    /* Espera a sessão antes de perguntar. O `window.dalmobileAuth`
+       é montado na hora, mas o TOKEN vem de um getSession() que
+       ainda está no ar — e consulta sem token volta vazia, sem
+       erro. A lista apareceria vazia e o seletor convidaria a
+       cadastrar de novo um cliente que já existe, que é
+       exatamente o defeito que ele veio impedir. */
+    await c.auth.getSession();
+
+    let q = c.from('trabalhos')
+      .select('cliente, atualizado_em')
+      .order('atualizado_em', { ascending: false })
+      .limit(500);
+
+    if (tipo) q = q.eq('tipo', tipo);
+
+    const { data, error } = await q;
+    if (error) throw new Error(traduzir(error));
+
+    /* A grafia que fica é a MAIS RECENTE — a lista vem ordenada
+       por atualizado_em, então o primeiro de cada chave ganha. É
+       a que a pessoa acabou de usar e reconhece. A pasta no Drive
+       pode ter o nome de uma grafia antiga, e isso não importa:
+       lá a identidade é o id, não o nome. */
+    const vistos = new Map();
+
+    (data || []).forEach(function (l) {
+      const nome = String(l.cliente || '').trim();
+      if (!nome) return;
+      const k = chaveDe(nome);
+      if (!k || vistos.has(k)) return;
+      vistos.set(k, nome);
+    });
+
+    return Array.from(vistos.values())
+      .sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+  }
+
+
+  /* --------------------------------------------------------
      AS FOTOS NO DRIVE
      --------------------------------------------------------
      Até aqui este arquivo dizia, com razão: AS FOTOS NÃO SOBEM.
@@ -549,6 +621,6 @@ const DADOS = (function () {
     salvar, listar, abrir, apagar,
     souAdmin, souGerente, vejoDeOutros, meuPerfil, listaDeConsultores,
     marcarFoto, indexar, quando, traduzir,
-    guardarFotos, trazerFotos
+    guardarFotos, trazerFotos, clientesConhecidos
   };
 })();

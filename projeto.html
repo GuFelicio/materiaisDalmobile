@@ -86,6 +86,13 @@
   }
 
   .campo { margin-bottom: 15px; }
+
+  .escolha { display: flex; gap: 8px; align-items: stretch; }
+  .escolha select, .escolha input { flex: 1 1 auto; min-width: 0; }
+  .escolha button {
+    flex: 0 0 auto; white-space: nowrap; cursor: pointer;
+    padding: 0 12px; font-size: 13px;
+  }
   .campo:last-child { margin-bottom: 0; }
 
   .campo > label {
@@ -488,8 +495,26 @@
     </div>
 
     <div class="campo">
-      <label for="cliente">Nome do cliente</label>
-      <input id="cliente" type="text" placeholder="Ex.: Gustavo Felício e Gleiza Dias" autocomplete="off">
+      <label for="cliente-lista">Nome do cliente</label>
+
+      <!-- O seletor existe para impedir um defeito, não para
+           economizar digitação: "Carlos e Bia" digitado de duas
+           formas vira dois clientes para o sistema, duas pastas
+           no Drive, cada uma com metade dos projetos — e as duas
+           parecendo certas para quem olha.
+
+           Cadastrar novo é um ato EXPLÍCITO, num botão separado.
+           Campo livre que apenas sugere deixa o erro acontecer:
+           basta ignorar a sugestão. -->
+      <div class="escolha">
+        <select id="cliente-lista"><option value="">Carregando…</option></select>
+        <input id="cliente" type="text"
+               placeholder="Ex.: Gustavo Felício e Gleiza Dias"
+               autocomplete="off" hidden>
+        <button type="button" id="cliente-trocar">+ novo</button>
+      </div>
+
+      <p class="nota" id="cliente-nota"></p>
     </div>
 
     <div class="campo">
@@ -885,6 +910,143 @@ const chkAnexar   = el('anexarPv');
 /* Dados lidos do PV, já conferidos/corrigidos na tela */
 let orcamento = null;
 let ultimo = null;    // { nome, bytes }
+
+/* ============================================================
+   O CLIENTE: escolher da lista, ou cadastrar de propósito
+   ============================================================
+   `#cliente` continua sendo a fonte da verdade — todo o resto do
+   arquivo lê `el('cliente').value`, e eu não quis mexer em
+   nenhum desses lugares. O que o seletor faz é ESCREVER nele.
+   Quando a lista está à mostra, o input fica escondido mas
+   continua com o valor; quando o modo é "novo", ele aparece e a
+   pessoa digita direto nele.
+
+   ⚠️ FALHA PARA FRENTE, nunca para trás. Se a lista não carregar
+   — sem internet, sessão expirada, qualquer coisa — a tela cai no
+   campo livre, que é exatamente como ela era antes disto existir.
+   Um seletor que trava o salvamento porque não conseguiu listar
+   seria pior que seletor nenhum. */
+
+const selCliente  = el('cliente-lista');
+const inpCliente  = el('cliente');
+const btnCliente  = el('cliente-trocar');
+const notaCliente = el('cliente-nota');
+
+let clientesNaLista = [];
+
+function modoCliente(modo) {
+  const novo = modo === 'novo';
+
+  selCliente.hidden = novo;
+  inpCliente.hidden = !novo;
+
+  btnCliente.textContent = novo ? 'escolher da lista' : '+ novo';
+  btnCliente.hidden = novo && !clientesNaLista.length;   /* nada a voltar para */
+
+  /* O label aponta para o que está à mostra, senão clicar nele
+     foca um campo invisível. */
+  const rotulo = document.querySelector('label[for="cliente-lista"], label[for="cliente"]');
+  if (rotulo) rotulo.setAttribute('for', novo ? 'cliente' : 'cliente-lista');
+
+  if (novo) inpCliente.focus();
+}
+
+/* Põe a tela no estado certo para o valor que `#cliente` tem
+   agora. Chamada depois de abrir um trabalho salvo: se o cliente
+   dele está na lista, a lista mostra ele; se não está — foi
+   renomeado, ou é de antes —, o campo livre mostra o que há. */
+function sincronizarCliente() {
+  const valor = String(inpCliente.value || '').trim();
+
+  if (!valor) {
+    selCliente.value = '';
+    modoCliente(clientesNaLista.length ? 'lista' : 'novo');
+    return;
+  }
+
+  const igual = clientesNaLista.indexOf(valor);
+  if (igual >= 0) {
+    selCliente.value = valor;
+    modoCliente('lista');
+  } else {
+    modoCliente('novo');
+  }
+}
+
+function desenharClientes(nomes) {
+  clientesNaLista = nomes || [];
+
+  selCliente.innerHTML = '';
+
+  const vazio = document.createElement('option');
+  vazio.value = '';
+  vazio.textContent = clientesNaLista.length
+    ? '— escolha o cliente —' : '— nenhum cliente ainda —';
+  selCliente.appendChild(vazio);
+
+  clientesNaLista.forEach(function (nome) {
+    const o = document.createElement('option');
+    o.value = nome;
+    o.textContent = nome;
+    selCliente.appendChild(o);
+  });
+}
+
+async function montarClientes() {
+  try {
+    desenharClientes(await DADOS.clientesConhecidos('apresentacao'));
+
+    notaCliente.textContent = clientesNaLista.length
+      ? 'Escolha da lista para não criar um cliente repetido no Drive.'
+      : 'Nenhum cliente ainda. Cadastre o primeiro.';
+
+    sincronizarCliente();
+
+  } catch (e) {
+    /* Cai no campo livre: é como a tela funcionava antes. */
+    console.warn('[clientes] não listei: ' + ((e && e.message) || e));
+    clientesNaLista = [];
+    notaCliente.textContent = 'Não consegui carregar a lista de clientes — '
+      + 'digite o nome e confira a grafia.';
+    modoCliente('novo');
+  }
+}
+
+selCliente.addEventListener('change', function () {
+  inpCliente.value = selCliente.value;
+});
+
+btnCliente.addEventListener('click', function () {
+  if (inpCliente.hidden) {
+    /* Para "novo": limpa, senão o nome escolhido antes viraria o
+       começo do nome novo e sairia um cliente quase igual. */
+    inpCliente.value = '';
+    selCliente.value = '';
+    modoCliente('novo');
+  } else {
+    modoCliente('lista');
+    sincronizarCliente();
+  }
+});
+
+montarClientes();
+
+/* E DE NOVO QUANDO A PESSOA ENTRA. Na primeira visita da sessão a
+   página carrega atrás da tela de login: a chamada acima acontece
+   sem usuário, volta vazia, e o seletor diria "nenhum cliente
+   ainda" para quem tem trinta. O `liberar()` do auth.js não
+   recarrega a página, então ninguém refaria esta pergunta. */
+try {
+  const sb = window.dalmobileAuth && window.dalmobileAuth.cliente;
+  if (sb && sb.auth && sb.auth.onAuthStateChange) {
+    sb.auth.onAuthStateChange(function (evento) {
+      if (evento === 'SIGNED_IN' || evento === 'INITIAL_SESSION') montarClientes();
+    });
+  }
+} catch (e) {
+  console.warn('[clientes] sem aviso de login: ' + ((e && e.message) || e));
+}
+
 
 /* ============================================================
    LOJA
@@ -2937,6 +3099,7 @@ async function abrirTrabalho(id) {
 
     selLoja.value = t.loja || selLoja.value;
     el('cliente').value = t.cliente || '';
+    sincronizarCliente();
     el('arquiteto').value = t.arquiteto || '';
     if (d.consultor) el('consultor').value = d.consultor;
 
