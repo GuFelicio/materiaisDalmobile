@@ -29,7 +29,7 @@
 -- rache os projetos dela em duas.
 
 create table if not exists public.drive_pastas (
-  escopo     text not null check (escopo in ('usuario', 'cliente')),
+  escopo     text not null check (escopo in ('raiz', 'usuario', 'cliente')),
   chave      text not null,
   pasta      text not null,
   nome_usado text,
@@ -38,10 +38,14 @@ create table if not exists public.drive_pastas (
 );
 
 comment on table public.drive_pastas is
-  'Pastas do Drive já criadas. escopo=usuario: chave é o uuid do perfil. '
+  'Pastas do Drive já criadas, guardadas pelo ID e nunca pelo nome. '
+  'escopo=raiz: chave fixa ("apresentacoes"). '
+  'escopo=usuario: chave é o uuid do perfil. '
   'escopo=cliente: chave é "<uuid do perfil>|<cliente>". '
   'A chave do cliente inclui o dono porque duas pessoas podem atender o '
-  'mesmo cliente, e cada uma tem a sua própria pasta.';
+  'mesmo cliente, e cada uma tem a sua própria pasta. '
+  'Guardar o id é o que faz renomear a pessoa no painel, ou a pasta dentro '
+  'do Drive, não criar uma segunda pasta e rachar os projetos em duas.';
 
 comment on column public.drive_pastas.nome_usado is
   'O nome com que a pasta foi criada. Só para você conferir no Drive — '

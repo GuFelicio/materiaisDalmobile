@@ -41,7 +41,7 @@
 
 import {
   temDrive, tokenDeAcesso, pastaDaApresentacao,
-  subirArquivo, baixarComTipo
+  subirArquivo, acharArquivo, baixarComTipo
 } from '../../lib/drive.js';
 
 
@@ -149,7 +149,20 @@ async function subir(request, env, url, secreta, sessao) {
 
   const nome = nomeDaFoto(lugar.ordem, arquivo.name, TIPOS[tipo]);
 
-  const id = await subirArquivo(acesso, pasta, { nome: nome, bytes: bytes }, tipo, {
+  /* ⚠️ PROCURAR ANTES DE SUBIR. Fecha uma janela real: o envio
+     dá certo e o `registrar_foto_drive` falha logo depois. A foto
+     está no Drive, o banco não sabe onde, e a segunda tentativa
+     subiria a MESMA foto outra vez — o Drive aceita nome repetido
+     sem reclamar, então ficariam duas iguais na pasta e nenhum
+     jeito de saber qual é qual.
+
+     Com a busca antes, repetir é seguro: acha a que subiu,
+     devolve o id, e o registro acontece. É a mesma cerca que o
+     documento assinado já tinha; aqui ela faltava, e foi a prova
+     23 que mostrou. */
+  const anterior = await acharArquivo(acesso, pasta, nome);
+
+  const id = anterior || await subirArquivo(acesso, pasta, { nome: nome, bytes: bytes }, tipo, {
     descricao: 'Apresentação de projeto · ' + (dono.cliente || 'sem cliente')
              + ' · ambiente ' + lugar.ambiente,
     propriedades: {
