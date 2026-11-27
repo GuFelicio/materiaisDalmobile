@@ -9,7 +9,7 @@ node provas/provar-jornada.mjs           --defeitos
 node provas/provar-mudancas.mjs          --defeitos
 ```
 
-Hoje: **107 provas e 75 defeitos**, todos pegos.
+Hoje: **112 provas e 80 defeitos**, todos pegos.
 
 ---
 
@@ -59,13 +59,25 @@ registrada.
 O `dados.js`: a deduplicação dos clientes conhecidos, o **tudo ou nada por
 ambiente** ao trazer fotos do Drive, a redução antes de subir.
 
-### `provar-jornada.mjs` — 18 provas, 12 defeitos
+### `provar-jornada.mjs` — 23 provas, 17 defeitos
 O `jornada.js` é DADO, não código: ele é editado toda vez que a loja muda um
 passo, uma fala ou um material. As provas olham a integridade — id de material
 que não existe na Central, trecho do vídeo com o cargo errado, fala sem
 procedência, passo órfão numa fase que não existe. Nada disso aparece na tela:
 um id com erro de digitação vira um chip cinza igual ao de um material que
 ainda não foi feito.
+
+Os nove links dos trechos do vídeo foram colados um a um, à mão, de uma lista
+do Drive, e três provas existem só por causa disso: link que não é arquivo do
+Drive, dois trechos apontando para o MESMO vídeo (o chip abre, o vídeo toca, e
+só quem conhece o corte percebe que a etapa 6 está mostrando a 7), e prévia sem
+o aviso de prévia — que é uma prévia indo para o cliente.
+
+Duas outras saíram de erros que aconteceram de verdade aqui: um `materiais:`
+escrito duas vezes no mesmo passo (em objeto literal a última chave ganha
+calada, e a lista de cima some sem erro nenhum), e dois materiais com o mesmo
+rótulo lado a lado — os dois "WhatsApp da loja" são números de lojas
+diferentes, e na Central nunca aparecem juntos.
 
 ### `provar-mudancas.mjs` — 15 provas, 12 defeitos
 O comparador de versões do Checklist de Eletros. É o documento em que a troca

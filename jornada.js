@@ -128,19 +128,34 @@ const JORNADA = (function () {
      que F04 e F23 precisam ser atualizados. Enquanto isso não
      acontece, este arquivo é o lugar com o nome certo.
 
-     ⚠️ NENHUM DELES EXISTE AINDA. O vídeo é a ficha 1 e está por
-     fazer. A tela mostra o trecho como PENDENTE em vez de um
-     botão que não baixa nada. */
+     ⚠️ TODOS SÃO PRÉVIAS (render V2 sketch, 26/11). O trecho
+     abre no Drive, e a tela escreve "prévia" ao lado: quem for
+     mandar para um cliente precisa saber que ainda não é o corte
+     final. Trecho sem `url` volta a aparecer como pendência. */
+  const PASTA_DO_VIDEO =
+    'https://drive.google.com/drive/folders/193iCipK_IucRr3DnTVdAUOzCulDI-swN';
+
+  function noDrive(id) { return 'https://drive.google.com/file/d/' + id + '/view'; }
+
   const TRECHOS = {
-    t0: { n: '0', nome: 'Versão completa',       arquivo: 'jornada_00_completo.mp4',  dura: '~3 min 30 s', quem: 'gerente' },
-    t1: { n: '1', nome: 'Avaliação do ambiente', arquivo: 'jornada_01_avaliacao.mp4', dura: '22 s', quem: 'montagem' },
-    t2: { n: '2', nome: 'Medição técnica',       arquivo: 'jornada_02_medicao.mp4',   dura: '22 s', quem: 'executivo' },
-    t3: { n: '3', nome: 'Projeto executivo',     arquivo: 'jornada_03_projeto.mp4',   dura: '22 s', quem: 'executivo' },
-    t4: { n: '4', nome: 'Aprovação do projeto',  arquivo: 'jornada_04_aprovacao.mp4', dura: '22 s', quem: 'consultor' },
-    t5: { n: '5', nome: 'Produção',              arquivo: 'jornada_05_producao.mp4',  dura: '25 s', quem: 'executivo' },
-    t6: { n: '6', nome: 'Entrega e montagem',    arquivo: 'jornada_06_entrega.mp4',   dura: '25 s', quem: 'montagem' },
-    t7: { n: '7', nome: 'Vistoria',              arquivo: 'jornada_07_vistoria.mp4',  dura: '22 s', quem: 'montagem' },
-    t8: { n: '8', nome: 'Entrega da caixinha',   arquivo: 'jornada_08_caixinha.mp4',  dura: '25 s', quem: 'marketing' }
+    t0: { n: '0', nome: 'Versão completa',       arquivo: 'jornada_00_completo.mp4',  dura: '~3 min 30 s', quem: 'gerente',
+          previa: true, url: noDrive('1ZjnxGBs1aC3Ee2npSYGqNg6Fhaygu3R0') },
+    t1: { n: '1', nome: 'Avaliação do ambiente', arquivo: 'jornada_01_avaliacao.mp4', dura: '22 s', quem: 'montagem',
+          previa: true, url: noDrive('19OufwK_iD3RMjDaEs0TZkEnLFdEXH9Qk') },
+    t2: { n: '2', nome: 'Medição técnica',       arquivo: 'jornada_02_medicao.mp4',   dura: '22 s', quem: 'executivo',
+          previa: true, url: noDrive('1GRPwPtKaY6gbgLgv4w7t6rIA7Qq0obh0') },
+    t3: { n: '3', nome: 'Projeto executivo',     arquivo: 'jornada_03_projeto.mp4',   dura: '22 s', quem: 'executivo',
+          previa: true, url: noDrive('14GcmSkrtcelkT1lL18_OWnbFIu0hjlrB') },
+    t4: { n: '4', nome: 'Aprovação do projeto',  arquivo: 'jornada_04_aprovacao.mp4', dura: '22 s', quem: 'consultor',
+          previa: true, url: noDrive('1cFzu6VSLAc8OD7-_-u4hhbJZB0fOD0Xy') },
+    t5: { n: '5', nome: 'Produção',              arquivo: 'jornada_05_producao.mp4',  dura: '25 s', quem: 'executivo',
+          previa: true, url: noDrive('1usoJK9Ltzb6WTOUklMhHTrPW-XVvfa5t') },
+    t6: { n: '6', nome: 'Entrega e montagem',    arquivo: 'jornada_06_entrega.mp4',   dura: '25 s', quem: 'montagem',
+          previa: true, url: noDrive('1d8DS0CbmW8Fzpknkjmcwne7EOqi35lth') },
+    t7: { n: '7', nome: 'Vistoria',              arquivo: 'jornada_07_vistoria.mp4',  dura: '22 s', quem: 'montagem',
+          previa: true, url: noDrive('1Hv0ufbe-2vE1OMKRqqS5Mj94VmLAO_Dk') },
+    t8: { n: '8', nome: 'Entrega da caixinha',   arquivo: 'jornada_08_caixinha.mp4',  dura: '25 s', quem: 'marketing',
+          previa: true, url: noDrive('1XWZ-4jThF1bBk_Q8KN2OcroJ7FSXO4hz') }
   };
 
 
@@ -188,7 +203,8 @@ const JORNADA = (function () {
       oque: 'Apresentação da Dalmóbile e do projeto com os materiais da Central.',
       fala: null, falaFonte: null,
       sistema: null,
-      materiais: ['apres-clientes', 'apres-arquitetos', 'catalogos-sjc', 'catalogos-cgt'],
+      materiais: ['apres-clientes', 'apres-arquitetos', 'catalogos-sjc', 'catalogos-cgt',
+                  'boas-vindas-impresso', 'site-sjc', 'insta-sjc'],
       cuidado: null },
 
     { id: 'p-orcamento', fase: 'f01', ordem: 50, cargo: 'consultor',
@@ -296,8 +312,8 @@ const JORNADA = (function () {
           + 'de cada etapa e um vídeo que mostra o caminho todo. Qualquer dúvida, é só chamar por aqui.',
       falaFonte: 'manual',
       sistema: 'Grupo criado no MESMO DIA do contrato.',
-      materiais: ['boas-vindas', 'logo-grupos-wpp', 'itens-extras',
-                  { pendente: 'jornada_00_completo.mp4', oque: 'Vídeo da jornada, versão completa (~3 min 30 s). Ficha 1.' }],
+      materiais: ['boas-vindas', 'logo-grupos-wpp',
+                  'itens-extras', 'zap-loja-sjc', 'zap-loja-cgt'],
       cuidado: 'O GRUPO É DO GERENTE, PELO CELULAR DA LOJA — não do celular do consultor. '
              + 'A caixa azul do Fluxograma Dalmobile ainda diz "Consultor... e cria grupo WPP", e está '
              + 'desatualizada. Criado do aparelho de uma pessoa, a conversa do cliente sai da loja com ela.',
@@ -340,7 +356,7 @@ const JORNADA = (function () {
           + 'isso que evita surpresas no dia da montagem.',
       falaFonte: 'roteiro',
       sistema: 'Kanban: Medição Solicitada.',
-      materiais: [{ pendente: 'jornada_01_avaliacao.mp4', oque: 'Trecho 1 do vídeo da jornada (22 s).' }],
+      materiais: ['agendamento'],
       cuidado: null,
       trecho: 't1' },
 
@@ -385,8 +401,7 @@ const JORNADA = (function () {
           + 'antes: uma troca muda as medidas e o projeto.',
       falaFonte: 'roteiro',
       sistema: null,
-      materiais: ['itens-extras',
-                  { pendente: 'jornada_02_medicao.mp4', oque: 'Trecho 2 do vídeo da jornada (22 s).' }],
+      materiais: ['itens-extras'],
       cuidado: 'Troca de eletro depois daqui muda medida e muda projeto — e pode mudar o prazo. '
              + 'O aviso ao cliente é nesta etapa, não depois.',
       trecho: 't2' },
@@ -399,7 +414,7 @@ const JORNADA = (function () {
           + 'Assim, o que vai para a fábrica já foi pensado pela equipe toda.',
       falaFonte: 'roteiro',
       sistema: 'Kanban: Projeto Executivo.',
-      materiais: [{ pendente: 'jornada_03_projeto.mp4', oque: 'Trecho 3 do vídeo da jornada (22 s).' }],
+      materiais: [],
       cuidado: null,
       trecho: 't3' },
 
@@ -431,8 +446,7 @@ const JORNADA = (function () {
           + 'tanta diferença. Com o projeto aprovado e assinado, o seu pedido segue para a produção.',
       falaFonte: 'roteiro',
       sistema: null,
-      materiais: ['projeto',
-                  { pendente: 'jornada_04_aprovacao.mp4', oque: 'Trecho 4 do vídeo da jornada (22 s).' }],
+      materiais: ['projeto'],
       cuidado: 'NADA vai para a fábrica sem o ok do cliente. É a promessa mais forte do vídeo.',
       trecho: 't4' },
 
@@ -472,8 +486,7 @@ const JORNADA = (function () {
           + 'E você acompanha cada etapa pelo link do pedido, que chega aqui no grupo.',
       falaFonte: 'roteiro',
       sistema: null,
-      materiais: ['acompanhe-pedido',
-                  { pendente: 'jornada_05_producao.mp4', oque: 'Trecho 5 do vídeo da jornada (25 s).' }],
+      materiais: ['acompanhe-pedido'],
       cuidado: 'SEM PRAZO na mensagem e sem prazo no vídeo. Prazo fica no contrato — foi decisão de 25/11.',
       trecho: 't5' },
 
@@ -512,8 +525,7 @@ const JORNADA = (function () {
           + 'tratada com o mesmo cuidado que o seu móvel.',
       falaFonte: 'roteiro',
       sistema: null,
-      materiais: ['agendamento', 'montagem',
-                  { pendente: 'jornada_06_entrega.mp4', oque: 'Trecho 6 do vídeo da jornada (25 s).' }],
+      materiais: ['agendamento', 'montagem'],
       cuidado: null,
       trecho: 't6' },
 
@@ -523,7 +535,7 @@ const JORNADA = (function () {
           + 'horários combinados com o cliente e adesivo nas peças danificadas.',
       fala: null, falaFonte: null,
       sistema: null,
-      materiais: [],
+      materiais: ['montagem'],
       cuidado: 'O vídeo promete casa protegida do começo ao fim. Estes padrões são conferidos na Vistoria de '
              + 'Equipe de Montagem.' },
 
@@ -556,8 +568,7 @@ const JORNADA = (function () {
           + 'serviço e acompanha tudo com a fábrica até ficar pronto.',
       falaFonte: 'roteiro',
       sistema: 'Vistoria registrada na Central.',
-      materiais: ['vistoria-montagem',
-                  { pendente: 'jornada_07_vistoria.mp4', oque: 'Trecho 7 do vídeo da jornada (22 s).' }],
+      materiais: ['vistoria-montagem'],
       cuidado: null,
       trecho: 't7' },
 
@@ -656,7 +667,7 @@ const JORNADA = (function () {
           + 'feito com fotos do seu ambiente. Obrigado por criar o seu projeto com a gente.',
       falaFonte: 'roteiro',
       sistema: null,
-      materiais: ['entrega'],
+      materiais: ['entrega', 'manual-garantia'],
       cuidado: null },
 
     { id: 'p-avaliacao-google', fase: 'f09', ordem: 840, cargo: 'marketing',
@@ -666,8 +677,7 @@ const JORNADA = (function () {
       fala: 'Se puder, conte no Google como foi. Isso ajuda muito a nossa equipe.',
       falaFonte: 'roteiro',
       sistema: null,
-      materiais: ['google-sjc', 'google-cgt', 'pos-visita',
-                  { pendente: 'jornada_08_caixinha.mp4', oque: 'Trecho 8 do vídeo da jornada (25 s).' }],
+      materiais: ['google-sjc', 'google-cgt', 'pos-visita'],
       cuidado: 'Um lembrete, e só um. Dois viram cobrança.',
       trecho: 't8' },
 
@@ -677,7 +687,7 @@ const JORNADA = (function () {
           + 'cliente e ao arquiteto, marcando os dois.',
       fala: null, falaFonte: null,
       sistema: 'Obra fechada no controle de captações.',
-      materiais: [],
+      materiais: ['foto-indicacao-sjc', 'foto-indicacao-cgt', 'insta-sjc'],
       cuidado: null }
   ];
 
@@ -713,7 +723,7 @@ const JORNADA = (function () {
   }
 
   return {
-    CARGOS, FASES, PASSOS, NIVEIS, TRECHOS,
+    CARGOS, FASES, PASSOS, NIVEIS, TRECHOS, PASTA_DO_VIDEO,
     passosDaFase, cargoDe, trechoDe, contarRascunhos, contarPendencias
   };
 })();

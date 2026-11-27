@@ -150,138 +150,245 @@
   .painel > h2 { margin: 0 0 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
   .painel > p.desc { margin: 0 0 20px; font-size: 13px; color: var(--ink-2); }
 
-  /* ---------- Jornada: a trilha do vídeo ---------- */
-  .jor-trilha-caixa { margin: 0 0 6px; }
-  #jor-trilha-svg svg { width: 100%; height: auto; max-width: 720px; display: block; margin: 0 auto; }
+  /* ============================================================
+     JORNADA — traço grafite sobre fundo papel
+     ------------------------------------------------------------
+     A direção é a do vídeo, e está escrita no roteiro: "traço
+     grafite sobre fundo papel, a cor entra aos poucos". A aba
+     segue isso em vez de inventar um visual próprio — quem vê o
+     vídeo e depois abre a Central tem de reconhecer o mesmo
+     lugar.
+
+     A COR DO CARGO É O ÚNICO COLORIDO, e entra só onde diz de
+     quem é o passo. Pintar o cartão inteiro com ela, como estava,
+     deixava a tela com seis fundos coloridos brigando e nada
+     ganhando destaque.
+     ============================================================ */
+  .painel-aba[data-painel="jornada"] {
+    --papel: #faf8f4;
+    --grafite: #2b2b2b;
+    --linha: rgba(43, 43, 43, .13);
+  }
+
+  .jor-trilha-caixa {
+    background: var(--papel);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 22px 16px 10px;
+    margin: 0 0 4px;
+  }
+  #jor-trilha-svg svg { width: 100%; height: auto; max-width: 660px; display: block; margin: 0 auto; }
 
   .jor-marco { cursor: pointer; }
-  .jor-marco rect.caixa { fill: #fff; stroke: #1a1a1a; stroke-width: 1.5; }
-  .jor-marco text.num { font: 600 15px/1 system-ui, sans-serif; fill: #1a1a1a; }
+  .jor-marco rect.caixa {
+    fill: var(--papel); stroke: var(--grafite); stroke-width: 1.5;
+    transition: fill .14s;
+  }
+  .jor-marco text.num {
+    font: 600 15px/1 ui-sans-serif, system-ui, sans-serif; fill: var(--grafite);
+    transition: fill .14s;
+  }
 
-  /* O desenho fica fraco até alguém olhar. É o do vídeo: o
-     caminho inteiro de leve e só o ponto da vez com peso. */
-  .jor-marco .arte { opacity: .34; transition: opacity .14s; }
-  .jor-marco .arte rect.vazio { fill: none; stroke: #bbb; stroke-dasharray: 3 3; }
-  .jor-marco .arte text.falta { font: 10px/1 system-ui, sans-serif; fill: #999; }
+  /* O conjunto de leve, só o da vez com peso. É o vídeo. */
+  .jor-marco .arte { opacity: .3; transition: opacity .16s; }
+  .jor-marco .arte rect.vazio { fill: none; stroke: #c4c0b8; stroke-dasharray: 3 3; }
+  .jor-marco .arte text.falta { font: 10px/1 ui-sans-serif, system-ui, sans-serif; fill: #9a958c; }
 
-  .jor-marco.aceso rect.caixa { fill: #1a1a1a; }
-  .jor-marco.aceso text.num { fill: #fff; }
+  .jor-marco:hover .arte { opacity: .62; }
   .jor-marco.aceso .arte { opacity: 1; }
+  .jor-marco.aceso rect.caixa { fill: var(--grafite); }
+  .jor-marco.aceso text.num { fill: var(--papel); }
 
   .jor-marco:focus { outline: none; }
-  .jor-marco:focus rect.caixa { stroke-width: 3; }
+  .jor-marco:focus-visible rect.caixa { stroke-width: 3; }
 
   .jor-aqui {
-    margin: 2px 0 20px; font-size: 13px; min-height: 1.3em;
-    max-width: 720px; margin-left: auto; margin-right: auto;
+    max-width: 660px; margin: 10px auto 24px;
+    font-size: 13px; min-height: 1.3em; text-align: center;
   }
   .jor-aqui b { font-weight: 600; }
-  .jor-aqui .vazio { opacity: .45; }
 
+  /* ---- o cartão do trecho ---- */
   .jor-cartao {
-    max-width: 720px; margin: 0 auto 22px;
-    border: 1px solid rgba(0,0,0,.12); border-radius: 8px;
-    padding: 16px 18px;
+    max-width: 660px; margin: 0 auto 22px;
+    border: 1px solid var(--linha); border-radius: 10px;
+    overflow: hidden; background: #fff;
   }
-  .jor-cartao > h3 { margin: 0 0 2px; font-size: 16px; }
+  .jor-cartao > .topo {
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--linha);
+    background: var(--papel);
+  }
+  .jor-cartao > .topo h3 { margin: 2px 0 0; font-size: 18px; letter-spacing: -.01em; }
   .jor-cartao .sub {
-    font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
-    opacity: .75; margin-bottom: 10px;
-  }
-  .jor-cartao .nada { font-size: 13px; opacity: .6; margin: 0; }
-
-  .jor-tudo { max-width: 720px; margin: 0 auto; }
-  .jor-tudo > summary {
-    cursor: pointer; font-size: 13px; padding: 8px 0;
-    border-top: 1px solid rgba(0,0,0,.1);
-  }
-
-  /* ---------- Jornada Dalmóbile ---------- */
-  .jor-filtros {
-    display: flex; align-items: center; gap: 10px;
-    flex-wrap: wrap; margin: 0 0 18px;
-  }
-  .jor-filtros label { font-size: 13px; opacity: .75; }
-  .jor-filtros select { flex: 0 1 260px; }
-  .jor-conta { font-size: 12px; opacity: .6; margin-left: auto; }
-
-  .jor-fase {
-    margin: 26px 0 12px; padding: 0 0 8px;
-    border-bottom: 1px solid rgba(0,0,0,.08);
-  }
-  .jor-fase:first-child { margin-top: 0; }
-  .jor-fase h3 { margin: 0 0 4px; font-size: 15px; }
-  .jor-fase .num {
-    display: inline-block; min-width: 26px;
-    font-variant-numeric: tabular-nums; opacity: .45;
-  }
-  .jor-fase p { margin: 0; font-size: 13px; opacity: .72; max-width: 70ch; }
-
-  .jor-passo {
-    border-left: 4px solid #ccc; border-radius: 6px;
-    padding: 12px 14px; margin: 10px 0;
-    background: #fafafa;
-  }
-  .jor-passo h4 { margin: 0 0 2px; font-size: 14px; }
-  .jor-passo .quem {
     font-size: 11px; text-transform: uppercase;
-    letter-spacing: .04em; opacity: .8;
+    letter-spacing: .06em; opacity: .7;
   }
-  .jor-passo .oque { margin: 8px 0 0; font-size: 13px; max-width: 78ch; }
+  .jor-cartao .nada { font-size: 13px; opacity: .6; margin: 16px 20px; }
+  .jor-cartao .sub.secao {
+    margin: 0; padding: 12px 20px 8px;
+    border-top: 1px solid var(--linha); background: var(--papel);
+  }
 
-  /* O desvio não é o caminho normal, e a tela diz isso sem
-     precisar de legenda: tracejado em vez de cheio. */
-  .jor-passo.desvio { border-left-style: dashed; background: transparent; }
-  .jor-passo.desvio h4::before { content: 'desvio · '; opacity: .5; font-weight: normal; }
+  /* ---- um passo ---- */
+  .jor-passo { padding: 16px 20px; border-top: 1px solid var(--linha); }
+  .jor-cartao .jor-passo:first-of-type { border-top: 0; }
 
-  /* Fechado: uma linha. É o que faz 51 passos caberem na tela
-     quando a pessoa filtra pelo cargo dela — o resto continua
-     visível, porque saber o que acontece em volta é metade da
-     utilidade. */
-  .jor-passo.resumido { padding: 7px 14px; background: transparent; opacity: .62; }
-  .jor-passo.resumido .oque,
-  .jor-passo.resumido .jor-fala,
-  .jor-passo.resumido .jor-linha,
-  .jor-passo.resumido .jor-cuidado { display: none; }
+  .jor-passo h4 { margin: 3px 0 0; font-size: 15px; letter-spacing: -.005em; }
+  .jor-passo .quem {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em;
+  }
+  /* A cor do cargo mora num ponto, não num fundo. */
+  .jor-passo .quem::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: currentColor; flex: 0 0 auto;
+  }
+  .jor-passo .oque { margin: 7px 0 0; font-size: 13.5px; line-height: 1.55; max-width: 62ch; opacity: .88; }
 
+  .jor-passo.desvio { background: var(--papel); }
+  .jor-passo.desvio h4::before {
+    content: 'desvio'; display: inline-block; margin-right: 8px;
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em;
+    padding: 2px 6px; border: 1px solid var(--linha); border-radius: 3px;
+    vertical-align: 2px; font-weight: 500; opacity: .6;
+  }
+
+  .jor-passo.resumido { padding: 9px 20px; opacity: .55; }
+  .jor-passo.resumido .oque, .jor-passo.resumido .jor-fala,
+  .jor-passo.resumido .jor-linha, .jor-passo.resumido .jor-cuidado,
+  .jor-passo.resumido .jor-niveis { display: none; }
+
+  /* ---- a fala: é uma mensagem, e parece uma ---- */
   .jor-fala {
-    margin: 10px 0 0; padding: 10px 12px;
-    background: #fff; border: 1px solid rgba(0,0,0,.1); border-radius: 5px;
+    margin: 12px 0 0; padding: 12px 14px;
+    background: var(--papel);
+    border: 1px solid var(--linha);
+    border-radius: 10px 10px 10px 3px;
+    max-width: 62ch;
   }
   .jor-fala .rot {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
-    opacity: .6; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; opacity: .62;
   }
-  .jor-fala p { margin: 0; font-size: 13px; line-height: 1.5; max-width: 72ch; }
-  .jor-fala button { margin-left: auto; font-size: 11px; padding: 3px 9px; cursor: pointer; }
+  .jor-fala p { margin: 0; font-size: 13.5px; line-height: 1.6; }
+  .jor-fala button {
+    margin-left: auto; font: inherit; font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 4px 10px; cursor: pointer;
+    border: 1px solid var(--linha); border-radius: 20px;
+    background: #fff; color: inherit;
+  }
+  .jor-fala button:hover { background: var(--grafite); color: var(--papel); border-color: var(--grafite); }
 
   .jor-selo {
-    display: inline-block; font-size: 10px; padding: 1px 6px;
-    border-radius: 3px; text-transform: uppercase; letter-spacing: .04em;
+    display: inline-block; font-size: 9.5px; padding: 2px 7px;
+    border-radius: 20px; text-transform: uppercase; letter-spacing: .06em;
+    white-space: nowrap;
   }
-  .jor-selo.rascunho { background: #ffdc4a; color: #5a4600; }
-  .jor-selo.pendente { background: #eee; color: #555; }
-  .jor-selo.confirmar { background: #ffdc4a; color: #5a4600; }
+  .jor-selo.rascunho  { background: #ffe9a8; color: #6b5200; }
+  .jor-selo.confirmar { background: #ffe9a8; color: #6b5200; }
+  .jor-selo.pendente  { background: rgba(43,43,43,.07); color: #5b5b5b; }
 
-  .jor-linha { margin: 9px 0 0; font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
-  .jor-linha > b { font-weight: 600; opacity: .55; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; }
+  /* ---- linhas de apoio ---- */
+  .jor-linha {
+    margin: 11px 0 0; font-size: 12.5px;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline;
+  }
+  .jor-linha > b {
+    flex: 0 0 92px; font-weight: 600; opacity: .5;
+    text-transform: uppercase; font-size: 9.5px; letter-spacing: .06em;
+  }
+  .jor-linha > span { flex: 1 1 0; min-width: 0; }
+
+  /* Os chips moram num span próprio, que é quem recebe o flex:1
+     da linha. Soltos como filhos da .jor-linha eles encolhiam
+     abaixo do próprio texto e um escrevia por cima do outro. */
+  .jor-linha > span.chips {
+    display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+  }
 
   .jor-mat {
-    display: inline-block; font-size: 12px; padding: 2px 9px;
-    border: 1px solid rgba(0,0,0,.18); border-radius: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    flex: 0 1 auto; max-width: 100%; min-width: 0;
+    font: inherit; font-size: 12.5px; padding: 4px 11px;
+    border: 1px solid var(--linha); border-radius: 20px;
     background: #fff; cursor: pointer; text-decoration: none; color: inherit;
   }
-  .jor-mat.falta { border-style: dashed; cursor: default; opacity: .7; }
+  .jor-mat > span {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .jor-mat::before { flex: 0 0 auto; }
 
-  .jor-cuidado {
-    margin: 10px 0 0; padding: 9px 11px; font-size: 12.5px;
-    background: #fff8e1; border-left: 3px solid #e0b400; border-radius: 4px;
-    max-width: 78ch;
+  /* O vídeo não é "mais um material": é o que o cliente recebe.
+     Fundo grafite para ele ganhar a linha. */
+  .jor-mat.video {
+    background: var(--grafite); color: #fff; border-color: var(--grafite);
+  }
+  .jor-mat.video::before { content: '\25B6'; opacity: .8; font-size: 9px; }
+  .jor-mat.video .previa {
+    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    opacity: .72; border-left: 1px solid rgba(255,255,255,.3);
+    padding-left: 7px; margin-left: 1px; flex: 0 0 auto;
   }
 
-  .jor-niveis { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; }
-  .jor-niveis li { margin: 2px 0; }
+  .jor-pasta {
+    display: inline-block; margin-left: 6px; font-size: 12.5px;
+    color: inherit; opacity: .55; text-underline-offset: 3px;
+  }
+  .jor-pasta:hover { opacity: 1; }
+  .jor-pasta::before { content: '\2197\00a0'; }
+  .jor-mat:hover { border-color: var(--grafite); }
+  .jor-mat::before { content: '\2197'; font-size: 11px; opacity: .45; }
+  .jor-mat.tela::before { content: '\271A'; }
+  .jor-mat.falta {
+    border-style: dashed; cursor: default; opacity: .62; background: transparent;
+  }
+  .jor-mat.falta:hover { border-color: var(--linha); }
+  .jor-mat.falta::before { content: '\2026'; }
+
+  .jor-cuidado {
+    margin: 12px 0 0; padding: 11px 13px; font-size: 12.5px; line-height: 1.55;
+    background: #fffbe9; border: 1px solid #f0e2b0; border-radius: 8px;
+    max-width: 62ch;
+  }
+
+  .jor-niveis { margin: 9px 0 0; padding-left: 20px; font-size: 12.5px; line-height: 1.55; }
+  .jor-niveis li { margin: 3px 0; }
+
+  /* ---- o fluxo inteiro, fechado ---- */
+  .jor-tudo { max-width: 660px; margin: 0 auto; }
+  .jor-tudo > summary {
+    cursor: pointer; font-size: 12.5px; padding: 12px 0;
+    border-top: 1px solid var(--linha); opacity: .72;
+  }
+  .jor-tudo > summary:hover { opacity: 1; }
+
+  .jor-filtros { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 18px; }
+  .jor-filtros label { font-size: 12.5px; opacity: .7; }
+  .jor-filtros select { flex: 0 1 250px; }
+  .jor-conta { font-size: 11.5px; opacity: .55; margin-left: auto; }
+
+  .jor-fase { margin: 24px 0 10px; padding: 0 0 9px; border-bottom: 1px solid var(--linha); }
+  .jor-fase:first-child { margin-top: 0; }
+  .jor-fase h3 { margin: 0 0 3px; font-size: 14px; }
+  .jor-fase .num {
+    display: inline-block; min-width: 28px;
+    font-variant-numeric: tabular-nums; opacity: .4;
+  }
+  .jor-fase p { margin: 0; font-size: 12.5px; line-height: 1.5; opacity: .7; max-width: 64ch; }
+
+  /* No fluxo inteiro os passos ficam soltos, sem o cartão. */
+  #jornada-trilha .jor-passo {
+    border: 1px solid var(--linha); border-left-width: 3px;
+    border-radius: 8px; margin: 9px 0; padding: 14px 16px;
+  }
+  #jornada-trilha .jor-passo.resumido { padding: 8px 16px; }
+
+  @media (max-width: 620px) {
+    .jor-linha > b { flex: 0 0 100%; }
+    .jor-cartao > .topo, .jor-passo { padding-left: 15px; padding-right: 15px; }
+  }
 
   .campo { margin-bottom: 15px; }
   .campo > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
@@ -688,6 +795,7 @@
       <p class="aviso-aba" style="text-align:left;margin:0 0 18px">
         O caminho do projeto do cliente. Escolha um marco para ver o que
         acontece nele, o que dizer e qual material usar.
+        <a class="jor-pasta" id="jor-pasta" target="_blank" rel="noopener">todas as peças do vídeo no Drive</a>
       </p>
 
       <div class="jor-trilha-caixa">
@@ -1366,6 +1474,59 @@ function acharItemDaJornada(id) {
       || null;
 }
 
+/* O rótulo vai num <span> porque é ele que corta com reticências
+   quando o nome é longo. No chip direto, o ::before do ícone
+   entraria na conta e o ícone sumiria antes do texto. */
+function rotuloDoChip(texto) {
+  const s = document.createElement('span');
+  s.textContent = texto;
+  return s;
+}
+
+/* O trecho do vídeo é o material mais importante do passo: é o
+   que o cliente recebe. Por isso ele abre o arquivo, e não só
+   diz o número. Sem url, volta a ser pendência — um chip que
+   não abre nada faria a pessoa achar que o problema é dela. */
+function chipDoTrecho(t) {
+  if (!t) return null;
+
+  if (!t.url) {
+    const s = document.createElement('span');
+    s.className = 'jor-mat falta';
+    s.appendChild(rotuloDoChip(t.n + ' · ' + t.nome));
+    s.title = t.arquivo + ' — ainda não foi gerado.';
+    return s;
+  }
+
+  const a = document.createElement('a');
+  a.className = 'jor-mat video';
+  a.href = t.url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.title = t.arquivo + ' · ' + t.dura;
+  a.appendChild(rotuloDoChip(t.n + ' · ' + t.nome + ' (' + t.dura + ')'));
+
+  if (t.previa) {
+    const p = document.createElement('span');
+    p.className = 'previa';
+    p.textContent = 'prévia';
+    a.appendChild(p);
+  }
+  return a;
+}
+
+/* Dois materiais do mesmo passo podem ter o MESMO nome e serem
+   coisas diferentes — os dois "WhatsApp da loja" são números de
+   lojas diferentes. Na Central cada um aparece dentro da grade
+   da sua loja; aqui os dois aparecem lado a lado, e sem a loja
+   no rótulo o consultor manda o número errado. */
+function nomeDoChip(item) {
+  const l = item.lojas || [];
+  if (l.length !== 1) return item.nome;
+  const loja = LOJAS.filter(function (x) { return x.id === l[0]; })[0];
+  return loja ? (item.nome + ' · ' + loja.nome) : item.nome;
+}
+
 function chipDeMaterial(m) {
   /* Pendente: o material não existe ainda. Um botão que não
      baixa nada faz a pessoa achar que o problema é dela, então
@@ -1374,7 +1535,7 @@ function chipDeMaterial(m) {
   if (m && m.pendente) {
     const s = document.createElement('span');
     s.className = 'jor-mat falta';
-    s.textContent = m.pendente;
+    s.appendChild(rotuloDoChip(m.pendente));
     s.title = (m.oque || '') + ' — ainda não está na Central.';
     return s;
   }
@@ -1387,7 +1548,7 @@ function chipDeMaterial(m) {
        digitação no jornada.js para sempre. */
     const s = document.createElement('span');
     s.className = 'jor-mat falta';
-    s.textContent = m;
+    s.appendChild(rotuloDoChip(m));
     s.title = 'Este id não existe na Central. Confira o jornada.js.';
     return s;
   }
@@ -1398,14 +1559,14 @@ function chipDeMaterial(m) {
     a.href = item.url;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.textContent = item.nome;
+    a.appendChild(rotuloDoChip(nomeDoChip(item)));
     return a;
   }
 
   const b = document.createElement('button');
   b.type = 'button';
-  b.className = 'jor-mat';
-  b.textContent = item.nome;
+  b.className = 'jor-mat tela';
+  b.appendChild(rotuloDoChip(nomeDoChip(item)));
   b.title = 'Abrir na aba ' + item.aba;
   b.addEventListener('click', function () { trocarAba(item.aba); });
   return b;
@@ -1422,7 +1583,10 @@ function linhaDaJornada(rotulo, conteudo) {
     s.textContent = conteudo;
     d.appendChild(s);
   } else {
-    conteudo.forEach(function (n) { d.appendChild(n); });
+    const caixa = document.createElement('span');
+    caixa.className = 'chips';
+    conteudo.forEach(function (n) { if (n) caixa.appendChild(n); });
+    d.appendChild(caixa);
   }
   return d;
 }
@@ -1433,11 +1597,14 @@ function cartaoDoPasso(passo, resumido) {
   const art = document.createElement('article');
   art.className = 'jor-passo' + (passo.desvio ? ' desvio' : '') + (resumido ? ' resumido' : '');
   art.style.borderLeftColor = cargo.borda;
-  if (!resumido && !passo.desvio) art.style.background = cargo.fundo;
 
+  /* ⚠️ A COR DO CARGO É UM PONTO, NÃO UM FUNDO. Pintando o
+     cartão inteiro — como estava — a tela ficava com seis fundos
+     coloridos brigando entre si, e nada ganhava destaque. O
+     ponto diz de quem é o passo sem tomar a página. */
   const quem = document.createElement('div');
   quem.className = 'quem';
-  quem.style.color = cargo.texto;
+  quem.style.color = cargo.borda;
   quem.textContent = cargo.nome;
   art.appendChild(quem);
 
@@ -1537,8 +1704,7 @@ function cartaoDoPasso(passo, resumido) {
 
   const trecho = JORNADA.trechoDe(passo.trecho);
   if (trecho) {
-    art.appendChild(linhaDaJornada('Trecho do vídeo',
-      trecho.n + ' · ' + trecho.nome + ' (' + trecho.dura + ')'));
+    art.appendChild(linhaDaJornada('Vídeo', [chipDoTrecho(trecho)]));
   }
 
   if ((passo.materiais || []).length) {
@@ -1794,17 +1960,22 @@ function desenharTrecho(id) {
   const cx = document.createElement('div');
   cx.className = 'jor-cartao';
 
+  const topo = document.createElement('div');
+  topo.className = 'topo';
+
   const sub = document.createElement('div');
   sub.className = 'sub';
   const quem = JORNADA.cargoDe(trecho.quem);
   sub.textContent = 'Etapa ' + trecho.n + ' · quem manda: ' + quem.nome
                   + ' · trecho de ' + trecho.dura;
-  sub.style.color = quem.texto;
-  cx.appendChild(sub);
+  sub.style.color = quem.borda;
+  topo.appendChild(sub);
 
   const h = document.createElement('h3');
   h.textContent = trecho.nome;
-  cx.appendChild(h);
+  topo.appendChild(h);
+
+  cx.appendChild(topo);
 
   if (passo) {
     /* O cartão do passo já sabe desenhar fala, material, sistema
@@ -1826,8 +1997,7 @@ function desenharTrecho(id) {
 
     if (irmaos.length) {
       const t = document.createElement('div');
-      t.className = 'sub';
-      t.style.margin = '14px 0 2px';
+      t.className = 'sub secao';
       t.textContent = 'Nesta mesma fase';
       cx.appendChild(t);
       irmaos.forEach(function (p) { cx.appendChild(cartaoDoPasso(p, false)); });
@@ -1868,6 +2038,13 @@ function desenharTrecho(id) {
 
   desenharJornada(sel.value);
   desenharTrilha();
+
+  /* A pasta do Drive com os cortes, as vinhetas e o projeto do
+     After. Fica no topo porque quem precisa de uma peça que não
+     está na Central precisa saber onde ela mora. */
+  const pasta = el('jor-pasta');
+  if (pasta && JORNADA.PASTA_DO_VIDEO) pasta.href = JORNADA.PASTA_DO_VIDEO;
+  else if (pasta) pasta.remove();
 })();
 
 

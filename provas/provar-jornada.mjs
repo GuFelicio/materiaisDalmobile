@@ -330,24 +330,147 @@ prova('18. todo passo tem título e descrição', (J) => {
 });
 
 
+/* ------------------------------------------------------------
+   Os nove links do vídeo foram colados UM A UM, à mão, de uma
+   lista do Drive. É o tipo de dado em que o erro não aparece:
+   o chip abre, o vídeo toca, e só quem conhece o corte percebe
+   que a etapa 6 está mostrando a etapa 7. As três provas abaixo
+   existem por causa disso.
+   ------------------------------------------------------------ */
+prova('19. todo trecho tem vídeo, e o vídeo é um arquivo do Drive', (J) => {
+  const ruins = [];
+  Object.keys(J.TRECHOS).forEach(function (k) {
+    const t = J.TRECHOS[k];
+    if (!t.url) { ruins.push(k + ' (sem vídeo)'); return; }
+    if (!/^https:\/\/drive\.google\.com\/file\/d\/[\w-]{20,}\/view$/.test(t.url)) {
+      ruins.push(k + ' → ' + t.url);
+    }
+  });
+  vazio(ruins, 'trechos sem link de vídeo válido');
+});
+
+prova('20. dois trechos nunca apontam para o mesmo vídeo', (J) => {
+  const vistos = new Map();
+  const repetidos = [];
+  Object.keys(J.TRECHOS).forEach(function (k) {
+    const u = J.TRECHOS[k].url;
+    if (!u) return;
+    if (vistos.has(u)) repetidos.push(vistos.get(u) + ' e ' + k);
+    else vistos.set(u, k);
+  });
+  vazio(repetidos, 'trechos apontando para o mesmo arquivo');
+});
+
+prova('21. todo vídeo de prévia está declarado como prévia', (J) => {
+  /* Os renders de hoje são prévias. Um link sem esse aviso vira
+     uma prévia mandada para o cliente — e a tela só escreve
+     "prévia" porque este campo diz que é. */
+  const calados = Object.keys(J.TRECHOS).filter(function (k) {
+    const t = J.TRECHOS[k];
+    return t.url && t.previa !== true && t.previa !== false;
+  });
+  vazio(calados, 'trechos com vídeo que não dizem se é prévia ou corte final');
+});
+
+prova('23. dois materiais do mesmo passo nunca aparecem com o mesmo rótulo', (J, base) => {
+  /* Na Central cada item aparece dentro da grade da sua loja, e
+     dois "WhatsApp da loja" não se confundem. Aqui os dois ficam
+     lado a lado no mesmo passo: rótulos iguais = o consultor
+     manda o número da outra loja. A tela resolve acrescentando a
+     loja ao rótulo; esta prova é quem garante que resolveu. */
+  const html = readFileSync(join(base, 'index.html'), 'utf8');
+
+  const rotulo = new Map();
+  const re = /nome:\s*'([^']+)'([\s\S]{0,400}?)\bid:\s*'([a-z0-9-]+)'/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const lojas = (m[2].match(/lojas:\s*\[([^\]]*)\]/) || [, ''])[1]
+                    .split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    rotulo.set(m[3], lojas.length === 1 ? (m[1] + ' · ' + lojas[0]) : m[1]);
+  }
+
+  const ruins = [];
+  J.PASSOS.forEach(function (p) {
+    const vistos = new Map();
+    (p.materiais || []).forEach(function (mat) {
+      if (!mat || typeof mat !== 'string') return;
+      const r = rotulo.get(mat);
+      if (!r) return;
+      if (vistos.has(r)) ruins.push(p.id + ': ' + vistos.get(r) + ' e ' + mat + ' → "' + r + '"');
+      else vistos.set(r, mat);
+    });
+  });
+  vazio(ruins, 'passos com dois materiais de rótulo igual');
+});
+
+prova('22. nenhum passo declara o mesmo campo duas vezes', (J, base) => {
+  /* Em objeto literal a última chave ganha calada. Um `materiais`
+     repetido apaga o de cima sem erro nenhum — foi assim que uma
+     lista de materiais sumiu neste arquivo. Só o texto pega. */
+  const texto = readFileSync(join(base, 'jornada.js'), 'utf8');
+  const blocos = texto.split(/\n    \{ id: '/).slice(1);
+  const CHAVES = ['fase', 'ordem', 'cargo', 'titulo', 'oque', 'fala',
+                  'falaFonte', 'sistema', 'materiais', 'cuidado', 'trecho'];
+  const ruins = [];
+  blocos.forEach(function (b) {
+    const quem = (b.match(/^[a-z0-9-]+/) || ['?'])[0];
+    CHAVES.forEach(function (c) {
+      /* Exatamente seis espaços: é a coluna dos campos do passo.
+         Objeto aninhado dentro de `materiais` fica muito mais à
+         direita, e o `oque:` de dentro dele não é este `oque:`. */
+      const n = (b.match(new RegExp('\\n {6}' + c + ':', 'g')) || []).length;
+      if (n > 1) ruins.push(quem + ' · ' + c + ' ×' + n);
+    });
+  });
+  vazio(ruins, 'passos com campo repetido');
+});
+
+
 /* ============================================================
    OS DEFEITOS
    ============================================================ */
 const DEFEITOS = [
   { nome: 'um id de material com erro de digitação',
     arquivo: 'jornada.js',
-    de: `      materiais: ['acompanhe-pedido',`,
-    para: `      materiais: ['acompanhe-pedidos',` },
+    de: `      materiais: ['acompanhe-pedido'],`,
+    para: `      materiais: ['acompanhe-pedidos'],` },
 
   { nome: 'uma pendência sem explicação',
     arquivo: 'jornada.js',
-    de: `{ pendente: 'jornada_05_producao.mp4', oque: 'Trecho 5 do vídeo da jornada (25 s).' }`,
-    para: `{ pendente: 'jornada_05_producao.mp4' }` },
+    de: `[{ pendente: 'Termo de Autorização de Uso de Imagem',
+                    oque: 'Ficha 18. Texto ainda a validar com o jurídico.' }]`,
+    para: `[{ pendente: 'Termo de Autorização de Uso de Imagem' }]` },
 
   { nome: 'o trecho da aprovação passa para o Executivo (o erro do quadro antigo)',
     arquivo: 'jornada.js',
-    de: `    t4: { n: '4', nome: 'Aprovação do projeto',  arquivo: 'jornada_04_aprovacao.mp4', dura: '22 s', quem: 'consultor' },`,
-    para: `    t4: { n: '4', nome: 'Aprovação do projeto',  arquivo: 'jornada_04_aprovacao.mp4', dura: '22 s', quem: 'executivo' },` },
+    de: `dura: '22 s', quem: 'consultor',`,
+    para: `dura: '22 s', quem: 'executivo',` },
+
+  { nome: 'dois trechos ficam com o mesmo vídeo (um id colado duas vezes)',
+    arquivo: 'jornada.js',
+    de: `previa: true, url: noDrive('1d8DS0CbmW8Fzpknkjmcwne7EOqi35lth') },`,
+    para: `previa: true, url: noDrive('1Hv0ufbe-2vE1OMKRqqS5Mj94VmLAO_Dk') },` },
+
+  { nome: 'um link do Drive volta com um caractere a menos',
+    arquivo: 'jornada.js',
+    de: `url: noDrive('1usoJK9Ltzb6WTOUklMhHTrPW-XVvfa5t')`,
+    para: `url: 'https://drive.google.com/file/d/1usoJK9Ltzb6WTOUklMhHTrPW-XVvfa5t'` },
+
+  { nome: 'uma prévia perde o aviso de que é prévia',
+    arquivo: 'jornada.js',
+    de: `    t0: { n: '0', nome: 'Versão completa',       arquivo: 'jornada_00_completo.mp4',  dura: '~3 min 30 s', quem: 'gerente',
+          previa: true,`,
+    para: `    t0: { n: '0', nome: 'Versão completa',       arquivo: 'jornada_00_completo.mp4',  dura: '~3 min 30 s', quem: 'gerente',` },
+
+  { nome: 'o WhatsApp de Caraguá sai com a loja de SJC (erro de copiar e colar)',
+    arquivo: 'index.html',
+    de: `        url: 'https://wa.me/5512996021234', tipo: 'ZAP', lojas: ['cgt'], id: 'zap-loja-cgt' }`,
+    para: `        url: 'https://wa.me/5512996021234', tipo: 'ZAP', lojas: ['sjc'], id: 'zap-loja-cgt' }` },
+
+  { nome: 'um passo ganha um `materiais` repetido e o de cima some',
+    arquivo: 'jornada.js',
+    de: `      materiais: ['agendamento', 'montagem'],`,
+    para: `      materiais: ['agendamento', 'montagem'],\n      materiais: [],` },
 
   { nome: 'uma fala perde a procedência',
     arquivo: 'jornada.js',
