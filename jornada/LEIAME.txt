@@ -1,0 +1,20 @@
+AS ILUSTRACOES DA TRILHA
+
+Oito arquivos, as mesmas cenas do video da jornada:
+
+  01.png  Avaliacao do ambiente
+  02.png  Medicao tecnica
+  03.png  Projeto executivo
+  04.png  Aprovacao do projeto
+  05.png  Producao
+  06.png  Entrega e montagem
+  07.png  Vistoria
+  08.png  Entrega da caixinha
+
+PNG com fundo transparente, cerca de 380 x 320 px (o dobro do
+tamanho na tela, para ficar nitido em retina). O traco grafite do
+sketch, sem fundo de papel -- o fundo da Central ja e claro.
+
+Enquanto o arquivo nao existe, o marco mostra uma moldura
+tracejada com o nome da etapa. Isso e de proposito: pendencia
+visivel vale mais que um quadrado vazio que parece defeito.
