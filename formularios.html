@@ -162,7 +162,7 @@
   </a>
 
   <section class="painel">
-    <h2>Pedir o checklist de eletros</h2>
+    <h2>Pedir os itens extras</h2>
     <p class="desc">Gera um link para o cliente informar marca e medidas dos
        aparelhos que convivem com os móveis. Ele preenche pelo celular, aos
        poucos, e você acompanha aqui.</p>
@@ -571,6 +571,16 @@ function cartaoDoc(d) {
     gaveta.classList.remove('oculto');
   }));
 
+  acoes.appendChild(botao('versões', async () => {
+    if (!gaveta.classList.contains('oculto') && gaveta.dataset.tipo === 'vers') {
+      gaveta.classList.add('oculto'); gaveta.innerHTML = ''; return;
+    }
+    gaveta.innerHTML = '';
+    gaveta.dataset.tipo = 'vers';
+    gaveta.appendChild(await verVersoes(d));
+    gaveta.classList.remove('oculto');
+  }));
+
   acoes.appendChild(botao('baixar PDF', async (b) => {
     const antes = b.textContent;
     b.disabled = true;
@@ -579,6 +589,13 @@ function cartaoDoc(d) {
     try {
       const bytes = await PDF102.montar(d);
       baixar(bytes, PDF102.nomeDoArquivo(d));
+
+      /* A versão vem DEPOIS do download, e de propósito: se o
+         registro falhar, a pessoa já tem o PDF na mão. Gravar
+         antes trocaria "o histórico não anotou" por "o PDF não
+         baixou", e o segundo é o que ela veio fazer aqui. */
+      await anotarVersaoDoPdf(d, bytes);
+
     } catch (e) {
       console.error(e);
       alert('Não consegui montar o PDF: ' + (e.message || e) +
@@ -640,7 +657,7 @@ function seloDe(d) {
 
 function resumoDeProgresso(d) {
   const dados = d.dados || {};
-  if (dados.semItensExtras) return 'sem eletros';
+  if (dados.semItensExtras) return 'sem itens extras';
 
   let total = 0, ok = 0, links = 0;
   (dados.ambientes || []).forEach((a) => (a.itens || []).forEach((i) => {
@@ -681,6 +698,174 @@ function dominio(url) {
    Respostas
    ------------------------------------------------------------ */
 
+/* ============================================================
+   AS VERSÕES DO CHECKLIST
+   ------------------------------------------------------------
+   O Checklist de Eletros é o documento em que a troca acontece:
+   o cliente informa a geladeira, o projeto é feito em cima
+   daquela medida, e semanas depois ele compra outra. O roteiro
+   do vídeo avisa duas vezes que isso muda as medidas e pode
+   mudar o prazo.
+
+   Até aqui o documento não guardava versão nenhuma — tinha o
+   estado de agora e mais nada —, então esse aviso não tinha
+   como ser cobrado: não havia o que mostrar.
+
+   ⚠️ GUARDAR NÃO BASTA, TEM DE DAR PARA VER. Uma tabela de
+   versões que ninguém abre responde a mesma coisa que não ter
+   tabela. Por isso a gaveta não lista "versão 1, versão 2": ela
+   mostra O QUE MUDOU de uma para a outra, item por item.
+   ============================================================ */
+
+async function anotarVersaoDoPdf(d, bytes) {
+  const sb = window.dalmobileAuth && window.dalmobileAuth.cliente;
+  if (!sb || !d || !d.id) return;
+
+  let hash = null;
+  try {
+    if (window.Campo && window.Campo.hashDoPdf) hash = await window.Campo.hashDoPdf(bytes);
+  } catch (e) { hash = null; }
+
+  try {
+    const r = await sb.rpc('registrar_versao_pdf', {
+      alvo: d.id, dados: d.dados || {}, hash: hash
+    });
+    if (r.error) throw r.error;
+  } catch (e) {
+    /* NÃO INTERROMPE NADA. O PDF já baixou. Um alerta aqui
+       culparia a pessoa por algo que ela não fez e não pode
+       resolver. */
+    console.warn('A versão não foi anotada agora: ' + ((e && e.message) || e));
+  }
+}
+
+
+async function verVersoes(d) {
+  const caixa = document.createElement('div');
+  caixa.className = 'resp';
+
+  const sb = window.dalmobileAuth && window.dalmobileAuth.cliente;
+  if (!sb) { caixa.appendChild(recado('Sem sessão para ler o histórico.')); return caixa; }
+
+  let linhas = [];
+  try {
+    const r = await sb.from('formulario_versoes')
+      .select('numero, motivo, criada_em, dados')
+      .eq('formulario', d.id)
+      .order('numero', { ascending: true });
+    if (r.error) throw r.error;
+    linhas = r.data || [];
+  } catch (e) {
+    caixa.appendChild(recado('Não consegui ler o histórico: ' + ((e && e.message) || e)));
+    return caixa;
+  }
+
+  if (!linhas.length) {
+    caixa.appendChild(recado('Ainda não há versão guardada. A primeira nasce quando '
+      + 'alguém baixar o PDF deste documento.'));
+    return caixa;
+  }
+
+  /* O comparador mora no lib/mudancas.js, e é importado aqui em
+     vez de copiado: é a parte que mais merece prova, e no meio
+     do HTML a prova teria de arrancar o texto da função por
+     regex — que quebra calado quando alguém renomeia algo. */
+  let oQueMudou;
+  try {
+    oQueMudou = (await import('./lib/mudancas.js')).oQueMudou;
+  } catch (e) {
+    caixa.appendChild(recado('Não consegui carregar o comparador de versões.'));
+    return caixa;
+  }
+
+  /* Da mais nova para a mais velha: quem abre quer saber o que
+     mudou por último. */
+  for (let i = linhas.length - 1; i >= 0; i--) {
+    caixa.appendChild(cartaoDeVersao(linhas[i], i > 0 ? linhas[i - 1] : null, oQueMudou));
+  }
+
+  return caixa;
+}
+
+function recado(texto) {
+  const p = document.createElement('p');
+  p.className = 'msg';
+  p.textContent = texto;
+  return p;
+}
+
+const MOTIVO_POR_EXTENSO = {
+  pdf: 'PDF gerado',
+  assinatura: 'assinado',
+  correcao: 'correção',
+  recusa: 'recusado',
+  reabertura: 'reaberto',
+  manual: 'anotação manual'
+};
+
+function cartaoDeVersao(v, anterior, oQueMudou) {
+  const bloco = document.createElement('div');
+  bloco.style.cssText = 'border-top:1px solid rgba(0,0,0,.1);padding:10px 0;';
+
+  const topo = document.createElement('div');
+  topo.style.cssText = 'font-size:12px;opacity:.7;margin-bottom:6px;';
+  topo.textContent = 'versão ' + v.numero
+    + ' · ' + (MOTIVO_POR_EXTENSO[v.motivo] || v.motivo)
+    + ' · ' + quandoFoi(v.criada_em);
+  bloco.appendChild(topo);
+
+  if (!anterior) {
+    bloco.appendChild(recado('Primeira versão guardada.'));
+    return bloco;
+  }
+
+  const mudancas = oQueMudou(anterior.dados || {}, v.dados || {});
+
+  if (!mudancas.length) {
+    /* Com a trava do registrar_versao_pdf isto não deveria
+       acontecer para motivo=pdf. Aparecendo, é sinal de que a
+       trava não está valendo — e é melhor dizer do que esconder. */
+    bloco.appendChild(recado('Nada mudou em relação à versão anterior.'));
+    return bloco;
+  }
+
+  const lista = document.createElement('ul');
+  lista.style.cssText = 'margin:0;padding-left:18px;font-size:13px;';
+
+  mudancas.forEach(function (m) {
+    const li = document.createElement('li');
+    li.style.margin = '3px 0';
+
+    const onde = document.createElement('b');
+    onde.textContent = m.onde + ': ';
+    li.appendChild(onde);
+
+    if (m.de && m.para) {
+      const de = document.createElement('span');
+      de.style.cssText = 'text-decoration:line-through;opacity:.6;';
+      de.textContent = m.de;
+      li.appendChild(de);
+      li.appendChild(document.createTextNode(' → ' + m.para));
+    } else if (m.para) {
+      li.appendChild(document.createTextNode('passou a ser ' + m.para));
+    } else {
+      li.appendChild(document.createTextNode('deixou de ser ' + m.de));
+    }
+
+    lista.appendChild(li);
+  });
+
+  bloco.appendChild(lista);
+  return bloco;
+}
+
+function quandoFoi(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 'sem data';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+       + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function verRespostas(d) {
   const caixa = document.createElement('div');
   caixa.className = 'resp';
@@ -690,7 +875,7 @@ function verRespostas(d) {
   if (dados.semItensExtras) {
     const p = document.createElement('p');
     p.className = 'msg';
-    p.textContent = 'O cliente declarou que não tem eletros para informar.';
+    p.textContent = 'O cliente declarou que não tem itens extras para informar.';
     caixa.appendChild(p);
     return caixa;
   }

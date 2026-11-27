@@ -6,9 +6,10 @@ node provas/provar-assinado-drive.mjs  --defeitos
 node provas/provar-dados.mjs           --defeitos
 node provas/provar-cliente-seletor.mjs --defeitos
 node provas/provar-jornada.mjs           --defeitos
+node provas/provar-mudancas.mjs          --defeitos
 ```
 
-Hoje: **92 provas e 63 defeitos**, todos pegos.
+Hoje: **107 provas e 75 defeitos**, todos pegos.
 
 ---
 
@@ -65,6 +66,18 @@ que não existe na Central, trecho do vídeo com o cargo errado, fala sem
 procedência, passo órfão numa fase que não existe. Nada disso aparece na tela:
 um id com erro de digitação vira um chip cinza igual ao de um material que
 ainda não foi feito.
+
+### `provar-mudancas.mjs` — 15 provas, 12 defeitos
+O comparador de versões do Checklist de Eletros. É o documento em que a troca
+acontece — o cliente informa a geladeira, o projeto é feito em cima daquela
+medida, e semanas depois ele compra outra. Guardar versões não basta: "versão
+1, versão 2, versão 3" responde a mesma coisa que não guardar. A pergunta é "o
+cliente mudou **o quê**", e quem responde é essa função.
+
+O defeito mais caro que ela pega: comparar por POSIÇÃO em vez de por ambiente +
+item. Um item acrescentado no meio empurra todos os de baixo, e a tela acusa o
+documento inteiro como mudado — trinta linhas vermelhas para uma linha que
+mudou de verdade. Quem lesse isso uma vez não leria de novo.
 
 ### `provar-cliente-seletor.mjs` — 9 provas, 6 defeitos
 ⚠️ **Esta precisa do Playwright.** Ela abre o `projeto.html` num navegador de
