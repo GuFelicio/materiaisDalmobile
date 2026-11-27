@@ -5,9 +5,10 @@ node provas/provar-foto.mjs            --defeitos
 node provas/provar-assinado-drive.mjs  --defeitos
 node provas/provar-dados.mjs           --defeitos
 node provas/provar-cliente-seletor.mjs --defeitos
+node provas/provar-jornada.mjs           --defeitos
 ```
 
-Hoje: **74 provas e 51 defeitos**, todos pegos.
+Hoje: **92 provas e 63 defeitos**, todos pegos.
 
 ---
 
@@ -56,6 +57,14 @@ registrada.
 ### `provar-dados.mjs` — 15 provas, 10 defeitos
 O `dados.js`: a deduplicação dos clientes conhecidos, o **tudo ou nada por
 ambiente** ao trazer fotos do Drive, a redução antes de subir.
+
+### `provar-jornada.mjs` — 18 provas, 12 defeitos
+O `jornada.js` é DADO, não código: ele é editado toda vez que a loja muda um
+passo, uma fala ou um material. As provas olham a integridade — id de material
+que não existe na Central, trecho do vídeo com o cargo errado, fala sem
+procedência, passo órfão numa fase que não existe. Nada disso aparece na tela:
+um id com erro de digitação vira um chip cinza igual ao de um material que
+ainda não foi feito.
 
 ### `provar-cliente-seletor.mjs` — 9 provas, 6 defeitos
 ⚠️ **Esta precisa do Playwright.** Ela abre o `projeto.html` num navegador de

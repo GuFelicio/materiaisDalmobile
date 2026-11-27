@@ -150,6 +150,93 @@
   .painel > h2 { margin: 0 0 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
   .painel > p.desc { margin: 0 0 20px; font-size: 13px; color: var(--ink-2); }
 
+  /* ---------- Jornada Dalmóbile ---------- */
+  .jor-filtros {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; margin: 0 0 18px;
+  }
+  .jor-filtros label { font-size: 13px; opacity: .75; }
+  .jor-filtros select { flex: 0 1 260px; }
+  .jor-conta { font-size: 12px; opacity: .6; margin-left: auto; }
+
+  .jor-fase {
+    margin: 26px 0 12px; padding: 0 0 8px;
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  .jor-fase:first-child { margin-top: 0; }
+  .jor-fase h3 { margin: 0 0 4px; font-size: 15px; }
+  .jor-fase .num {
+    display: inline-block; min-width: 26px;
+    font-variant-numeric: tabular-nums; opacity: .45;
+  }
+  .jor-fase p { margin: 0; font-size: 13px; opacity: .72; max-width: 70ch; }
+
+  .jor-passo {
+    border-left: 4px solid #ccc; border-radius: 6px;
+    padding: 12px 14px; margin: 10px 0;
+    background: #fafafa;
+  }
+  .jor-passo h4 { margin: 0 0 2px; font-size: 14px; }
+  .jor-passo .quem {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; opacity: .8;
+  }
+  .jor-passo .oque { margin: 8px 0 0; font-size: 13px; max-width: 78ch; }
+
+  /* O desvio não é o caminho normal, e a tela diz isso sem
+     precisar de legenda: tracejado em vez de cheio. */
+  .jor-passo.desvio { border-left-style: dashed; background: transparent; }
+  .jor-passo.desvio h4::before { content: 'desvio · '; opacity: .5; font-weight: normal; }
+
+  /* Fechado: uma linha. É o que faz 51 passos caberem na tela
+     quando a pessoa filtra pelo cargo dela — o resto continua
+     visível, porque saber o que acontece em volta é metade da
+     utilidade. */
+  .jor-passo.resumido { padding: 7px 14px; background: transparent; opacity: .62; }
+  .jor-passo.resumido .oque,
+  .jor-passo.resumido .jor-fala,
+  .jor-passo.resumido .jor-linha,
+  .jor-passo.resumido .jor-cuidado { display: none; }
+
+  .jor-fala {
+    margin: 10px 0 0; padding: 10px 12px;
+    background: #fff; border: 1px solid rgba(0,0,0,.1); border-radius: 5px;
+  }
+  .jor-fala .rot {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    opacity: .6; margin-bottom: 6px;
+  }
+  .jor-fala p { margin: 0; font-size: 13px; line-height: 1.5; max-width: 72ch; }
+  .jor-fala button { margin-left: auto; font-size: 11px; padding: 3px 9px; cursor: pointer; }
+
+  .jor-selo {
+    display: inline-block; font-size: 10px; padding: 1px 6px;
+    border-radius: 3px; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .jor-selo.rascunho { background: #ffdc4a; color: #5a4600; }
+  .jor-selo.pendente { background: #eee; color: #555; }
+  .jor-selo.confirmar { background: #ffdc4a; color: #5a4600; }
+
+  .jor-linha { margin: 9px 0 0; font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+  .jor-linha > b { font-weight: 600; opacity: .55; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; }
+
+  .jor-mat {
+    display: inline-block; font-size: 12px; padding: 2px 9px;
+    border: 1px solid rgba(0,0,0,.18); border-radius: 12px;
+    background: #fff; cursor: pointer; text-decoration: none; color: inherit;
+  }
+  .jor-mat.falta { border-style: dashed; cursor: default; opacity: .7; }
+
+  .jor-cuidado {
+    margin: 10px 0 0; padding: 9px 11px; font-size: 12.5px;
+    background: #fff8e1; border-left: 3px solid #e0b400; border-radius: 4px;
+    max-width: 78ch;
+  }
+
+  .jor-niveis { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; }
+  .jor-niveis li { margin: 2px 0; }
+
   .campo { margin-bottom: 15px; }
   .campo > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
   .campo .nota { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: -2px; margin-bottom: 6px; }
@@ -513,6 +600,7 @@
       <button type="button" role="tab" data-aba="materiais" aria-selected="false">Materiais</button>
       <button type="button" role="tab" data-aba="links"     aria-selected="false">Links</button>
       <button type="button" role="tab" data-aba="posvenda"  aria-selected="false">Pós&nbsp;venda</button>
+      <button type="button" role="tab" data-aba="jornada"   aria-selected="false">Jornada</button>
       <button type="button" role="tab" data-aba="contas"    aria-selected="false" class="oculto">Contas</button>
     </nav>
 
@@ -548,6 +636,22 @@
         link que você manda.
       </p>
       <div class="grade" id="grade-posvenda"></div>
+    </div>
+
+    <div class="painel-aba oculto" data-painel="jornada">
+      <p class="aviso-aba" style="text-align:left;margin:0 0 14px">
+        O caminho do projeto do cliente, da primeira conversa à entrega da
+        caixinha. Em cada passo: de quem é, o que acontece, o que dizer e
+        qual material usar.
+      </p>
+
+      <div class="jor-filtros">
+        <label for="jor-cargo">Ver a parte de</label>
+        <select id="jor-cargo"></select>
+        <span class="jor-conta" id="jor-conta"></span>
+      </div>
+
+      <div id="jornada-trilha"></div>
     </div>
 
     <div class="painel-aba oculto" data-painel="contas">
@@ -650,11 +754,7 @@
 <script src="vendor/pdf-lib.min.js"></script>
 <script src="vendor/fontkit.umd.min.js"></script>
 <script src="pecas.js"></script>
-<!-- Aba temporária da ação de novembro/2026. Ela se retira sozinha
-     depois de 30/11 (a data está dentro do arquivo). Para tirar do
-     repositório: apague creative-black.js, esta linha e a chamada de
-     CreativeBlack.montar() no iniciarCargos. Não há mais nada. -->
-<script src="creative-black.js"></script>
+<script src="jornada.js"></script>
 <script>
 /* ============================================================
    CONFIGURAÇÃO
@@ -966,11 +1066,6 @@ const BIBLIOTECA = [
         url: 'https://docs.google.com/presentation/d/1tiisjXgxjbPDemCt1t3hRtxlbuojQtUY/edit?usp=sharing&ouid=104061984965291092231&rtpof=true&sd=true', tipo: 'DOC', lojas: ['sjc', 'cgt'], id: 'apres-arquitetos' },
         { nome: 'Manual de Garantia e Uso', descricao: 'Manual de Garantia e de como usar os moveis adquiridos na Dalmóbile.',
         url: 'https://drive.google.com/file/d/1iLPazH48KGWEQF2S_6f6W4vMjbDQxEUx/view?usp=sharing', tipo: 'DOC', lojas: ['sjc', 'cgt'], id: 'manual-garantia' },
-        { nome: 'Apresentação Feira - Horizontal', descricao: 'Apresentação para utilização em feiras e eventos, no formato horizontal.',
-        url: 'https://drive.google.com/file/d/1dJ_rSwZbTwm8vEmByYoVBcUIDbUUuj66/view?usp=sharing', tipo: 'DOC', lojas: ['sjc', 'cgt'], id: 'apres-clientes' },
-        { nome: 'Apresentação Feira - Vertical', descricao: 'Apresentação para utilização em feiras e eventos, no formato vertical.',
-        url: 'https://drive.google.com/file/d/1E4oqmPreKLS7F5ETRgBafj7BnTmAK1PF/view?usp=sharing', tipo: 'DOC', lojas: ['sjc', 'cgt'], id: 'apres-clientes' },
-   
     ]
   },
 
@@ -1175,6 +1270,314 @@ abas.addEventListener('click', (ev) => {
   if (botao) trocarAba(botao.dataset.aba);
 });
 
+/* ============================================================
+   JORNADA DALMÓBILE
+   ------------------------------------------------------------
+   Desenha o fluxo da loja: as nove fases, os passos de cada
+   uma, e em cada passo o que dizer e qual material usar.
+
+   OS DADOS NÃO ESTÃO AQUI. Estão no jornada.js, em forma de
+   banco, porque um dia eles vão para uma tabela editada pelo
+   painel. Esta função só desenha.
+
+   ⚠️ O FILTRO É DE LEITURA, NÃO DE PERMISSÃO. Todo mundo vê o
+   fluxo todo — foi a decisão. Filtrando por cargo, os passos
+   dos outros não desaparecem: encolhem para uma linha. Saber o
+   que acontece ANTES e DEPOIS do seu passo é metade da
+   utilidade de ter o fluxo na tela; esconder o resto deixaria
+   cada um com a sua fatia e ninguém com o processo.
+   ============================================================ */
+
+/* Onde cada material mora, para o chip virar um caminho de
+   verdade em vez de um nome escrito. Três fontes porque são três
+   abas: telas, materiais e links. */
+function acharItemDaJornada(id) {
+  const naTela = (typeof CATALOGO !== 'undefined')
+    ? CATALOGO.filter(function (c) { return c.id === id; })[0] : null;
+  if (naTela) return { nome: naTela.nome, aba: 'gerar' };
+
+  const nosGrupos = function (fonte, aba) {
+    if (typeof fonte === 'undefined') return null;
+    for (let i = 0; i < fonte.length; i++) {
+      const achado = (fonte[i].itens || []).filter(function (x) { return x.id === id; })[0];
+      if (achado) return { nome: achado.nome, url: achado.url, aba: aba };
+    }
+    return null;
+  };
+
+  return nosGrupos(typeof BIBLIOTECA !== 'undefined' ? BIBLIOTECA : undefined, 'materiais')
+      || nosGrupos(typeof LINKS !== 'undefined' ? LINKS : undefined, 'links')
+      || null;
+}
+
+function chipDeMaterial(m) {
+  /* Pendente: o material não existe ainda. Um botão que não
+     baixa nada faz a pessoa achar que o problema é dela, então
+     aqui ele aparece como pendência, com o nome do arquivo que
+     vai existir. */
+  if (m && m.pendente) {
+    const s = document.createElement('span');
+    s.className = 'jor-mat falta';
+    s.textContent = m.pendente;
+    s.title = (m.oque || '') + ' — ainda não está na Central.';
+    return s;
+  }
+
+  const item = acharItemDaJornada(m);
+
+  if (!item) {
+    /* Id que não existe em nenhuma das três fontes. Aparece como
+       pendência em vez de sumir: sumir esconderia um erro de
+       digitação no jornada.js para sempre. */
+    const s = document.createElement('span');
+    s.className = 'jor-mat falta';
+    s.textContent = m;
+    s.title = 'Este id não existe na Central. Confira o jornada.js.';
+    return s;
+  }
+
+  if (item.url) {
+    const a = document.createElement('a');
+    a.className = 'jor-mat';
+    a.href = item.url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = item.nome;
+    return a;
+  }
+
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'jor-mat';
+  b.textContent = item.nome;
+  b.title = 'Abrir na aba ' + item.aba;
+  b.addEventListener('click', function () { trocarAba(item.aba); });
+  return b;
+}
+
+function linhaDaJornada(rotulo, conteudo) {
+  const d = document.createElement('div');
+  d.className = 'jor-linha';
+  const b = document.createElement('b');
+  b.textContent = rotulo;
+  d.appendChild(b);
+  if (typeof conteudo === 'string') {
+    const s = document.createElement('span');
+    s.textContent = conteudo;
+    d.appendChild(s);
+  } else {
+    conteudo.forEach(function (n) { d.appendChild(n); });
+  }
+  return d;
+}
+
+function cartaoDoPasso(passo, resumido) {
+  const cargo = JORNADA.cargoDe(passo.cargo);
+
+  const art = document.createElement('article');
+  art.className = 'jor-passo' + (passo.desvio ? ' desvio' : '') + (resumido ? ' resumido' : '');
+  art.style.borderLeftColor = cargo.borda;
+  if (!resumido && !passo.desvio) art.style.background = cargo.fundo;
+
+  const quem = document.createElement('div');
+  quem.className = 'quem';
+  quem.style.color = cargo.texto;
+  quem.textContent = cargo.nome;
+  art.appendChild(quem);
+
+  const h = document.createElement('h4');
+  h.textContent = passo.titulo;
+
+  if (passo.confirmar) {
+    const s = document.createElement('span');
+    s.className = 'jor-selo confirmar';
+    s.textContent = 'a confirmar';
+    s.style.marginLeft = '8px';
+    h.appendChild(s);
+  }
+  art.appendChild(h);
+
+  if (resumido) return art;
+
+  if (passo.oque) {
+    const p = document.createElement('p');
+    p.className = 'oque';
+    p.textContent = passo.oque;
+    art.appendChild(p);
+  }
+
+  if (passo.niveis) {
+    const ul = document.createElement('ul');
+    ul.className = 'jor-niveis';
+    JORNADA.NIVEIS.forEach(function (n) {
+      const li = document.createElement('li');
+      li.textContent = 'Nível ' + n.n + ': ' + n.oque;
+      ul.appendChild(li);
+    });
+    art.appendChild(ul);
+  }
+
+  if (passo.fala) {
+    const cx = document.createElement('div');
+    cx.className = 'jor-fala';
+
+    const rot = document.createElement('div');
+    rot.className = 'rot';
+    rot.appendChild(document.createTextNode('O que dizer'));
+
+    /* ⚠️ A PROCEDÊNCIA DA FALA APARECE NA TELA. Rascunho meu
+       passando por fala aprovada é alguém lendo em voz alta, na
+       frente do cliente, uma frase que a loja nunca disse. */
+    if (passo.falaFonte === 'rascunho') {
+      const s = document.createElement('span');
+      s.className = 'jor-selo rascunho';
+      s.textContent = 'rascunho · confira';
+      rot.appendChild(s);
+    } else if (passo.falaFonte === 'roteiro') {
+      const s = document.createElement('span');
+      s.className = 'jor-selo pendente';
+      s.textContent = 'roteiro do vídeo';
+      rot.appendChild(s);
+    } else if (passo.falaFonte === 'manual') {
+      const s = document.createElement('span');
+      s.className = 'jor-selo pendente';
+      s.textContent = 'manual';
+      rot.appendChild(s);
+    }
+
+    const copiar = document.createElement('button');
+    copiar.type = 'button';
+    copiar.textContent = 'copiar';
+    copiar.addEventListener('click', function () {
+      const antes = copiar.textContent;
+      /* `writeText` falha em http sem localhost e quando a aba
+         não está em foco. Sem o catch, o botão ficaria mudo e a
+         pessoa não saberia se copiou. */
+      try {
+        navigator.clipboard.writeText(passo.fala).then(function () {
+          copiar.textContent = 'copiado';
+          setTimeout(function () { copiar.textContent = antes; }, 1400);
+        }, function () {
+          copiar.textContent = 'não deu — selecione à mão';
+          setTimeout(function () { copiar.textContent = antes; }, 2600);
+        });
+      } catch (e) {
+        copiar.textContent = 'não deu — selecione à mão';
+        setTimeout(function () { copiar.textContent = antes; }, 2600);
+      }
+    });
+    rot.appendChild(copiar);
+
+    cx.appendChild(rot);
+
+    const p = document.createElement('p');
+    p.textContent = passo.fala;
+    cx.appendChild(p);
+
+    art.appendChild(cx);
+  }
+
+  if (passo.sistema) art.appendChild(linhaDaJornada('No sistema', passo.sistema));
+
+  const trecho = JORNADA.trechoDe(passo.trecho);
+  if (trecho) {
+    art.appendChild(linhaDaJornada('Trecho do vídeo',
+      trecho.n + ' · ' + trecho.nome + ' (' + trecho.dura + ')'));
+  }
+
+  if ((passo.materiais || []).length) {
+    art.appendChild(linhaDaJornada('Material',
+      passo.materiais.map(chipDeMaterial)));
+  }
+
+  if (passo.cuidado) {
+    const d = document.createElement('div');
+    d.className = 'jor-cuidado';
+    d.textContent = passo.cuidado;
+    art.appendChild(d);
+  }
+
+  return art;
+}
+
+function desenharJornada(cargoFiltro) {
+  const alvo = el('jornada-trilha');
+  if (!alvo) return;
+
+  alvo.innerHTML = '';
+
+  JORNADA.FASES.forEach(function (fase) {
+    const passos = JORNADA.passosDaFase(fase.id);
+    if (!passos.length) return;
+
+    const cab = document.createElement('div');
+    cab.className = 'jor-fase';
+
+    const h = document.createElement('h3');
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = fase.numero;
+    h.appendChild(num);
+    h.appendChild(document.createTextNode(fase.nome));
+    cab.appendChild(h);
+
+    const p = document.createElement('p');
+    p.textContent = fase.resumo;
+    cab.appendChild(p);
+
+    alvo.appendChild(cab);
+
+    passos.forEach(function (passo) {
+      const resumido = !!cargoFiltro && passo.cargo !== cargoFiltro
+                                     && passo.cargo !== 'inicio';
+      alvo.appendChild(cartaoDoPasso(passo, resumido));
+    });
+  });
+
+  const conta = el('jor-conta');
+  if (conta) {
+    const partes = [JORNADA.PASSOS.length + ' passos'];
+    const r = JORNADA.contarRascunhos();
+    const q = JORNADA.contarPendencias();
+    if (r) partes.push(r + ' fala(s) em rascunho');
+    if (q) partes.push(q + ' material(is) por fazer');
+    conta.textContent = partes.join(' · ');
+  }
+}
+
+(function ligarJornada() {
+  const sel = el('jor-cargo');
+  if (!sel || typeof JORNADA === 'undefined') return;
+
+  const todos = document.createElement('option');
+  todos.value = '';
+  todos.textContent = 'toda a equipe';
+  sel.appendChild(todos);
+
+  Object.keys(JORNADA.CARGOS).forEach(function (id) {
+    if (id === 'inicio') return;
+    const o = document.createElement('option');
+    o.value = id;
+    o.textContent = JORNADA.CARGOS[id].nome;
+    sel.appendChild(o);
+  });
+
+  /* Lembra o cargo escolhido: quem abre a Jornada é quase sempre
+     a mesma pessoa, procurando a mesma parte. */
+  try {
+    const salvo = localStorage.getItem('dalmobile:jornada-cargo');
+    if (salvo && JORNADA.CARGOS[salvo]) sel.value = salvo;
+  } catch (e) {}
+
+  sel.addEventListener('change', function () {
+    try { localStorage.setItem('dalmobile:jornada-cargo', sel.value); } catch (e) {}
+    desenharJornada(sel.value);
+  });
+
+  desenharJornada(sel.value);
+})();
+
+
 function abaSalva() {
   try { return localStorage.getItem('dalmobile:aba'); } catch (e) { return null; }
 }
@@ -1210,7 +1613,7 @@ function montarHub() {
    pessoa abriria o Central e não teria o que fazer, sem nada na
    tela explicando por quê. 'Gerar' é o piso.
    ------------------------------------------------------------ */
-const ABAS_DA_MATRIZ = ['gerar', 'materiais', 'links', 'posvenda'];
+const ABAS_DA_MATRIZ = ['gerar', 'materiais', 'links', 'posvenda', 'jornada'];
 
 function aplicarMatrizNasAbas() {
   const visiveis = ABAS_DA_MATRIZ.filter(function (nome) {
@@ -2200,12 +2603,6 @@ async function descobrirQuemSou() {
   montarAtalhos();
   montarHub();
   aplicarMatrizNasAbas();
-
-  /* A aba da ação de novembro/2026 entra aqui, depois da matriz:
-     ela precisa do perfil para saber se o cargo a esconde e para
-     preencher o "Seu nome" do gerador. Montada antes, apareceria
-     para quem a tem escondida — e aqui some, nunca aparece. */
-  if (window.CreativeBlack) CreativeBlack.montar();
 
   /* O gerente passa a abrir esta aba para cuidar dos montadores.
      O resto dela continua só do administrador — quem decide é o
